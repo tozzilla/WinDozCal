@@ -10,15 +10,15 @@
 mod auth;
 mod commands;
 mod credentials;
-mod db;
-mod error;
+pub mod db;
+pub mod error;
 mod logging;
-mod models;
+pub mod models;
 mod notifications;
 mod providers;
 mod state;
 mod sync;
-mod timeutil;
+pub mod timeutil;
 mod tray;
 
 use tauri::Manager;
@@ -53,6 +53,7 @@ pub fn run() {
             commands::list_calendars,
             commands::set_calendar_visibility,
             commands::list_events,
+            commands::get_event,
             commands::create_event,
             commands::update_event,
             commands::delete_event,

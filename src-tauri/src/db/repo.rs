@@ -8,7 +8,8 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    Account, AccountSyncStatus, Calendar, Event, EventSyncStatus, NewEvent, ProviderKind,
+    Account, AccountSyncStatus, Attendee, Calendar, Event, EventDetail, EventSyncStatus,
+    NewAttendee, NewEvent, NewReminder, ProviderKind, Reminder,
 };
 use crate::timeutil::{now_iso, parse_ts};
 
@@ -16,7 +17,8 @@ use crate::timeutil::{now_iso, parse_ts};
 /// "start" e "end" sono quotate: `end` e' parola riservata SQL.
 pub(crate) const EVENT_COLS: &str = "e.id, e.calendar_id, e.remote_id, e.title, e.description, \
      e.location, e.\"start\", e.\"end\", e.timezone, e.all_day, e.recurrence_rule, e.status, \
-     e.etag, e.updated_at, e.sync_status, e.local_updated_at, e.remote_updated_at";
+     e.etag, e.updated_at, e.sync_status, e.local_updated_at, e.remote_updated_at, \
+     e.conference_url";
 
 /// Massimo numero di risultati di `search_events`.
 const SEARCH_LIMIT: i64 = 200;
@@ -40,6 +42,7 @@ pub(crate) fn event_from_row(row: &Row<'_>) -> rusqlite::Result<Event> {
         sync_status: row.get(14)?,
         local_updated_at: row.get(15)?,
         remote_updated_at: row.get(16)?,
+        conference_url: row.get(17)?,
     })
 }
 
@@ -229,6 +232,48 @@ pub fn get_event(conn: &Connection, event_id: &str) -> AppResult<Event> {
         .ok_or_else(|| AppError::NotFound(format!("event {event_id}")))
 }
 
+/// Durata (secondi) oltre la quale un evento non ricorrente e' considerato "lungo" (35 giorni).
+/// DEVE coincidere con il letterale usato dall'indice parziale `idx_events_long` della
+/// migrazione 004: SQLite usa un indice parziale solo se la query contiene la stessa condizione.
+pub(crate) const MAX_SPAN_SECS: i64 = 35 * 86_400;
+
+/// SQL di `list_events`: tre rami `UNION ALL` mutuamente esclusivi, ognuno con il proprio indice.
+/// - (a) non ricorrenti "corti": `start_ts` limitato a `[?1 - MAX_SPAN, ?2)` su `idx_events_range`;
+/// - (b) non ricorrenti "lunghi" (> MAX_SPAN): indice parziale `idx_events_long`, pochissime righe;
+/// - (c) ricorrenti: indice parziale `idx_events_recurring`.
+///
+/// Le colonne 19 e 20 (`start_ts`, `end_ts`) servono solo all'`ORDER BY` della query composta.
+pub(crate) fn list_events_sql() -> String {
+    let max = MAX_SPAN_SECS;
+    // INDEXED BY: senza statistiche il planner sceglierebbe `idx_events_range` anche per i rami
+    // (b) e (c); cosi' ogni ramo e' vincolato al proprio indice (errore a prepare se non usabile).
+    let base = |index: &str| {
+        format!(
+            "SELECT {EVENT_COLS}, e.start_ts, e.end_ts
+             FROM events e INDEXED BY {index} JOIN calendars c ON c.id = e.calendar_id
+             WHERE c.visible = 1 AND e.sync_status <> 'pending_delete'"
+        )
+    };
+    let (short, long, recurring) = (
+        base("idx_events_range"),
+        base("idx_events_long"),
+        base("idx_events_recurring"),
+    );
+    format!(
+        "{short} AND e.recurrence_rule IS NULL
+            AND e.end_ts - e.start_ts <= {max}
+            AND e.start_ts >= ?1 - {max} AND e.start_ts < ?2
+            AND (e.end_ts > ?1 OR e.start_ts >= ?1)
+         UNION ALL
+         {long} AND e.recurrence_rule IS NULL
+            AND e.end_ts - e.start_ts > {max}
+            AND e.start_ts < ?2 AND e.end_ts > ?1
+         UNION ALL
+         {recurring} AND e.recurrence_rule IS NOT NULL AND e.start_ts < ?2
+         ORDER BY 19, 20"
+    )
+}
+
 /// Eventi dei soli calendari visibili che intersecano `[range_start, range_end)`.
 ///
 /// Gli eventi `pending_delete` sono nascosti subito (la UI non deve aspettare il provider).
@@ -237,16 +282,7 @@ pub fn get_event(conn: &Connection, event_id: &str) -> AppResult<Event> {
 pub fn list_events(conn: &Connection, range_start: &str, range_end: &str) -> AppResult<Vec<Event>> {
     let start_ts = parse_ts(range_start)?;
     let end_ts = parse_ts(range_end)?;
-    let sql = format!(
-        "SELECT {EVENT_COLS}
-         FROM events e JOIN calendars c ON c.id = e.calendar_id
-         WHERE c.visible = 1
-           AND e.sync_status <> 'pending_delete'
-           AND ((e.start_ts < ?2 AND (e.end_ts > ?1 OR e.start_ts >= ?1))
-                OR (e.recurrence_rule IS NOT NULL AND e.start_ts < ?2))
-         ORDER BY e.start_ts, e.end_ts"
-    );
-    let mut stmt = conn.prepare(&sql)?;
+    let mut stmt = conn.prepare(&list_events_sql())?;
     let rows = stmt.query_map(params![start_ts, end_ts], event_from_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
@@ -316,12 +352,188 @@ fn ensure_writable(calendar: &Calendar) -> AppResult<()> {
     Ok(())
 }
 
+/// Massimo ragionevole per `minutes_before` (4 settimane, come Google Calendar).
+const MAX_REMINDER_MINUTES: i64 = 40_320;
+
+/// Stesso formato di `src/utils/validation.ts` (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`): parte locale non
+/// vuota, dominio con un punto interno, nessuno spazio ne' altra `@`.
+fn is_valid_email(email: &str) -> bool {
+    let plain = |s: &str| !s.is_empty() && !s.chars().any(|c| c.is_whitespace() || c == '@');
+    let Some((local, domain)) = email.split_once('@') else {
+        return false;
+    };
+    let chars: Vec<char> = domain.chars().collect();
+    plain(local)
+        && plain(domain)
+        && chars
+            .iter()
+            .enumerate()
+            .any(|(i, c)| *c == '.' && i > 0 && i + 1 < chars.len())
+}
+
+/// Solo http/https (il link viene aperto fuori dall'app). Un valore vuoto equivale a `None`;
+/// il valore salvato e' privo di spazi ai bordi.
+fn normalize_conference_url(url: &Option<String>) -> AppResult<Option<String>> {
+    let Some(raw) = url.as_deref().map(str::trim).filter(|u| !u.is_empty()) else {
+        return Ok(None);
+    };
+    let lower = raw.to_ascii_lowercase();
+    let rest = lower
+        .strip_prefix("https://")
+        .or_else(|| lower.strip_prefix("http://"));
+    match rest {
+        Some(r) if !r.is_empty() && !r.starts_with('/') && !r.chars().any(char::is_whitespace) => {
+            Ok(Some(raw.to_string()))
+        }
+        _ => Err(AppError::InvalidInput(
+            "conference_url must be an http or https URL".into(),
+        )),
+    }
+}
+
+fn validate_children(attendees: &[NewAttendee], reminders: &[NewReminder]) -> AppResult<()> {
+    let mut seen = std::collections::HashSet::new();
+    for attendee in attendees {
+        let email = attendee.email.trim();
+        if !is_valid_email(email) {
+            return Err(AppError::InvalidInput("attendee email is not valid".into()));
+        }
+        if !seen.insert(email.to_lowercase()) {
+            return Err(AppError::InvalidInput("duplicate attendee".into()));
+        }
+    }
+    for reminder in reminders {
+        if !(0..=MAX_REMINDER_MINUTES).contains(&reminder.minutes_before) {
+            return Err(AppError::InvalidInput(format!(
+                "reminder minutes_before must be between 0 and {MAX_REMINDER_MINUTES}"
+            )));
+        }
+        if reminder.r#type != "popup" && reminder.r#type != "email" {
+            return Err(AppError::InvalidInput(
+                "reminder type must be popup or email".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Sostituisce interamente partecipanti e promemoria dell'evento.
+fn replace_children(
+    conn: &Connection,
+    event_id: &str,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<()> {
+    // Le risposte RSVP gia' ricevute (accepted/declined/...) non si perdono su una modifica
+    // locale: per le email gia' presenti (confronto case-insensitive) si conserva lo status,
+    // solo i nuovi partecipanti partono da needs_action.
+    let mut previous_status = std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare("SELECT email, status FROM attendees WHERE event_id = ?1")?;
+        let rows = stmt.query_map(params![event_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        for row in rows {
+            let (email, status) = row?;
+            previous_status.insert(email.to_lowercase(), status);
+        }
+    }
+    conn.execute(
+        "DELETE FROM attendees WHERE event_id = ?1",
+        params![event_id],
+    )?;
+    for attendee in attendees {
+        let email = attendee.email.trim();
+        let status = previous_status
+            .get(&email.to_lowercase())
+            .map(String::as_str)
+            .unwrap_or("needs_action");
+        conn.execute(
+            "INSERT INTO attendees (id, event_id, email, name, status)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                uuid::Uuid::new_v4().to_string(),
+                event_id,
+                email,
+                attendee.name,
+                status
+            ],
+        )?;
+    }
+    conn.execute(
+        "DELETE FROM reminders WHERE event_id = ?1",
+        params![event_id],
+    )?;
+    for reminder in reminders {
+        conn.execute(
+            "INSERT INTO reminders (id, event_id, minutes_before, \"type\") VALUES (?1, ?2, ?3, ?4)",
+            params![
+                uuid::Uuid::new_v4().to_string(),
+                event_id,
+                reminder.minutes_before,
+                reminder.r#type
+            ],
+        )?;
+    }
+    Ok(())
+}
+
+/// Evento con partecipanti e promemoria (per `get_event`).
+pub fn get_event_detail(conn: &Connection, event_id: &str) -> AppResult<EventDetail> {
+    let event = get_event(conn, event_id)?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, event_id, email, name, status FROM attendees
+         WHERE event_id = ?1 ORDER BY rowid",
+    )?;
+    let attendees = stmt
+        .query_map(params![event_id], |row| {
+            Ok(Attendee {
+                id: row.get(0)?,
+                event_id: row.get(1)?,
+                email: row.get(2)?,
+                name: row.get(3)?,
+                status: row.get(4)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, event_id, minutes_before, \"type\" FROM reminders
+         WHERE event_id = ?1 ORDER BY minutes_before, rowid",
+    )?;
+    let reminders = stmt
+        .query_map(params![event_id], |row| {
+            Ok(Reminder {
+                id: row.get(0)?,
+                event_id: row.get(1)?,
+                minutes_before: row.get(2)?,
+                r#type: row.get(3)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    Ok(EventDetail {
+        event,
+        attendees,
+        reminders,
+    })
+}
+
 /// Crea un evento con `sync_status = pending_create`; sui calendari di account `local` nasce
-/// direttamente `synced` (nessuna coda di sync).
-pub fn insert_event(conn: &Connection, new: &NewEvent) -> AppResult<Event> {
+/// direttamente `synced` (nessuna coda di sync). Evento, partecipanti e promemoria sono scritti
+/// in un'unica transazione, dopo la validazione.
+pub fn insert_event(
+    conn: &Connection,
+    new: &NewEvent,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<EventDetail> {
     let calendar = get_calendar(conn, &new.calendar_id)?;
     ensure_writable(&calendar)?;
     let (start_ts, end_ts) = validate_range(&new.start, &new.end, &new.timezone)?;
+    validate_children(attendees, reminders)?;
+    let conference_url = normalize_conference_url(&new.conference_url)?;
 
     let initial_status = if is_local_calendar(conn, &new.calendar_id)? {
         EventSyncStatus::Synced
@@ -330,13 +542,14 @@ pub fn insert_event(conn: &Connection, new: &NewEvent) -> AppResult<Event> {
     };
     let id = uuid::Uuid::new_v4().to_string();
     let now = now_iso();
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "INSERT INTO events (id, calendar_id, remote_id, title, description, location,
                              \"start\", \"end\", start_ts, end_ts, timezone, all_day,
                              recurrence_rule, status, etag, updated_at, sync_status,
-                             local_updated_at, remote_updated_at)
+                             local_updated_at, remote_updated_at, conference_url)
          VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, NULL, ?14,
-                 ?15, ?14, NULL)",
+                 ?15, ?14, NULL, ?16)",
         params![
             id,
             new.calendar_id,
@@ -353,17 +566,28 @@ pub fn insert_event(conn: &Connection, new: &NewEvent) -> AppResult<Event> {
             new.status,
             now,
             initial_status,
+            conference_url,
         ],
     )?;
-    get_event(conn, &id)
+    replace_children(&tx, &id, attendees, reminders)?;
+    tx.commit()?;
+    get_event_detail(conn, &id)
 }
 
-/// Aggiorna i campi modificabili dall'utente. `remote_id`, `etag`, `remote_updated_at` e
-/// `calendar_id` inviati dal client vengono ignorati (li governa il backend).
+/// Aggiorna i campi modificabili dall'utente e sostituisce partecipanti e promemoria, in
+/// un'unica transazione. `remote_id`, `etag`, `remote_updated_at` e `calendar_id` inviati dal
+/// client vengono ignorati (li governa il backend).
 ///
 /// Stato risultante: `pending_update`, salvo che l'evento sia ancora `pending_create` (mai
 /// arrivato sul server): in quel caso resta `pending_create` e il sync lo crea con i dati nuovi.
-pub fn update_event(conn: &Connection, event: &Event) -> AppResult<Event> {
+/// La riga `events` viene sempre aggiornata, quindi anche una modifica ai soli partecipanti o
+/// promemoria di un evento `synced` lo porta a `pending_update`.
+pub fn update_event(
+    conn: &Connection,
+    event: &Event,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<EventDetail> {
     let existing = get_event(conn, &event.id)?;
     if existing.sync_status == EventSyncStatus::PendingDelete {
         return Err(AppError::NotFound(format!("event {}", event.id)));
@@ -371,6 +595,8 @@ pub fn update_event(conn: &Connection, event: &Event) -> AppResult<Event> {
     let calendar = get_calendar(conn, &existing.calendar_id)?;
     ensure_writable(&calendar)?;
     let (start_ts, end_ts) = validate_range(&event.start, &event.end, &event.timezone)?;
+    validate_children(attendees, reminders)?;
+    let conference_url = normalize_conference_url(&event.conference_url)?;
 
     let next_status = if is_local_calendar(conn, &existing.calendar_id)? {
         EventSyncStatus::Synced
@@ -380,12 +606,13 @@ pub fn update_event(conn: &Connection, event: &Event) -> AppResult<Event> {
         EventSyncStatus::PendingUpdate
     };
     let now = now_iso();
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "UPDATE events SET title = ?1, description = ?2, location = ?3, \"start\" = ?4,
                 \"end\" = ?5, start_ts = ?6, end_ts = ?7, timezone = ?8, all_day = ?9,
                 recurrence_rule = ?10, status = ?11, sync_status = ?12,
-                updated_at = ?13, local_updated_at = ?13
-         WHERE id = ?14",
+                updated_at = ?13, local_updated_at = ?13, conference_url = ?14
+         WHERE id = ?15",
         params![
             event.title,
             event.description,
@@ -400,10 +627,13 @@ pub fn update_event(conn: &Connection, event: &Event) -> AppResult<Event> {
             event.status,
             next_status,
             now,
+            conference_url,
             event.id,
         ],
     )?;
-    get_event(conn, &event.id)
+    replace_children(&tx, &event.id, attendees, reminders)?;
+    tx.commit()?;
+    get_event_detail(conn, &event.id)
 }
 
 /// Cancellazione locale. Un evento `pending_create` non esiste sul server: viene rimosso
@@ -435,112 +665,4 @@ pub fn delete_event(conn: &Connection, event_id: &str) -> AppResult<bool> {
         }
     }
     Ok(true)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db::migrations;
-
-    fn setup() -> Connection {
-        let mut conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
-        migrations::run(&mut conn).unwrap();
-        conn.execute_batch(
-            "INSERT INTO accounts (id, provider, name, email) VALUES ('a1', 'google', 'A', 'a@x.it');
-             INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('c1', 'a1', 'r1', 'Cal');",
-        )
-        .unwrap();
-        conn
-    }
-
-    fn new_event(title: &str) -> NewEvent {
-        NewEvent {
-            calendar_id: "c1".into(),
-            title: title.into(),
-            description: None,
-            location: None,
-            start: "2026-10-07T10:00:00+02:00".into(),
-            end: "2026-10-07T11:00:00+02:00".into(),
-            timezone: "Europe/Rome".into(),
-            all_day: false,
-            recurrence_rule: None,
-            status: crate::models::EventStatus::Busy,
-        }
-    }
-
-    #[test]
-    fn create_list_search_delete_roundtrip() {
-        let conn = setup();
-        let ev = insert_event(&conn, &new_event("Riunione commerciale")).unwrap();
-        assert_eq!(ev.sync_status, EventSyncStatus::PendingCreate);
-
-        let listed = list_events(&conn, "2026-10-07T00:00:00Z", "2026-10-08T00:00:00Z").unwrap();
-        assert_eq!(listed.len(), 1);
-        assert_eq!(search_events(&conn, "commerc").unwrap().len(), 1);
-
-        assert!(!delete_event(&conn, &ev.id).unwrap());
-        assert!(
-            list_events(&conn, "2026-10-07T00:00:00Z", "2026-10-08T00:00:00Z")
-                .unwrap()
-                .is_empty()
-        );
-        assert!(search_events(&conn, "commerc").unwrap().is_empty());
-    }
-
-    #[test]
-    fn update_synced_event_becomes_pending_update() {
-        let conn = setup();
-        let ev = insert_event(&conn, &new_event("Uno")).unwrap();
-        conn.execute(
-            "UPDATE events SET sync_status = 'synced', remote_id = 'x'",
-            [],
-        )
-        .unwrap();
-        let mut ev = get_event(&conn, &ev.id).unwrap();
-        ev.title = "Due".into();
-        let updated = update_event(&conn, &ev).unwrap();
-        assert_eq!(updated.sync_status, EventSyncStatus::PendingUpdate);
-        assert!(delete_event(&conn, &ev.id).unwrap());
-        assert_eq!(
-            get_event(&conn, &ev.id).unwrap().sync_status,
-            EventSyncStatus::PendingDelete
-        );
-    }
-
-    #[test]
-    fn local_account_is_idempotent_and_events_stay_synced() {
-        let conn = setup();
-        let account = create_local_account(&conn, "Questo computer").unwrap();
-        assert_eq!(account.provider, ProviderKind::Local);
-        let again = create_local_account(&conn, "Altro nome").unwrap();
-        assert_eq!(again.id, account.id);
-
-        let calendars: Vec<_> = list_calendars(&conn)
-            .unwrap()
-            .into_iter()
-            .filter(|c| c.account_id == account.id)
-            .collect();
-        assert_eq!(calendars.len(), 1);
-        assert_eq!(calendars[0].name, "Personale");
-        assert!(calendars[0].visible && !calendars[0].read_only);
-
-        let mut new = new_event("Locale");
-        new.calendar_id = calendars[0].id.clone();
-        let ev = insert_event(&conn, &new).unwrap();
-        assert_eq!(ev.sync_status, EventSyncStatus::Synced);
-        let mut edited = ev.clone();
-        edited.title = "Locale 2".into();
-        assert_eq!(
-            update_event(&conn, &edited).unwrap().sync_status,
-            EventSyncStatus::Synced
-        );
-        assert!(!delete_event(&conn, &ev.id).unwrap());
-        assert!(get_event(&conn, &ev.id).is_err());
-
-        let extra = create_calendar(&conn, &account.id, "Lavoro", "#ff0000").unwrap();
-        assert_eq!(extra.name, "Lavoro");
-        // "a1" e' l'account google creato da setup(): non ammesso.
-        assert!(create_calendar(&conn, "a1", "X", "#000000").is_err());
-    }
 }

@@ -1,4 +1,4 @@
-import type { Account, Calendar, Event, NewEvent } from "@/types";
+import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 import { tauriCalendarService } from "./tauriCalendarService";
 
@@ -16,15 +16,18 @@ export interface CalendarService {
   listCalendars(): Promise<Calendar[]>;
   setCalendarVisibility(calendarId: string, visible: boolean): Promise<void>;
   listEvents(rangeStart: string, rangeEnd: string): Promise<Event[]>;
-  createEvent(event: NewEvent): Promise<Event>;
-  updateEvent(event: Event): Promise<Event>;
+  getEvent(eventId: string): Promise<EventDetail>;
+  /** Rifiuta con un Error leggibile se email o minuti non sono validi (vedi utils/validation). */
+  createEvent(event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /** Gli array sostituiscono interamente partecipanti e promemoria esistenti. */
+  updateEvent(event: Event, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
   deleteEvent(eventId: string): Promise<void>;
   searchEvents(query: string): Promise<Event[]>;
   syncNow(accountId?: string): Promise<void>;
   openLogFolder(): Promise<void>;
 }
 
-const insideTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+export const insideTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 /** Dentro Tauri usa l'IPC; nel browser (`npm run dev`) un fallback in-memory, con dati d'esempio solo se l'URL ha `?demo`. */
 export const calendarService: CalendarService = insideTauri

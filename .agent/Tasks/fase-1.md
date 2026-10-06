@@ -2,7 +2,7 @@
 
 Fonte: PRD §42 (perimetro) e §48 (Definition of Done). Obiettivo: "WinDozCal può sostituire Google Calendar web per l'uso quotidiano su Windows."
 
-Stato: stage 0 e 1 completati, prossimo stage 2. Ultimo aggiornamento: 6 ott 2026.
+Stato: stage 0, 1 e 2 completati, prossimo stage 3. Ultimo aggiornamento: 6 ott 2026.
 
 Perimetro §42: Tauri shell, SQLite, UI calendario, account Google, viste giorno/settimana/mese, CRUD eventi, cache offline, notifiche, system tray.
 
@@ -24,10 +24,17 @@ Richiesta del proprietario, 6 ott 2026 ([ADR 009](../System/decisions/009-modali
 - Primo avvio (§33): oltre ai pulsanti Google/Microsoft/CalDAV, la scelta di usare WinDozCal solo in locale.
 - Accettazione: l'app si avvia, crea l'account locale e un evento senza rete né account, chiusa e riaperta lo ritrova (DoD 6, 7, 8, 12, 13 sul calendario locale); nessun evento locale compare mai come `pending_*`; nessun traffico di rete osservato; un account esterno aggiunto in seguito convive con quello locale (verificato dallo stage Google).
 
-## Stage 2: database locale e Calendar Service
+## Stage 2: database locale e Calendar Service (completato 6 ott 2026)
 
-- Schema SQLite §12 + campi §23 (`local_updated_at`, `remote_updated_at`, `etag`), migrazioni, comandi IPC su dati reali.
-- Accettazione: DoD 13 (chiudere e riaprire ritrova subito gli eventi); unit test su mapping e sync state.
+- Schema SQLite §12 + campi §23 (`local_updated_at`, `remote_updated_at`, `etag`) + `conference_url` ([ADR 010](../System/decisions/010-dettaglio-evento-conference-url.md)), migrazioni, comandi IPC su dati reali.
+
+Tre filoni:
+
+1. Dettaglio evento: `get_event` / `EventDetail`, array `attendees` e `reminders` che sostituiscono in `create_event` e `update_event`, `list_events` e `search_events` senza dettaglio. Accettazione: creare, modificare e rileggere un evento con partecipanti, promemoria e `conference_url`; gli array inviati sostituiscono quelli esistenti.
+2. Test su mapping e sync state: mapping dei campi evento, transizioni di `sync_status` (`pending_*`, `synced` su calendari `local`), lettura e scrittura del cursore in `sync_state`. Test permanenti, uno per comportamento.
+3. Misura dei target §32 su 50.000 eventi: cambio settimana < 100 ms e ricerca locale < 100 ms. Registrare in questo piano la misura reale (macchina, data, dataset) senza arrotondare; una misura mancata si dichiara, non si aggira.
+
+- Accettazione complessiva: DoD 13 (chiudere e riaprire ritrova subito gli eventi); i tre filoni sopra chiusi.
 
 ## Stage 3: account Google e sync
 
@@ -66,3 +73,4 @@ Richiesta del proprietario, 6 ott 2026 ([ADR 009](../System/decisions/009-modali
 - 6 ott 2026 (2): installati rustup (rustc 1.99.0, stable-x86_64-pc-windows-msvc), VS 2022 Build Tools con workload VCTools, GitHub CLI 2.102.0. Progetto rinominato da OpenCal a WinDozCal (identifier `app.windozcal.desktop`, crate `windozcal`). Verificati: `npm run typecheck`, `npm test` (9 test), `npm run build`, `cargo clippy --all-targets -D warnings`, `cargo test` (4 test). Stage 1 verificato nell'app vera (`npm run tauri dev`, WebView2 pilotata via DevTools Protocol): primo avvio senza account, "Use without an account", creazione/modifica/cancellazione evento, nuovo calendario locale dalla sidebar, riavvio con evento ritrovato; in SQLite gli eventi locali risultano `synced`; nessun token o password nei log. Non verificato: assenza di traffico di rete. Seguiti noti: doppio clic su un evento esistente crea anche un nuovo evento (il dblclick risale alla griglia); intestazioni dei giorni leggermente disallineate rispetto alle colonne quando compare la scrollbar; payload IPC per partecipanti/promemoria/videoconferenza ancora da definire; manca un comando per collegare account esterni (stage 3).
 - 6 ott 2026 (3): decisioni del proprietario: esempi personali del PRD neutralizzati, copyright Andrea Tozzi, progetto presentato come "vibecoded". Repo pubblico `Tozzilla/WinDozCal`.
 - 6 ott 2026 (4): build di release (`npm run tauri build`): installer NSIS 2,62 MiB e MSI 3,65 MiB, sotto il target di 30 MB (§32). Verificati: exe di release autonomo (carica da tauri.localhost, flusso locale ok), installazione silenziosa NSIS per utente, avvio dall'installato, disinstallazione pulita. Pubblicata la prerelease GitHub v0.1.0 con installer e SHA256SUMS. Installer non firmati (avviso SmartScreen): firma del codice da valutare prima di una release stabile.
+- 6 ott 2026 (5): stage 2 completato. Migrazioni 003 (`conference_url`, tabella `event_conflicts` per preservare le modifiche locali scartate dal server-wins, ADR 007) e 004 (indici parziali `idx_events_long`, `idx_events_recurring`). `list_events` riscritta in tre rami UNION ALL (eventi brevi <= 35 giorni, lunghi, ricorrenti) con `INDEXED BY`: prima 90,9 ms (settimana) e 107,6 ms (mese), fuori target. Misura finale (`cargo run --release --example perf`, questa macchina Windows 11, 6 ott 2026, 50.000 eventi su 3 anni e 5 calendari, 25 esecuzioni, mediana): settimana 0,61 ms, mese 6,48 ms, ricerca termine comune 10,37 ms, termine raro 0,10 ms. Test: 18 Rust, 12 frontend. Verificato nell'app vera: DB creato dalla release 0.1.0 (schema v2) migrato a v4 senza perdita; evento con link Meet, partecipante e promemoria salvato, "Join meeting" visibile, email non valida rifiutata, dettaglio ritrovato dopo riavvio. Non verificato: clic su "Join meeting" (apertura del link). Seguiti noti: ora di fine di default prima dell'inizio per eventi creati alle 23:00 (stage 5); il backend accetta URL limite come `https://:80` che il frontend rifiuta (validazione senza crate `url`).

@@ -6,8 +6,12 @@
 //!   locale viene scartata. Una cancellazione remota vince sempre.
 //! - Le modifiche locali pending sono preservate quando possibile: se l'etag remoto coincide con
 //!   quello locale non c'e' stata nessuna modifica remota e la riga locale non viene toccata.
-//! - TODO(PRD 23, futuro): salvare la versione locale scartata per una schermata di risoluzione
-//!   manuale dei conflitti.
+//! - "Preservare" (ADR 007) vuol dire due cose: (1) se il server non ha cambiato l'evento la
+//!   riga locale pending non viene toccata; (2) se il server vince su una modifica locale
+//!   (`pending_update`/`pending_delete` con etag diverso, o cancellazione remota di un
+//!   `pending_update`) la versione locale scartata viene salvata come snapshot JSON in
+//!   `event_conflicts` (con motivo e istante) invece di perdersi. La schermata di risoluzione
+//!   manuale che legge quella tabella e' rimandata (PRD 23, Fase 3).
 //!
 //! Mai loggare titoli, descrizioni o luoghi degli eventi (PRD 35): solo id e conteggi.
 
@@ -29,6 +33,7 @@ pub struct ApplyStats {
     pub kept_local: usize,
     pub skipped_invalid: usize,
     pub deleted: usize,
+    pub conflicts: usize,
 }
 
 pub fn set_account_status(
@@ -202,7 +207,20 @@ pub fn apply_sync_result(
         apply_remote_event(&tx, &calendar.id, remote, &mut stats)?;
     }
     for remote_id in &result.deletions {
-        // Server wins: la cancellazione remota prevale anche su una modifica locale pending.
+        // Server wins: la cancellazione remota prevale anche su una modifica locale pending,
+        // che pero' viene salvata in `event_conflicts` prima di perdere la riga.
+        let local_edit: Option<String> = tx
+            .query_row(
+                "SELECT id FROM events
+                 WHERE calendar_id = ?1 AND remote_id = ?2 AND sync_status = 'pending_update'",
+                params![calendar.id, remote_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(event_id) = local_edit {
+            record_conflict(&tx, &event_id, "remote_deleted")?;
+            stats.conflicts += 1;
+        }
         stats.deleted += tx.execute(
             "DELETE FROM events WHERE calendar_id = ?1 AND remote_id = ?2",
             params![calendar.id, remote_id],
@@ -255,9 +273,9 @@ fn apply_remote_event(
                 "INSERT INTO events (id, calendar_id, remote_id, title, description, location,
                                      \"start\", \"end\", start_ts, end_ts, timezone, all_day,
                                      recurrence_rule, status, etag, updated_at, sync_status,
-                                     local_updated_at, remote_updated_at)
+                                     local_updated_at, remote_updated_at, conference_url)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-                         'synced', ?17, ?18)",
+                         'synced', ?17, ?18, ?19)",
                 params![
                     id,
                     calendar_id,
@@ -277,6 +295,7 @@ fn apply_remote_event(
                     updated_at,
                     now,
                     remote.remote_updated_at,
+                    remote.conference_url,
                 ],
             )?;
             stats.inserted += 1;
@@ -292,13 +311,18 @@ fn apply_remote_event(
                 stats.kept_local += 1;
                 return Ok(());
             }
-            // Server wins (anche su pending_update/pending_delete con etag diverso).
+            // Server wins (anche su pending_update/pending_delete con etag diverso), ma la
+            // versione locale scartata viene prima salvata in `event_conflicts`.
+            if has_local_changes {
+                record_conflict(conn, &id, "remote_changed")?;
+                stats.conflicts += 1;
+            }
             conn.execute(
                 "UPDATE events SET title = ?1, description = ?2, location = ?3, \"start\" = ?4,
                         \"end\" = ?5, start_ts = ?6, end_ts = ?7, timezone = ?8, all_day = ?9,
                         recurrence_rule = ?10, status = ?11, etag = ?12, updated_at = ?13,
-                        sync_status = 'synced', remote_updated_at = ?14
-                 WHERE id = ?15",
+                        sync_status = 'synced', remote_updated_at = ?14, conference_url = ?15
+                 WHERE id = ?16",
                 params![
                     remote.title,
                     remote.description,
@@ -314,6 +338,7 @@ fn apply_remote_event(
                     remote.etag,
                     updated_at,
                     remote.remote_updated_at,
+                    remote.conference_url,
                     id,
                 ],
             )?;
@@ -361,5 +386,28 @@ fn replace_attendees_and_reminders(
             ],
         )?;
     }
+    Ok(())
+}
+
+/// Salva in `event_conflicts` lo snapshot (JSON) della versione locale che sta per essere
+/// scartata. Lo snapshot contiene il contenuto dell'evento: resta solo nel DB locale, mai nei log.
+fn record_conflict(conn: &Connection, event_id: &str, reason: &str) -> AppResult<()> {
+    let event = crate::db::repo::get_event(conn, event_id)?;
+    let snapshot = serde_json::to_string(&event)
+        .map_err(|err| crate::error::AppError::Internal(format!("conflict snapshot: {err}")))?;
+    conn.execute(
+        "INSERT INTO event_conflicts (id, event_id, calendar_id, reason, local_sync_status,
+                                      local_snapshot, detected_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            uuid::Uuid::new_v4().to_string(),
+            event_id,
+            event.calendar_id,
+            reason,
+            event.sync_status,
+            snapshot,
+            now_iso(),
+        ],
+    )?;
     Ok(())
 }

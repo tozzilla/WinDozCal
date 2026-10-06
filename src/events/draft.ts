@@ -1,5 +1,6 @@
-import type { Event, EventStatus, NewEvent } from "@/types";
+import type { Attendee, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
 import { addDays, localTimezone, toIsoWithOffset } from "@/utils/date";
+import { isValidConferenceUrl, validateAttendees, validateReminders } from "@/utils/validation";
 
 export type RecurrencePreset = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -11,8 +12,8 @@ const RRULE: Record<Exclude<RecurrencePreset, "none">, string> = {
 };
 
 /**
- * Stato del form dell'editor (PRD §7). `videoconference`, `attendees` e `reminderMinutes` sono
- * raccolti dalla UI ma non hanno ancora un campo nel contratto `Event`: non vengono inviati.
+ * Stato del form dell'editor (PRD §7). Partecipanti e promemoria viaggiano a parte rispetto
+ * a `Event` (`NewAttendee[]`, `NewReminder[]`), come nei comandi `create_event`/`update_event`.
  */
 export interface EventDraft {
   title: string;
@@ -23,10 +24,10 @@ export interface EventDraft {
   calendarId: string;
   location: string;
   description: string;
-  videoconference: boolean;
-  attendees: string;
+  conferenceUrl: string;
+  attendees: NewAttendee[];
   recurrence: RecurrencePreset;
-  reminderMinutes: number | null;
+  reminders: NewReminder[];
   status: EventStatus;
 }
 
@@ -46,10 +47,10 @@ export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date }
     calendarId,
     location: "",
     description: "",
-    videoconference: false,
-    attendees: "",
+    conferenceUrl: "",
+    attendees: [],
     recurrence: "none",
-    reminderMinutes: 10,
+    reminders: [],
     status: "busy",
   };
 }
@@ -59,7 +60,7 @@ function presetFromRule(rule: string | null): RecurrencePreset {
   return (found?.[0] as RecurrencePreset | undefined) ?? "none";
 }
 
-export function eventToDraft(e: Event): EventDraft {
+export function eventToDraft(e: Event, attendees: Attendee[] = [], reminders: Reminder[] = []): EventDraft {
   const start = new Date(e.start);
   const end = new Date(e.end);
   return {
@@ -67,6 +68,9 @@ export function eventToDraft(e: Event): EventDraft {
     title: e.title,
     allDay: e.all_day,
     location: e.location ?? "",
+    conferenceUrl: e.conference_url ?? "",
+    attendees: attendees.map((a) => ({ email: a.email, name: a.name })),
+    reminders: reminders.map((r) => ({ minutes_before: r.minutes_before, type: r.type })),
     description: e.description ?? "",
     recurrence: presetFromRule(e.recurrence_rule),
     status: e.status,
@@ -86,6 +90,7 @@ export function draftToFields(d: EventDraft): NewEvent {
     title: d.title.trim(),
     description: d.description.trim() || null,
     location: d.location.trim() || null,
+    conference_url: d.conferenceUrl.trim() || null,
     start: toIsoWithOffset(start),
     end: toIsoWithOffset(end),
     timezone: localTimezone(),
@@ -93,4 +98,15 @@ export function draftToFields(d: EventDraft): NewEvent {
     recurrence_rule: d.recurrence === "none" ? null : RRULE[d.recurrence],
     status: d.status,
   };
+}
+
+/** Messaggi di validazione da mostrare prima dell'invio; lista vuota = form valido. */
+export function validateDraft(d: EventDraft): string[] {
+  const errors: string[] = [];
+  if (!d.title.trim()) errors.push("Il titolo è obbligatorio.");
+  if (!d.calendarId) errors.push("Scegli un calendario.");
+  if (d.conferenceUrl.trim() && !isValidConferenceUrl(d.conferenceUrl)) {
+    errors.push("Il link della videoconferenza deve iniziare con http:// o https://.");
+  }
+  return [...errors, ...validateAttendees(d.attendees), ...validateReminders(d.reminders)];
 }

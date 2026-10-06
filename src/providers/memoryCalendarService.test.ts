@@ -3,7 +3,7 @@ import type { NewEvent } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 
 const event = (calendar_id: string): NewEvent => ({
-  calendar_id, title: "Prova", description: null, location: null,
+  calendar_id, title: "Prova", description: null, location: null, conference_url: null,
   start: "2026-10-06T09:00:00+02:00", end: "2026-10-06T10:00:00+02:00", timezone: "Europe/Rome",
   all_day: false, recurrence_rule: null, status: "busy",
 });
@@ -28,7 +28,7 @@ describe("memoryCalendarService", () => {
     await svc.createLocalAccount("Questo computer");
     const [cal] = await svc.listCalendars();
 
-    const created = await svc.createEvent(event(cal.id));
+    const { event: created } = await svc.createEvent(event(cal.id), [], []);
     expect(created.sync_status).toBe("synced");
     const range = ["2026-10-05T00:00:00+02:00", "2026-10-12T00:00:00+02:00"] as const;
     expect((await svc.listEvents(...range)).map((e) => e.id)).toEqual([created.id]);
@@ -40,5 +40,57 @@ describe("memoryCalendarService", () => {
   it("rifiuta create_calendar su account non locali", async () => {
     const svc = createMemoryCalendarService(true);
     await expect(svc.createCalendar("acc-google", "X", "#000000")).rejects.toThrow();
+  });
+
+  describe("partecipanti e promemoria", () => {
+    const setup = async () => {
+      const svc = createMemoryCalendarService();
+      await svc.createLocalAccount("Questo computer");
+      const [cal] = await svc.listCalendars();
+      return { svc, cal };
+    };
+
+    it("get_event restituisce ciò che create_event ha salvato", async () => {
+      const { svc, cal } = await setup();
+      const created = await svc.createEvent(
+        { ...event(cal.id), conference_url: "https://meet.example.com/abc" },
+        [{ email: "anna@example.com", name: "Anna" }, { email: "bruno@example.com", name: null }],
+        [{ minutes_before: 10, type: "popup" }],
+      );
+      const detail = await svc.getEvent(created.event.id);
+      expect(detail.event.conference_url).toBe("https://meet.example.com/abc");
+      expect(detail.attendees.map((a) => [a.email, a.name, a.status])).toEqual([
+        ["anna@example.com", "Anna", "needs_action"],
+        ["bruno@example.com", null, "needs_action"],
+      ]);
+      expect(detail.reminders.map((r) => [r.minutes_before, r.type])).toEqual([[10, "popup"]]);
+    });
+
+    it("update_event sostituisce gli array invece di accodarli", async () => {
+      const { svc, cal } = await setup();
+      const { event: created } = await svc.createEvent(
+        event(cal.id),
+        [{ email: "anna@example.com", name: null }],
+        [{ minutes_before: 10, type: "popup" }],
+      );
+      await svc.updateEvent(created, [{ email: "carla@example.com", name: null }], [{ minutes_before: 60, type: "email" }]);
+      const detail = await svc.getEvent(created.id);
+      expect(detail.attendees.map((a) => a.email)).toEqual(["carla@example.com"]);
+      expect(detail.reminders.map((r) => [r.minutes_before, r.type])).toEqual([[60, "email"]]);
+
+      await svc.updateEvent(created, [], []);
+      expect((await svc.getEvent(created.id)).attendees).toEqual([]);
+    });
+
+    it("rifiuta email non valide, duplicati e minuti fuori intervallo senza salvare nulla", async () => {
+      const { svc, cal } = await setup();
+      await expect(svc.createEvent(event(cal.id), [{ email: "non-una-email", name: null }], [])).rejects.toThrow(/email non valido/);
+      await expect(
+        svc.createEvent(event(cal.id), [{ email: "a@x.it", name: null }, { email: "A@x.it", name: null }], []),
+      ).rejects.toThrow(/duplicato/);
+      await expect(svc.createEvent(event(cal.id), [], [{ minutes_before: -5, type: "popup" }])).rejects.toThrow(/Promemoria/);
+      await expect(svc.createEvent(event(cal.id), [], [{ minutes_before: 1.5, type: "popup" }])).rejects.toThrow(/Promemoria/);
+      expect(await svc.listEvents("2026-10-05T00:00:00+02:00", "2026-10-12T00:00:00+02:00")).toEqual([]);
+    });
   });
 });

@@ -102,6 +102,8 @@ pub struct Event {
     pub title: String,
     pub description: Option<String>,
     pub location: Option<String>,
+    /// Link della videoconferenza (Meet, Teams, Zoom, Webex; PRD 7, 29).
+    pub conference_url: Option<String>,
     /// ISO 8601 con offset (oppure `YYYY-MM-DD` per gli eventi all-day).
     pub start: String,
     pub end: String,
@@ -128,6 +130,7 @@ pub struct NewEvent {
     pub title: String,
     pub description: Option<String>,
     pub location: Option<String>,
+    pub conference_url: Option<String>,
     pub start: String,
     pub end: String,
     pub timezone: String,
@@ -136,7 +139,30 @@ pub struct NewEvent {
     pub recurrence_rule: Option<String>,
     #[serde(default = "default_event_status")]
     pub status: EventStatus,
-    // TODO: attendees e reminders in creazione (le tabelle esistono, nessun comando IPC le espone).
+}
+
+/// Partecipante inviato dal frontend: lo stato iniziale e' sempre `needs_action`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NewAttendee {
+    pub email: String,
+    pub name: Option<String>,
+}
+
+/// Promemoria inviato dal frontend.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NewReminder {
+    pub minutes_before: i64,
+    /// `popup` | `email`.
+    #[serde(rename = "type")]
+    pub r#type: String,
+}
+
+/// Risposta di `get_event`, `create_event` e `update_event`.
+#[derive(Debug, Clone, Serialize)]
+pub struct EventDetail {
+    pub event: Event,
+    pub attendees: Vec<Attendee>,
+    pub reminders: Vec<Reminder>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -145,7 +171,7 @@ pub struct Attendee {
     pub event_id: String,
     pub email: String,
     pub name: Option<String>,
-    /// accepted | declined | tentative | needs_action (non fissato dal contratto).
+    /// `needs_action` | `accepted` | `declined` | `tentative`.
     pub status: String,
 }
 
@@ -154,7 +180,7 @@ pub struct Reminder {
     pub id: String,
     pub event_id: String,
     pub minutes_before: i64,
-    /// popup | email (non fissato dal contratto).
+    /// `popup` | `email`.
     #[serde(rename = "type")]
     pub r#type: String,
 }
@@ -200,6 +226,7 @@ pub struct RemoteEvent {
     pub title: String,
     pub description: Option<String>,
     pub location: Option<String>,
+    pub conference_url: Option<String>,
     pub start: String,
     pub end: String,
     pub timezone: String,

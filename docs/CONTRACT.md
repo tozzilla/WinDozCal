@@ -19,9 +19,9 @@ Regole: nessun import di provider o di `@tauri-apps/api` in `src/components` o `
 
 - `Account`: id, provider (`"local" | "google" | "microsoft" | "caldav"`), name, email (stringa vuota per `local`), sync_status, last_sync
 - `Calendar`: id, account_id, remote_id, name, color, visible, read_only
-- `Event`: id, calendar_id, remote_id, title, description, location, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at
-- `Attendee`: id, event_id, email, name, status
-- `Reminder`: id, event_id, minutes_before, type
+- `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at
+- `Attendee`: id, event_id, email, name (nullable), status (`"needs_action" | "accepted" | "declined" | "tentative"`)
+- `Reminder`: id, event_id, minutes_before, type (`"popup" | "email"`)
 - `SyncState`: account_id, calendar_id, cursor (sync token / delta link / CalDAV sync-token), updated_at
 
 Valori:
@@ -31,7 +31,13 @@ Valori:
 - id locali: UUID v4 stringa
 - `NewEvent` = `Event` senza id, remote_id, etag, updated_at, sync_status, local_updated_at, remote_updated_at
 - campi opzionali (remote_id, description, location, recurrence_rule, etag, timestamp, `Account.last_sync`, `SyncState.cursor`): `Option<String>` in Rust, `string | null` in TS
-- Aperto: partecipanti, promemoria e videoconferenza nell'editor non hanno ancora un payload IPC (decidere tra `EventDetail` e comandi dedicati)
+- `conference_url` (nullable): link della videoconferenza (Meet, Teams, Zoom, Webex; PRD §7, §29). Campo in più rispetto a §12, vedi ADR 010
+- `EventDetail` = `{ event: Event, attendees: Attendee[], reminders: Reminder[] }`
+- `NewAttendee` = `{ email, name }` (status iniziale `needs_action`); `NewReminder` = `{ minutes_before, type }`
+- `list_events` e `search_events` restituiscono solo `Event` (niente partecipanti/promemoria: restano leggeri); il dettaglio si legge con `get_event`
+- Su calendari `local` partecipanti e promemoria si salvano ma non si invia alcun invito
+- Validazione (uguale su frontend e backend): email `x@y.z` senza duplicati case-insensitive nello stesso evento; `minutes_before` intero 0..40320; `conference_url` solo http/https
+- In `update_event` un partecipante già presente (stessa email, case-insensitive) conserva il proprio `status`; solo i nuovi partono da `needs_action`
 
 ## CalendarProvider (PRD §16) — trait Rust async
 
@@ -53,8 +59,9 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `list_calendars` | — | `Calendar[]` |
 | `set_calendar_visibility` | `calendarId, visible` | `void` |
 | `list_events` | `rangeStart, rangeEnd` (ISO) | `Event[]` (solo calendari visibili) |
-| `create_event` | `event: NewEvent` | `Event` (sync_status=pending_create) |
-| `update_event` | `event: Event` | `Event` (sync_status=pending_update) |
+| `get_event` | `eventId` | `EventDetail` |
+| `create_event` | `event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (sync_status=pending_create, `synced` su calendari local) |
+| `update_event` | `event: Event, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (pending_update, `synced` su local); gli array sostituiscono interamente quelli esistenti |
 | `delete_event` | `eventId` | `void` (pending_delete) |
 | `search_events` | `query` | `Event[]` |
 | `sync_now` | `accountId?` | `void` |

@@ -11,7 +11,9 @@ use tauri_plugin_opener::OpenerExt;
 
 use crate::db::repo;
 use crate::error::{AppError, AppResult};
-use crate::models::{Account, Calendar, Event, EventSyncStatus, NewEvent};
+use crate::models::{
+    Account, Calendar, Event, EventDetail, EventSyncStatus, NewAttendee, NewEvent, NewReminder,
+};
 use crate::state::AppState;
 
 #[tauri::command]
@@ -69,18 +71,39 @@ pub async fn list_events(
 }
 
 #[tauri::command]
-pub async fn create_event(state: State<'_, AppState>, event: NewEvent) -> AppResult<Event> {
-    let created = state.db.with(|conn| repo::insert_event(conn, &event))?;
-    if created.sync_status != EventSyncStatus::Synced {
+pub async fn get_event(state: State<'_, AppState>, event_id: String) -> AppResult<EventDetail> {
+    state
+        .db
+        .with(|conn| repo::get_event_detail(conn, &event_id))
+}
+
+#[tauri::command]
+pub async fn create_event(
+    state: State<'_, AppState>,
+    event: NewEvent,
+    attendees: Vec<NewAttendee>,
+    reminders: Vec<NewReminder>,
+) -> AppResult<EventDetail> {
+    let created = state
+        .db
+        .with(|conn| repo::insert_event(conn, &event, &attendees, &reminders))?;
+    if created.event.sync_status != EventSyncStatus::Synced {
         state.sync.request(None);
     }
     Ok(created)
 }
 
 #[tauri::command]
-pub async fn update_event(state: State<'_, AppState>, event: Event) -> AppResult<Event> {
-    let updated = state.db.with(|conn| repo::update_event(conn, &event))?;
-    if updated.sync_status != EventSyncStatus::Synced {
+pub async fn update_event(
+    state: State<'_, AppState>,
+    event: Event,
+    attendees: Vec<NewAttendee>,
+    reminders: Vec<NewReminder>,
+) -> AppResult<EventDetail> {
+    let updated = state
+        .db
+        .with(|conn| repo::update_event(conn, &event, &attendees, &reminders))?;
+    if updated.event.sync_status != EventSyncStatus::Synced {
         state.sync.request(None);
     }
     Ok(updated)

@@ -8,6 +8,9 @@ pub mod migrations;
 pub mod repo;
 pub mod sync_repo;
 
+#[cfg(test)]
+mod tests;
+
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 

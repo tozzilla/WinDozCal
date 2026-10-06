@@ -1,4 +1,5 @@
-import type { Account, Calendar, Event, NewEvent } from "@/types";
+import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
+import { validateAttendees, validateReminders } from "@/utils/validation";
 import { addDays, localTimezone, startOfWeek, toIsoWithOffset } from "@/utils/date";
 import type { CalendarService } from "./calendarService";
 
@@ -37,7 +38,7 @@ function seedEvents(): Event[] {
     start.setHours(h, m, 0, 0);
     const end = new Date(start.getTime() + minutes * 60_000);
     return {
-      id, calendar_id, remote_id: null, title, description: null, location: null,
+      id, calendar_id, remote_id: null, title, description: null, location: null, conference_url: null,
       start: toIsoWithOffset(start), end: toIsoWithOffset(end), timezone: localTimezone(),
       all_day: false, recurrence_rule: null, status: "busy", etag: null, updated_at: null,
       sync_status: "synced", local_updated_at: null, remote_updated_at: null, ...extra,
@@ -59,10 +60,27 @@ export function createMemoryCalendarService(demo = false): CalendarService {
   const accounts: Account[] = demo ? demoAccounts() : [];
   const calendars: Calendar[] = demo ? demoCalendars() : [];
   let events: Event[] = demo ? seedEvents() : [];
+  const attendeesByEvent = new Map<string, Attendee[]>();
+  const remindersByEvent = new Map<string, Reminder[]>();
   let nextId = 1;
   const newId = (prefix: string) => `${prefix}-${nextId++}`;
   const isLocal = (calendarId: string) =>
     accounts.find((a) => a.id === calendars.find((c) => c.id === calendarId)?.account_id)?.provider === "local";
+
+  const validate = (attendees: NewAttendee[], reminders: NewReminder[]) => {
+    const errors = [...validateAttendees(attendees), ...validateReminders(reminders)];
+    if (errors.length > 0) throw new Error(errors.join(" "));
+  };
+  // Gli array sostituiscono interamente quelli esistenti, come nel backend.
+  const storeExtras = (eventId: string, attendees: NewAttendee[], reminders: NewReminder[]) => {
+    attendeesByEvent.set(
+      eventId,
+      attendees.map((a) => ({ id: newId("att"), event_id: eventId, email: a.email.trim(), name: a.name?.trim() || null, status: "needs_action" })),
+    );
+    remindersByEvent.set(eventId, reminders.map((r) => ({ id: newId("rem"), event_id: eventId, ...r })));
+  };
+  const detailOf = (event: Event): EventDetail =>
+    structuredClone({ event, attendees: attendeesByEvent.get(event.id) ?? [], reminders: remindersByEvent.get(event.id) ?? [] });
 
   return {
     async listAccounts() {
@@ -102,7 +120,13 @@ export function createMemoryCalendarService(demo = false): CalendarService {
         events.filter((e) => visible.has(e.calendar_id) && new Date(e.start).getTime() < to && new Date(e.end).getTime() > from),
       );
     },
-    async createEvent(input: NewEvent) {
+    async getEvent(eventId) {
+      const event = events.find((e) => e.id === eventId);
+      if (!event) throw new Error(`Evento non trovato: ${eventId}`);
+      return detailOf(event);
+    },
+    async createEvent(input: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]) {
+      validate(attendees, reminders);
       const created: Event = {
         ...input,
         id: newId("ev"), remote_id: null, etag: null, updated_at: null,
@@ -111,19 +135,24 @@ export function createMemoryCalendarService(demo = false): CalendarService {
         local_updated_at: toIsoWithOffset(new Date()), remote_updated_at: null,
       };
       events.push(created);
-      return structuredClone(created);
+      storeExtras(created.id, attendees, reminders);
+      return detailOf(created);
     },
-    async updateEvent(event) {
+    async updateEvent(event, attendees, reminders) {
+      validate(attendees, reminders);
       const updated: Event = {
         ...event,
         sync_status: isLocal(event.calendar_id) ? "synced" : "pending_update",
         local_updated_at: toIsoWithOffset(new Date()),
       };
       events = events.map((e) => (e.id === event.id ? updated : e));
-      return structuredClone(updated);
+      storeExtras(updated.id, attendees, reminders);
+      return detailOf(updated);
     },
     async deleteEvent(eventId) {
       events = events.filter((e) => e.id !== eventId);
+      attendeesByEvent.delete(eventId);
+      remindersByEvent.delete(eventId);
     },
     async searchEvents(query) {
       const q = query.trim().toLowerCase();

@@ -1,5 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Event, NewEvent } from "@/types";
+import type { Event, NewAttendee, NewEvent, NewReminder } from "@/types";
 import { calendarService } from "./calendarService";
 
 export const queryClient = new QueryClient({
@@ -10,6 +10,7 @@ export const keys = {
   accounts: ["accounts"] as const,
   calendars: ["calendars"] as const,
   events: (start: string, end: string) => ["events", start, end] as const,
+  detail: (eventId: string) => ["events", "detail", eventId] as const,
   search: (query: string) => ["events", "search", query] as const,
 };
 
@@ -22,6 +23,15 @@ export const useEvents = (rangeStart: string, rangeEnd: string) =>
     queryKey: keys.events(rangeStart, rangeEnd),
     queryFn: () => calendarService.listEvents(rangeStart, rangeEnd),
     placeholderData: (previous) => previous,
+  });
+
+/** Dettaglio (partecipanti e promemoria) di un evento esistente; `null` = nessuna query. */
+export const useEventDetail = (eventId: string | null) =>
+  useQuery({
+    queryKey: keys.detail(eventId ?? ""),
+    queryFn: () => calendarService.getEvent(eventId as string),
+    enabled: eventId !== null,
+    staleTime: 0,
   });
 
 export const useSearchEvents = (query: string) =>
@@ -67,12 +77,14 @@ export function useSetCalendarVisibility() {
 
 export function useCreateEvent() {
   const invalidate = useInvalidate();
-  return useMutation({ mutationFn: (event: NewEvent) => calendarService.createEvent(event), onSuccess: () => invalidate() });
+  return useMutation({ mutationFn: (v: { event: NewEvent; attendees: NewAttendee[]; reminders: NewReminder[] }) =>
+      calendarService.createEvent(v.event, v.attendees, v.reminders), onSuccess: () => invalidate() });
 }
 
 export function useUpdateEvent() {
   const invalidate = useInvalidate();
-  return useMutation({ mutationFn: (event: Event) => calendarService.updateEvent(event), onSuccess: () => invalidate() });
+  return useMutation({ mutationFn: (v: { event: Event; attendees: NewAttendee[]; reminders: NewReminder[] }) =>
+      calendarService.updateEvent(v.event, v.attendees, v.reminders), onSuccess: () => invalidate() });
 }
 
 export function useDeleteEvent() {

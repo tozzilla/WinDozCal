@@ -33,6 +33,8 @@ export interface Event {
   title: string;
   description: string | null;
   location: string | null;
+  /** Link della videoconferenza (Meet, Teams, Zoom, Webex). */
+  conference_url: string | null;
   /** ISO 8601 con offset. */
   start: string;
   /** ISO 8601 con offset. */
@@ -55,19 +57,40 @@ export type NewEvent = Omit<
   "id" | "remote_id" | "etag" | "updated_at" | "sync_status" | "local_updated_at" | "remote_updated_at"
 >;
 
+export type AttendeeStatus = "needs_action" | "accepted" | "declined" | "tentative";
+export type ReminderType = "popup" | "email";
+
 export interface Attendee {
   id: string;
   event_id: string;
   email: string;
   name: string | null;
-  status: string;
+  status: AttendeeStatus;
 }
 
 export interface Reminder {
   id: string;
   event_id: string;
   minutes_before: number;
-  type: string;
+  type: ReminderType;
+}
+
+/** Payload di scrittura: lo status iniziale è `needs_action`. */
+export interface NewAttendee {
+  email: string;
+  name: string | null;
+}
+
+export interface NewReminder {
+  minutes_before: number;
+  type: ReminderType;
+}
+
+/** Ritorno di `get_event`, `create_event` e `update_event`. */
+export interface EventDetail {
+  event: Event;
+  attendees: Attendee[];
+  reminders: Reminder[];
 }
 
 export interface SyncState {
