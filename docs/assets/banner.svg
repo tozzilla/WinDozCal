@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="WinDozCal — the Windows calendar that was missing">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#14233f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+
+  <!-- stylised week grid -->
+  <g transform="translate(720 60)" opacity="0.95">
+    <rect width="400" height="240" rx="14" fill="#101b31" stroke="#24365c"/>
+    <g fill="#5f7299" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="13">
+      <text x="44" y="28">Mon</text><text x="96" y="28">Tue</text><text x="148" y="28">Wed</text>
+      <text x="200" y="28">Thu</text><text x="252" y="28">Fri</text><text x="304" y="28">Sat</text><text x="354" y="28">Sun</text>
+    </g>
+    <g stroke="#1d2c4b">
+      <line x1="30" y1="40" x2="30" y2="228"/><line x1="82" y1="40" x2="82" y2="228"/><line x1="134" y1="40" x2="134" y2="228"/>
+      <line x1="186" y1="40" x2="186" y2="228"/><line x1="238" y1="40" x2="238" y2="228"/><line x1="290" y1="40" x2="290" y2="228"/>
+      <line x1="342" y1="40" x2="342" y2="228"/>
+      <line x1="30" y1="86" x2="394" y2="86"/><line x1="30" y1="132" x2="394" y2="132"/><line x1="30" y1="178" x2="394" y2="178"/>
+    </g>
+    <rect x="34" y="50" width="44" height="52" rx="6" fill="#4f8cff"/>
+    <rect x="138" y="92" width="44" height="34" rx="6" fill="#34c38f"/>
+    <rect x="190" y="56" width="44" height="70" rx="6" fill="#7c5cff"/>
+    <rect x="242" y="140" width="44" height="40" rx="6" fill="#f5a524"/>
+    <rect x="86" y="150" width="44" height="60" rx="6" fill="#4f8cff" opacity="0.7"/>
+    <rect x="294" y="100" width="44" height="30" rx="6" fill="#34c38f" opacity="0.8"/>
+  </g>
+
+  <g font-family="Segoe UI, Inter, Arial, sans-serif">
+    <text x="72" y="140" font-size="64" font-weight="700" fill="#ffffff">WinDozCal</text>
+    <rect x="76" y="162" width="96" height="6" rx="3" fill="url(#accent)"/>
+    <text x="72" y="214" font-size="30" fill="#d6e1f5">The Windows calendar that was missing.</text>
+    <text x="72" y="256" font-size="18" fill="#8a9bbd">Google · Microsoft 365 · CalDAV — local-first, open source, no cloud in between.</text>
+  </g>
+</svg>

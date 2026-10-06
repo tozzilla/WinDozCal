@@ -1,0 +1,48 @@
+[package]
+name = "windozcal"
+version = "0.1.0"
+description = "WinDozCal: calendario desktop local-first con sincronizzazione Google, Microsoft e CalDAV"
+authors = ["Andrea Tozzi"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "windozcal_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+# Versioni verificate su crates.io il 6 ott 2026 (max_stable_version), caret major.minor.
+tauri = { version = "2.12", features = ["tray-icon"] }
+tauri-plugin-opener = "2.7"
+tauri-plugin-notification = "2.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+async-trait = "0.1"
+tokio = { version = "1.53", features = ["sync", "time", "macros"] }
+uuid = { version = "1.27", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+# SQLite incluso nel binario (nessuna dipendenza di sistema). FTS5 e' abilitato dalla build bundled.
+rusqlite = { version = "0.40", features = ["bundled"] }
+# Logging strutturato su file (PRD 35).
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+# Windows Credential Manager (PRD 19). La feature di default `v1` espone l'API classica Entry.
+keyring = "4.2"
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
