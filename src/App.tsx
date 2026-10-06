@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { EventEditor } from "@/events/EventEditor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useTheme } from "@/hooks/useTheme";
+import { useTrayEvents } from "@/hooks/useTrayEvents";
 import { queryClient, useAccounts } from "@/providers/queries";
 import { SettingsPage } from "@/settings/SettingsPage";
 import { useUiStore } from "@/stores/uiStore";
@@ -13,6 +14,7 @@ import { useUiStore } from "@/stores/uiStore";
 function Shell() {
   useTheme();
   useKeyboardShortcuts();
+  useTrayEvents();
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const { data: accounts, isPending } = useAccounts();
 

@@ -73,6 +73,24 @@ fn default_event_status() -> EventStatus {
     EventStatus::Busy
 }
 
+/// Impostazioni generali (PRD 34 General), salvate in `app_settings`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Settings {
+    pub start_on_login: bool,
+    pub start_minimized: bool,
+    pub close_to_tray: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            start_on_login: false,
+            start_minimized: false,
+            close_to_tray: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: String,

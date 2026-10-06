@@ -10,6 +10,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/002_local_provider.sql"),
     include_str!("migrations/003_event_detail.sql"),
     include_str!("migrations/004_range_indexes.sql"),
+    include_str!("migrations/005_app_settings.sql"),
 ];
 
 pub fn run(conn: &mut Connection) -> AppResult<()> {

@@ -39,6 +39,11 @@ tracing-appender = "0.2"
 # Windows Credential Manager (PRD 19). La feature di default `v1` espone l'API classica Entry.
 keyring = "4.2"
 
+# Plugin solo desktop (come nel template ufficiale Tauri).
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-autostart = "2.7"
+tauri-plugin-single-instance = "2.5"
+
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
 codegen-units = 1

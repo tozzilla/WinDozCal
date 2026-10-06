@@ -93,4 +93,13 @@ describe("memoryCalendarService", () => {
       expect(await svc.listEvents("2026-10-05T00:00:00+02:00", "2026-10-12T00:00:00+02:00")).toEqual([]);
     });
   });
+
+  it("espone le impostazioni di default e le salva con un roundtrip", async () => {
+    const svc = createMemoryCalendarService();
+    expect(await svc.getSettings()).toEqual({ start_on_login: false, start_minimized: false, close_to_tray: true });
+
+    const saved = await svc.updateSettings({ start_on_login: true, start_minimized: true, close_to_tray: false });
+    expect(saved).toEqual({ start_on_login: true, start_minimized: true, close_to_tray: false });
+    expect(await svc.getSettings()).toEqual(saved);
+  });
 });

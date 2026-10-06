@@ -1,4 +1,4 @@
-import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder } from "@/types";
+import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Settings } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 import { tauriCalendarService } from "./tauriCalendarService";
 
@@ -25,6 +25,9 @@ export interface CalendarService {
   searchEvents(query: string): Promise<Event[]>;
   syncNow(accountId?: string): Promise<void>;
   openLogFolder(): Promise<void>;
+  getSettings(): Promise<Settings>;
+  /** Applica subito (il backend registra o rimuove l'avvio automatico) e restituisce lo stato salvato. */
+  updateSettings(settings: Settings): Promise<Settings>;
 }
 
 export const insideTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

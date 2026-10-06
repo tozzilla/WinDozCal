@@ -9,7 +9,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use crate::error::{AppError, AppResult};
 use crate::models::{
     Account, AccountSyncStatus, Attendee, Calendar, Event, EventDetail, EventSyncStatus,
-    NewAttendee, NewEvent, NewReminder, ProviderKind, Reminder,
+    NewAttendee, NewEvent, NewReminder, ProviderKind, Reminder, Settings,
 };
 use crate::timeutil::{now_iso, parse_ts};
 
@@ -285,6 +285,97 @@ pub fn list_events(conn: &Connection, range_start: &str, range_end: &str) -> App
     let mut stmt = conn.prepare(&list_events_sql())?;
     let rows = stmt.query_map(params![start_ts, end_ts], event_from_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Prossimo evento non ancora finito dei calendari visibili (in corso incluso), dal piu' vicino.
+///
+/// Semplificazioni (vedi `tray`): di una serie ricorrente conta solo l'evento base e gli eventi
+/// non ricorrenti piu' lunghi di `MAX_SPAN_SECS` non sono considerati (serve `start_ts >= now -
+/// MAX_SPAN` per usare l'indice senza scansionare tutto lo storico).
+pub fn next_event(conn: &Connection, now_ts: i64) -> AppResult<Option<Event>> {
+    let sql = format!(
+        "SELECT {EVENT_COLS}
+         FROM events e INDEXED BY idx_events_range JOIN calendars c ON c.id = e.calendar_id
+         WHERE c.visible = 1 AND e.sync_status <> 'pending_delete'
+           AND e.start_ts >= ?1 - {MAX_SPAN_SECS} AND e.end_ts > ?1
+         ORDER BY e.start_ts, e.end_ts
+         LIMIT 1"
+    );
+    Ok(conn
+        .query_row(&sql, params![now_ts], event_from_row)
+        .optional()?)
+}
+
+// ---------------------------------------------------------------------------
+// Impostazioni (tabella chiave/valore app_settings)
+// ---------------------------------------------------------------------------
+
+const KEY_START_ON_LOGIN: &str = "start_on_login";
+const KEY_START_MINIMIZED: &str = "start_minimized";
+const KEY_CLOSE_TO_TRAY: &str = "close_to_tray";
+/// Flag: la notifica "ancora attivo nel tray" e' gia' stata mostrata.
+pub const FLAG_TRAY_NOTICE_SHOWN: &str = "tray_notice_shown";
+
+fn get_value(conn: &Connection, key: &str) -> AppResult<Option<String>> {
+    Ok(conn
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = ?1",
+            params![key],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
+fn set_value(conn: &Connection, key: &str, value: &str) -> AppResult<()> {
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
+         ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+        params![key, value],
+    )?;
+    Ok(())
+}
+
+fn get_bool(conn: &Connection, key: &str, default: bool) -> AppResult<bool> {
+    Ok(match get_value(conn, key)?.as_deref() {
+        Some("true") => true,
+        Some("false") => false,
+        _ => default,
+    })
+}
+
+/// Impostazioni correnti; le chiavi mancanti prendono il default (`Settings::default`).
+pub fn get_settings(conn: &Connection) -> AppResult<Settings> {
+    let default = Settings::default();
+    Ok(Settings {
+        start_on_login: get_bool(conn, KEY_START_ON_LOGIN, default.start_on_login)?,
+        start_minimized: get_bool(conn, KEY_START_MINIMIZED, default.start_minimized)?,
+        close_to_tray: get_bool(conn, KEY_CLOSE_TO_TRAY, default.close_to_tray)?,
+    })
+}
+
+pub fn set_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
+    let tx = conn.unchecked_transaction()?;
+    set_value(
+        &tx,
+        KEY_START_ON_LOGIN,
+        &settings.start_on_login.to_string(),
+    )?;
+    set_value(
+        &tx,
+        KEY_START_MINIMIZED,
+        &settings.start_minimized.to_string(),
+    )?;
+    set_value(&tx, KEY_CLOSE_TO_TRAY, &settings.close_to_tray.to_string())?;
+    tx.commit()?;
+    Ok(())
+}
+
+pub fn get_flag(conn: &Connection, key: &str) -> AppResult<bool> {
+    get_bool(conn, key, false)
+}
+
+pub fn set_flag(conn: &Connection, key: &str) -> AppResult<()> {
+    set_value(conn, key, "true")
 }
 
 /// Costruisce una query FTS5 sicura: ogni parola diventa un prefisso tra virgolette, cosi'

@@ -7,14 +7,17 @@
 //! Argomenti: camelCase lato JS (`calendarId`), snake_case lato Rust (`calendar_id`).
 
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::db::repo;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     Account, Calendar, Event, EventDetail, EventSyncStatus, NewAttendee, NewEvent, NewReminder,
+    Settings,
 };
 use crate::state::AppState;
+use crate::tray;
 
 #[tauri::command]
 pub async fn list_accounts(state: State<'_, AppState>) -> AppResult<Vec<Account>> {
@@ -49,13 +52,16 @@ pub async fn list_calendars(state: State<'_, AppState>) -> AppResult<Vec<Calenda
 
 #[tauri::command]
 pub async fn set_calendar_visibility(
+    app: AppHandle,
     state: State<'_, AppState>,
     calendar_id: String,
     visible: bool,
 ) -> AppResult<()> {
     state
         .db
-        .with(|conn| repo::set_calendar_visibility(conn, &calendar_id, visible))
+        .with(|conn| repo::set_calendar_visibility(conn, &calendar_id, visible))?;
+    tray::refresh_next_event(&app);
+    Ok(())
 }
 
 /// Eventi dei calendari visibili nel range `[rangeStart, rangeEnd)` (ISO 8601).
@@ -79,6 +85,7 @@ pub async fn get_event(state: State<'_, AppState>, event_id: String) -> AppResul
 
 #[tauri::command]
 pub async fn create_event(
+    app: AppHandle,
     state: State<'_, AppState>,
     event: NewEvent,
     attendees: Vec<NewAttendee>,
@@ -90,11 +97,13 @@ pub async fn create_event(
     if created.event.sync_status != EventSyncStatus::Synced {
         state.sync.request(None);
     }
+    tray::refresh_next_event(&app);
     Ok(created)
 }
 
 #[tauri::command]
 pub async fn update_event(
+    app: AppHandle,
     state: State<'_, AppState>,
     event: Event,
     attendees: Vec<NewAttendee>,
@@ -106,15 +115,21 @@ pub async fn update_event(
     if updated.event.sync_status != EventSyncStatus::Synced {
         state.sync.request(None);
     }
+    tray::refresh_next_event(&app);
     Ok(updated)
 }
 
 #[tauri::command]
-pub async fn delete_event(state: State<'_, AppState>, event_id: String) -> AppResult<()> {
+pub async fn delete_event(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    event_id: String,
+) -> AppResult<()> {
     let needs_sync = state.db.with(|conn| repo::delete_event(conn, &event_id))?;
     if needs_sync {
         state.sync.request(None);
     }
+    tray::refresh_next_event(&app);
     Ok(())
 }
 
@@ -140,4 +155,30 @@ pub async fn open_log_folder(app: AppHandle) -> AppResult<()> {
     app.opener()
         .open_path(dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|err| AppError::Internal(format!("cannot open log folder: {err}")))
+}
+
+#[tauri::command]
+pub async fn get_settings(state: State<'_, AppState>) -> AppResult<Settings> {
+    state.db.with(|conn| repo::get_settings(conn))
+}
+
+/// Salva le impostazioni e le applica subito: registra o rimuove l'avvio automatico di Windows
+/// (voce `Run` con l'argomento `--autostart`). Se l'OS rifiuta la modifica nulla viene salvato.
+// TODO(verify-compile): `app.autolaunch().enable()/disable()` di tauri-plugin-autostart 2.7.
+#[tauri::command]
+pub async fn update_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    settings: Settings,
+) -> AppResult<Settings> {
+    let autolaunch = app.autolaunch();
+    let result = if settings.start_on_login {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    result.map_err(|err| AppError::Internal(format!("autostart update failed: {err}")))?;
+
+    state.db.with(|conn| repo::set_settings(conn, &settings))?;
+    state.db.with(|conn| repo::get_settings(conn))
 }

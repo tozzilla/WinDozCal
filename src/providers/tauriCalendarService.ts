@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, Calendar, Event, EventDetail } from "@/types";
+import type { Account, Calendar, Event, EventDetail, Settings } from "@/types";
 import type { CalendarService } from "./calendarService";
 
 // Argomenti in camelCase lato JS (convenzione Tauri 2); i nomi dei comandi sono quelli di docs/CONTRACT.md.
@@ -17,4 +17,6 @@ export const tauriCalendarService: CalendarService = {
   searchEvents: (query) => invoke<Event[]>("search_events", { query }),
   syncNow: (accountId) => invoke<void>("sync_now", { accountId }),
   openLogFolder: () => invoke<void>("open_log_folder"),
+  getSettings: () => invoke<Settings>("get_settings"),
+  updateSettings: (settings) => invoke<Settings>("update_settings", { settings }),
 };

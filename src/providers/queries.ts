@@ -1,5 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Event, NewAttendee, NewEvent, NewReminder } from "@/types";
+import type { Event, NewAttendee, NewEvent, NewReminder, Settings } from "@/types";
 import { calendarService } from "./calendarService";
 
 export const queryClient = new QueryClient({
@@ -11,6 +11,7 @@ export const keys = {
   calendars: ["calendars"] as const,
   events: (start: string, end: string) => ["events", start, end] as const,
   detail: (eventId: string) => ["events", "detail", eventId] as const,
+  settings: ["settings"] as const,
   search: (query: string) => ["events", "search", query] as const,
 };
 
@@ -33,6 +34,20 @@ export const useEventDetail = (eventId: string | null) =>
     enabled: eventId !== null,
     staleTime: 0,
   });
+
+/** Lettura imperativa del dettaglio (es. da un evento del tray), con la stessa cache di `useEventDetail`. */
+export const fetchEventDetail = (eventId: string) =>
+  queryClient.fetchQuery({ queryKey: keys.detail(eventId), queryFn: () => calendarService.getEvent(eventId), staleTime: 0 });
+
+export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: () => calendarService.getSettings() });
+
+export function useUpdateSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: Settings) => calendarService.updateSettings(settings),
+    onSuccess: (saved) => qc.setQueryData(keys.settings, saved),
+  });
+}
 
 export const useSearchEvents = (query: string) =>
   useQuery({

@@ -8,7 +8,7 @@ use super::sync_repo::*;
 use crate::db::migrations;
 use crate::models::{
     Event, EventStatus, EventSyncStatus, NewAttendee, NewEvent, NewReminder, ProviderKind,
-    RemoteEvent, RemoteEventRef, SyncResult,
+    RemoteEvent, RemoteEventRef, Settings, SyncResult,
 };
 
 fn setup() -> Connection {
@@ -708,4 +708,171 @@ fn list_events_includes_long_and_recurring_events_started_before_window() {
         titles,
         vec!["Ricorrente", "Lungo che copre la finestra", "Dentro"]
     );
+}
+
+// ---------------------------------------------------------------------------
+// Impostazioni e prossimo evento (tray)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn settings_default_and_roundtrip() {
+    let conn = setup();
+    let defaults = get_settings(&conn).unwrap();
+    assert_eq!(
+        (
+            defaults.start_on_login,
+            defaults.start_minimized,
+            defaults.close_to_tray
+        ),
+        (false, false, true)
+    );
+
+    let changed = Settings {
+        start_on_login: true,
+        start_minimized: true,
+        close_to_tray: false,
+    };
+    set_settings(&conn, &changed).unwrap();
+    assert_eq!(get_settings(&conn).unwrap(), changed);
+    // Nessuna riga duplicata dopo un secondo salvataggio.
+    set_settings(&conn, &changed).unwrap();
+    let rows: i64 = conn
+        .query_row("SELECT COUNT(*) FROM app_settings", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(rows, 3);
+
+    // Flag di stato indipendente dalle impostazioni.
+    assert!(!get_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap());
+    set_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap();
+    assert!(get_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap());
+    assert_eq!(get_settings(&conn).unwrap(), changed);
+
+    // JSON del contratto.
+    let json = serde_json::to_value(defaults).unwrap();
+    assert_eq!(json["close_to_tray"], true);
+    assert_eq!(json["start_on_login"], false);
+}
+
+fn event_at(conn: &Connection, title: &str, calendar: &str, start: &str, end: &str) -> Event {
+    let mut ev = new_event(title);
+    ev.calendar_id = calendar.into();
+    ev.start = start.into();
+    ev.end = end.into();
+    insert_event(conn, &ev, &[], &[]).unwrap().event
+}
+
+#[test]
+fn next_event_skips_hidden_and_finished_and_includes_running() {
+    let conn = setup();
+    let now = crate::timeutil::parse_ts("2026-10-07T12:00:00Z").unwrap();
+    assert!(next_event(&conn, now).unwrap().is_none());
+
+    // Finito (termina alle 11:00): escluso.
+    event_at(
+        &conn,
+        "Finito",
+        "c1",
+        "2026-10-07T10:00:00Z",
+        "2026-10-07T11:00:00Z",
+    );
+    assert!(next_event(&conn, now).unwrap().is_none());
+
+    // Futuro ma in calendario nascosto: escluso.
+    set_calendar_visibility(&conn, "c2", false).unwrap();
+    event_at(
+        &conn,
+        "Nascosto",
+        "c2",
+        "2026-10-07T13:00:00Z",
+        "2026-10-07T14:00:00Z",
+    );
+    assert!(next_event(&conn, now).unwrap().is_none());
+
+    // Futuro visibile piu' lontano.
+    event_at(
+        &conn,
+        "Domani",
+        "c1",
+        "2026-10-08T09:00:00Z",
+        "2026-10-08T10:00:00Z",
+    );
+    assert_eq!(next_event(&conn, now).unwrap().unwrap().title, "Domani");
+
+    // Futuro visibile piu' vicino: vince.
+    event_at(
+        &conn,
+        "Oggi pomeriggio",
+        "c1",
+        "2026-10-07T15:00:00Z",
+        "2026-10-07T16:00:00Z",
+    );
+    assert_eq!(
+        next_event(&conn, now).unwrap().unwrap().title,
+        "Oggi pomeriggio"
+    );
+
+    // In corso (11:30-12:30): incluso e prima del successivo.
+    event_at(
+        &conn,
+        "In corso",
+        "c1",
+        "2026-10-07T11:30:00Z",
+        "2026-10-07T12:30:00Z",
+    );
+    assert_eq!(next_event(&conn, now).unwrap().unwrap().title, "In corso");
+
+    // Un evento cancellato (pending_delete) non conta.
+    let running = next_event(&conn, now).unwrap().unwrap();
+    make_synced(&conn, &running.id, "r-run", "e1");
+    delete_event(&conn, &running.id).unwrap();
+    assert_eq!(
+        next_event(&conn, now).unwrap().unwrap().title,
+        "Oggi pomeriggio"
+    );
+}
+
+#[test]
+fn next_event_label_formats_today_other_day_all_day_and_truncation() {
+    use chrono::{DateTime, FixedOffset};
+    let now: DateTime<FixedOffset> =
+        DateTime::parse_from_rfc3339("2026-10-07T09:00:00+02:00").unwrap();
+    let base = |title: &str, start: &str, all_day: bool| {
+        let mut ev = new_event(title);
+        ev.start = start.into();
+        ev.end = start.into();
+        ev.all_day = all_day;
+        let conn = setup();
+        let mut e = insert_event(&conn, &ev, &[], &[]).unwrap().event;
+        e.all_day = all_day;
+        e
+    };
+    // 15:30 +02:00 = oggi, ora locale 15:30.
+    let today = base("Riunione commerciale", "2026-10-07T15:30:00+02:00", false);
+    assert_eq!(
+        crate::tray::next_event_label(&today, now),
+        "15:30 Riunione commerciale"
+    );
+    // Altro giorno: data abbreviata + ora.
+    let other = base("Demo", "2026-10-09T08:05:00+02:00", false);
+    assert_eq!(
+        crate::tray::next_event_label(&other, now),
+        "Fri 09 Oct 08:05 Demo"
+    );
+    // Il fuso di visualizzazione e' quello di `now`: 23:30 UTC del 7 = 01:30 dell'8 in +02:00.
+    let tz = base("Notte", "2026-10-07T23:30:00+00:00", false);
+    assert_eq!(
+        crate::tray::next_event_label(&tz, now),
+        "Thu 08 Oct 01:30 Notte"
+    );
+    // A giornata intera: solo data.
+    let all_day = base("Ferie", "2026-10-12T00:00:00+02:00", true);
+    assert_eq!(
+        crate::tray::next_event_label(&all_day, now),
+        "Mon 12 Oct Ferie"
+    );
+    // Titolo lungo troncato a 40 caratteri (con ellissi).
+    let long = base(&"x".repeat(80), "2026-10-07T15:30:00+02:00", false);
+    let label = crate::tray::next_event_label(&long, now);
+    assert_eq!(label.chars().count(), "15:30 ".len() + 40);
+    assert!(label.ends_with('…'));
 }

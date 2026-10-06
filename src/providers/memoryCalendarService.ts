@@ -1,4 +1,4 @@
-import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
+import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder, Settings } from "@/types";
 import { validateAttendees, validateReminders } from "@/utils/validation";
 import { addDays, localTimezone, startOfWeek, toIsoWithOffset } from "@/utils/date";
 import type { CalendarService } from "./calendarService";
@@ -62,6 +62,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
   let events: Event[] = demo ? seedEvents() : [];
   const attendeesByEvent = new Map<string, Attendee[]>();
   const remindersByEvent = new Map<string, Reminder[]>();
+  let settings: Settings = { start_on_login: false, start_minimized: false, close_to_tray: true };
   let nextId = 1;
   const newId = (prefix: string) => `${prefix}-${nextId++}`;
   const isLocal = (calendarId: string) =>
@@ -161,5 +162,12 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     },
     async syncNow() {},
     async openLogFolder() {},
+    async getSettings() {
+      return { ...settings };
+    },
+    async updateSettings(next) {
+      settings = { ...next };
+      return { ...settings };
+    },
   };
 }

@@ -100,5 +100,12 @@ export interface SyncState {
   updated_at: string | null;
 }
 
+/** Impostazioni generali (PRD §34), salvate dal backend in SQLite. */
+export interface Settings {
+  start_on_login: boolean;
+  start_minimized: boolean;
+  close_to_tray: boolean;
+}
+
 export type CalendarView = "day" | "week" | "month" | "agenda";
 export type ThemeMode = "light" | "dark" | "system";

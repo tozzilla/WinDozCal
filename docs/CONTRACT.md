@@ -79,6 +79,26 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 - nessuna credenziale, nessun accesso di rete;
 - si possono aggiungere account esterni in seguito, e un account locale può convivere con loro.
 
+## System tray e impostazioni generali (anticipo dello stage 7, 6 ott 2026)
+
+Comandi:
+
+| Comando | Argomenti | Ritorno |
+|---|---|---|
+| `get_settings` | — | `Settings` |
+| `update_settings` | `settings: Settings` | `Settings` (applica subito: registra/rimuove l'avvio automatico) |
+
+`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean }`; default `false`, `false`, `true`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
+
+Eventi backend -> frontend (Tauri `emit`, nomi esatti):
+- `tray-new-event` (nessun payload): il frontend apre l'editor di un nuovo evento
+- `tray-open-event` (payload `{ eventId }`): il frontend apre l'editor su quell'evento
+
+Comportamento:
+- con `close_to_tray` la X nasconde la finestra; si esce solo da "Quit" nel menu del tray. La prima volta che succede, una notifica nativa avvisa che l'app resta nel tray
+- "Next event" nel menu mostra il prossimo evento non ancora finito dei calendari visibili (`HH:MM Titolo`, o "No upcoming events"), letto da SQLite; si aggiorna all'avvio, dopo ogni create/update/delete/visibilità, a fine sync e ogni 60 secondi; il clic apre l'evento
+- `start_minimized` vale solo quando l'app parte dall'avvio automatico di Windows (argomento `--autostart`): parte nascosta nel tray. Avvio manuale: finestra sempre visibile
+
 ## Costanti
 
 - Vite dev server: porta 1420 (`devUrl` in `tauri.conf.json`)

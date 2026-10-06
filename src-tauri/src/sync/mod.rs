@@ -81,6 +81,7 @@ async fn run_loop(app: AppHandle, db: Db, mut rx: mpsc::UnboundedReceiver<SyncRe
         if let Err(err) = app.emit(SYNC_FINISHED_EVENT, ()) {
             tracing::warn!(error = %err, "cannot notify frontend about sync end");
         }
+        crate::tray::refresh_next_event(&app);
     }
 }
 
