@@ -9,12 +9,15 @@ interface UiState {
   theme: ThemeMode;
   settingsOpen: boolean;
   searchOpen: boolean;
+  /** Messaggio breve non bloccante (errori di drag & drop, azioni non permesse). */
+  notice: string | null;
   setView: (view: CalendarView) => void;
   setCurrentDate: (date: Date) => void;
   toggleSidebar: () => void;
   setTheme: (theme: ThemeMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setSearchOpen: (open: boolean) => void;
+  setNotice: (notice: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -26,12 +29,14 @@ export const useUiStore = create<UiState>()(
       theme: "system",
       settingsOpen: false,
       searchOpen: false,
+      notice: null,
       setView: (view) => set({ view }),
       setCurrentDate: (currentDate) => set({ currentDate }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setTheme: (theme) => set({ theme }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSearchOpen: (searchOpen) => set({ searchOpen }),
+      setNotice: (notice) => set({ notice }),
     }),
     {
       name: "windozcal-ui",

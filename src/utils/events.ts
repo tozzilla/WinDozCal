@@ -18,3 +18,8 @@ export function eventsOnDay(events: Event[], day: Date): Event[] {
     })
     .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
 }
+
+/** Chiave univoca lato UI: le occorrenze di una serie condividono l'`id`. */
+export const eventKey = (e: Event) => `${e.id}|${e.occurrence_start ?? ""}`;
+
+export const isRecurring = (e: Event) => !!e.recurrence_rule;

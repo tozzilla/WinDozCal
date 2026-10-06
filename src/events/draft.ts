@@ -1,15 +1,7 @@
 import type { Attendee, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
 import { addDays, localTimezone, toIsoWithOffset } from "@/utils/date";
 import { isValidConferenceUrl, validateAttendees, validateReminders } from "@/utils/validation";
-
-export type RecurrencePreset = "none" | "daily" | "weekly" | "monthly" | "yearly";
-
-const RRULE: Record<Exclude<RecurrencePreset, "none">, string> = {
-  daily: "FREQ=DAILY",
-  weekly: "FREQ=WEEKLY",
-  monthly: "FREQ=MONTHLY",
-  yearly: "FREQ=YEARLY",
-};
+import { buildRecurrenceRule, parseRecurrence, type RecurrenceFreq, type Weekday } from "./recurrence";
 
 /**
  * Stato del form dell'editor (PRD §7). Partecipanti e promemoria viaggiano a parte rispetto
@@ -26,7 +18,11 @@ export interface EventDraft {
   description: string;
   conferenceUrl: string;
   attendees: NewAttendee[];
-  recurrence: RecurrencePreset;
+  recurrence: RecurrenceFreq;
+  /** Giorni scelti per la ricorrenza settimanale. */
+  recurrenceDays: Weekday[];
+  /** Regola con cui è stato aperto l'evento: da lì si conservano EXDATE e parametri non gestiti dall'editor. */
+  existingRule: string | null;
   reminders: NewReminder[];
   status: EventStatus;
 }
@@ -35,6 +31,14 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export const toDateInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const toTimeInput = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+/**
+ * Ora di fine di default per un nuovo evento. Il form ha una sola data, quindi se la fine cadrebbe
+ * il giorno dopo (evento creato alle 23:00) si limita alle 23:59 dello stesso giorno.
+ */
+export function defaultEndTime(start: Date, end: Date): string {
+  return toDateInput(end) === toDateInput(start) ? toTimeInput(end) : "23:59";
+}
+
 export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date } | null): EventDraft {
   const start = slot?.start ?? new Date(new Date().setMinutes(0, 0, 0));
   const end = slot?.end ?? new Date(start.getTime() + 60 * 60_000);
@@ -42,7 +46,7 @@ export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date }
     title: "",
     date: toDateInput(start),
     startTime: toTimeInput(start),
-    endTime: toTimeInput(end),
+    endTime: defaultEndTime(start, end),
     allDay: false,
     calendarId,
     location: "",
@@ -50,21 +54,20 @@ export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date }
     conferenceUrl: "",
     attendees: [],
     recurrence: "none",
+    recurrenceDays: [],
+    existingRule: null,
     reminders: [],
     status: "busy",
   };
 }
 
-function presetFromRule(rule: string | null): RecurrencePreset {
-  const found = Object.entries(RRULE).find(([, v]) => rule?.includes(v));
-  return (found?.[0] as RecurrencePreset | undefined) ?? "none";
-}
-
 export function eventToDraft(e: Event, attendees: Attendee[] = [], reminders: Reminder[] = []): EventDraft {
   const start = new Date(e.start);
   const end = new Date(e.end);
+  const spec = parseRecurrence(e.recurrence_rule);
   return {
     ...emptyDraft(e.calendar_id, { start, end }),
+    endTime: toTimeInput(end),
     title: e.title,
     allDay: e.all_day,
     location: e.location ?? "",
@@ -72,7 +75,9 @@ export function eventToDraft(e: Event, attendees: Attendee[] = [], reminders: Re
     attendees: attendees.map((a) => ({ email: a.email, name: a.name })),
     reminders: reminders.map((r) => ({ minutes_before: r.minutes_before, type: r.type })),
     description: e.description ?? "",
-    recurrence: presetFromRule(e.recurrence_rule),
+    recurrence: spec.freq,
+    recurrenceDays: spec.byDay,
+    existingRule: e.recurrence_rule,
     status: e.status,
   };
 }
@@ -95,7 +100,7 @@ export function draftToFields(d: EventDraft): NewEvent {
     end: toIsoWithOffset(end),
     timezone: localTimezone(),
     all_day: d.allDay,
-    recurrence_rule: d.recurrence === "none" ? null : RRULE[d.recurrence],
+    recurrence_rule: buildRecurrenceRule({ freq: d.recurrence, byDay: d.recurrenceDays }, d.existingRule),
     status: d.status,
   };
 }
@@ -105,6 +110,7 @@ export function validateDraft(d: EventDraft): string[] {
   const errors: string[] = [];
   if (!d.title.trim()) errors.push("Il titolo è obbligatorio.");
   if (!d.calendarId) errors.push("Scegli un calendario.");
+  if (d.recurrence === "weekly" && d.recurrenceDays.length === 0) errors.push("Scegli almeno un giorno della settimana per la ricorrenza.");
   if (d.conferenceUrl.trim() && !isValidConferenceUrl(d.conferenceUrl)) {
     errors.push("Il link della videoconferenza deve iniziare con http:// o https://.");
   }

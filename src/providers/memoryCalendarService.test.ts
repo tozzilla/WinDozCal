@@ -102,4 +102,28 @@ describe("memoryCalendarService", () => {
     expect(saved).toEqual({ start_on_login: true, start_minimized: true, close_to_tray: false });
     expect(await svc.getSettings()).toEqual(saved);
   });
+
+  describe("serie ricorrenti", () => {
+    const range = ["2026-10-05T00:00:00+02:00", "2026-10-26T00:00:00+01:00"] as const;
+    const day = (iso: string) => new Date(iso).getDate();
+
+    it("list_events espande la serie con occurrence_start; delete_occurrence aggiunge una EXDATE senza toccare le altre", async () => {
+      const svc = createMemoryCalendarService();
+      await svc.createLocalAccount("Questo computer");
+      const [cal] = await svc.listCalendars();
+      const { event: series } = await svc.createEvent({ ...event(cal.id), recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU" }, [], []);
+
+      const before = await svc.listEvents(...range);
+      expect(before.map((e) => day(e.start))).toEqual([6, 13, 20]);
+      expect(before.every((e) => e.id === series.id && e.occurrence_start === e.start)).toBe(true);
+
+      await svc.deleteOccurrence(series.id, before[1].occurrence_start as string);
+      const after = await svc.listEvents(...range);
+      expect(after.map((e) => day(e.start))).toEqual([6, 20]);
+
+      const detail = await svc.getEvent(series.id);
+      expect(detail.event.occurrence_start).toBeNull();
+      expect(detail.event.recurrence_rule).toMatch(/^RRULE:FREQ=WEEKLY;BYDAY=TU\nEXDATE:\d{8}T\d{6}Z$/);
+    });
+  });
 });

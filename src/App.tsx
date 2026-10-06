@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { WelcomeScreen } from "@/accounts/WelcomeScreen";
 import { CalendarSurface } from "@/components/CalendarSurface";
 import { Header } from "@/components/Header";
+import { NoticeBanner } from "@/components/NoticeBanner";
 import { Sidebar } from "@/components/Sidebar";
 import { EventEditor } from "@/events/EventEditor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Shell />
+      <NoticeBanner />
     </QueryClientProvider>
   );
 }

@@ -2,7 +2,7 @@
 
 Fonte: PRD §42 (perimetro) e §48 (Definition of Done). Obiettivo: "WinDozCal può sostituire Google Calendar web per l'uso quotidiano su Windows."
 
-Stato: stage 0, 1 e 2 completati, prossimo stage 3. Ultimo aggiornamento: 6 ott 2026.
+Stato: stage 0, 1 e 2 completati; stage 3 bloccato (credenziali Google); stage 4, 5 e notifiche dello stage 7 in corso. Ultimo aggiornamento: 7 ott 2026.
 
 Perimetro §42: Tauri shell, SQLite, UI calendario, account Google, viste giorno/settimana/mese, CRUD eventi, cache offline, notifiche, system tray.
 
@@ -36,19 +36,21 @@ Tre filoni:
 
 - Accettazione complessiva: DoD 13 (chiudere e riaprire ritrova subito gli eventi); i tre filoni sopra chiusi.
 
-## Stage 3: account Google e sync
+## Stage 3: account Google e sync (bloccato)
+
+Bloccato: servono client ID e secret OAuth di un progetto Google Cloud (tipo Desktop app); è una decisione del proprietario come distribuirli in un repo pubblico. Nessuna credenziale va nel repository.
 
 - OAuth 2.0 desktop con browser di sistema (§13), token in Credential Manager (ADR 005), lettura calendari ed eventi, sync incrementale con sync token, sync all'avvio e ogni 5 minuti (§22).
 - Accettazione: DoD 2 (collegare l'account), 3 (vedere tutti i calendari), 4 (scegliere quali mostrare); nessuna credenziale in log o SQLite. Integration test in `tests/integration/google/`.
 
-## Stage 4: UI calendario
+## Stage 4: UI calendario (completato 7 ott 2026)
 
-- Decisione ADR 006 (renderer), viste giorno/settimana/mese (§5), navigazione e sidebar (§6), visibilità calendari.
+- Renderer custom, [ADR 006](../System/decisions/006-renderer-calendario.md) (accettato 7 ott 2026), viste giorno/settimana/mese (§5), navigazione e sidebar (§6), visibilità calendari.
 - Accettazione: DoD 5; cambio settimana < 100 ms (§32).
 
-## Stage 5: CRUD, drag & drop, ricorrenze
+## Stage 5: CRUD, drag & drop, ricorrenze (completato 7 ott 2026, nel perimetro di ADR 011)
 
-- Editor evento (§7), crea/modifica/cancella con optimistic UI, drag & resize (§9), lettura RRULE (§10).
+- Editor evento (§7), crea/modifica/cancella con optimistic UI, drag & resize (§9), espansione RRULE nel backend ([ADR 011](../System/decisions/011-ricorrenze-espanse-backend.md)). "Solo questa occorrenza" in cancellazione via EXDATE; modifica di singola occorrenza e "questo e i successivi" rinviate (§10 lo consente).
 - Accettazione: DoD 6, 7, 8, 9, 10. Unit test su ricorrenze e timezone; UI test sui flussi §39.
 
 ## Stage 6: offline e sync delle modifiche
@@ -56,9 +58,9 @@ Tre filoni:
 - Stati `pending_*` (§21), push al provider, conflitti server-wins (ADR 007, da dettagliare qui).
 - Accettazione: DoD 12 (uso senza connessione) e 14 (sync automatica al ritorno online).
 
-## Stage 7: notifiche e system tray (parte tray anticipata e completata il 6 ott 2026; restano le notifiche dei promemoria)
+## Stage 7: notifiche e system tray (completato 7 ott 2026; resta da verificare il nome app nella notifica da installata)
 
-- Notifiche native (§28), tray con prossimo evento (§27).
+- Notifiche native (§28): controllo ogni 30 secondi dei promemoria `popup` in scadenza, una sola notifica per occorrenza, pulsante Join solo se l'API Windows lo consente dal backend (vedi `docs/CONTRACT.md`). Tray con prossimo evento (§27): completato.
 - Accettazione: DoD 11.
 
 ## Stage 8: chiusura Fase 1
@@ -76,3 +78,4 @@ Tre filoni:
 - 6 ott 2026 (5): stage 2 completato. Migrazioni 003 (`conference_url`, tabella `event_conflicts` per preservare le modifiche locali scartate dal server-wins, ADR 007) e 004 (indici parziali `idx_events_long`, `idx_events_recurring`). `list_events` riscritta in tre rami UNION ALL (eventi brevi <= 35 giorni, lunghi, ricorrenti) con `INDEXED BY`: prima 90,9 ms (settimana) e 107,6 ms (mese), fuori target. Misura finale (`cargo run --release --example perf`, questa macchina Windows 11, 6 ott 2026, 50.000 eventi su 3 anni e 5 calendari, 25 esecuzioni, mediana): settimana 0,61 ms, mese 6,48 ms, ricerca termine comune 10,37 ms, termine raro 0,10 ms. Test: 18 Rust, 12 frontend. Verificato nell'app vera: DB creato dalla release 0.1.0 (schema v2) migrato a v4 senza perdita; evento con link Meet, partecipante e promemoria salvato, "Join meeting" visibile, email non valida rifiutata, dettaglio ritrovato dopo riavvio. Non verificato: clic su "Join meeting" (apertura del link). Seguiti noti: ora di fine di default prima dell'inizio per eventi creati alle 23:00 (stage 5); il backend accetta URL limite come `https://:80` che il frontend rifiuta (validazione senza crate `url`).
 - 6 ott 2026 (6): anticipata la parte system tray dello stage 7 su richiesta del proprietario. Migrazione 005 (`app_settings`), comandi `get_settings`/`update_settings`, eventi `tray-new-event`/`tray-open-event`, plugin autostart 2.7.0 e single-instance 2.5.2, finestra `visible: false` all'avvio, sezione General delle impostazioni. Test: 21 Rust, 13 frontend. Verificato nell'app vera: X nasconde la finestra e il processo resta vivo; rilanciare l'exe con l'app nel tray riapre la finestra senza seconda istanza; `update_settings` scrive e rimuove `WinDozCal = ...windozcal.exe --autostart` in `HKCU\...\Run`; con `--autostart` e start_minimized l'app parte nascosta, avvio manuale sempre visibile; emettendo `tray-open-event` si apre l'editor sull'evento giusto, `tray-new-event` apre un editor vuoto; flag `tray_notice_shown` salvato dopo la prima chiusura. Non verificato a occhio: icona e menu del tray, testo di "Next event" (coperto da test unitari sul formato), notifica nativa della prima chiusura. Semplificazione dichiarata: "Next event" considera solo l'evento base delle serie ricorrenti (fino allo stage 5).
 - 7 ott 2026: pubblicata la prerelease GitHub v0.2.0 (versione 0.2.0 in package.json, Cargo.toml, tauri.conf.json). Installer NSIS 2,67 MiB e MSI 3,73 MiB. Verificato l'aggiornamento reale: installata la 0.1.0 scaricata dalla release, creato un evento, installata sopra la 0.2.0 in modo silenzioso: versione 0.2.0 registrata, evento presente, schema migrato a v5, settings ai default; poi disinstallazione pulita. MSI costruito ma non installato.
+- 7 ott 2026 (2): stage 4, 5 e notifiche dello stage 7 completati. Backend: espansione RRULE con crate `rrule` 0.14.0 + `chrono-tz` 0.10.4, `occurrence_start`, `delete_occurrence` (EXDATE), "Next event" sulle occorrenze, scheduler promemoria ogni 30 s con migrazione 006 `fired_reminders`, toast Windows via `tauri-winrt-notification` 0.8.1 con pulsanti Join/Dismiss e clic che apre l'evento. Frontend: sovrapposizioni affiancate, fascia all-day, indicatore ora corrente, mese compatto con "+N altri", Agenda OGGI/DOMANI, drag & drop e resize con snap 15 minuti e optimistic update con rollback, editor ricorrenze con giorni della settimana, dialogo "Solo questa occorrenza / Tutta la serie"; corretti doppio clic, intestazioni disallineate, ora di fine alle 23:00 (limitata alle 23:59). Test: 37 Rust, 35 frontend. Verificato nell'app vera (dev): serie settimanale lun/mer/ven creata dall'editor e salvata come `RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR`, tre occorrenze visibili nella settimana, dopo il 25 ottobre resta alle 09:00 (+01:00); eliminata la sola occorrenza di mercoledì (EXDATE 20261007T070000Z); evento trascinato al giorno dopo e +1,5 h e poi allungato di 30 minuti, partecipanti e promemoria conservati; doppio clic su un evento esistente apre l'editor senza crearne un altro; intestazioni allineate (screenshot); promemoria a 1 minuto scattato una volta (riga in `fired_reminders`) con toast "Test promemoria / in 1 minute · 00:44–01:14 / Google Meet" e pulsanti Join e Dismiss. Non verificati: clic su Join e sul corpo del toast; nel build di sviluppo il toast appare come "Windows PowerShell", il nome WinDozCal va verificato con l'app installata prima della prossima release. Prossimo: stage 3 (bloccato sulle credenziali Google), stage 6 dipende dallo stage 3.

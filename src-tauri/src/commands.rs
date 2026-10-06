@@ -133,6 +133,24 @@ pub async fn delete_event(
     Ok(())
 }
 
+/// Esclude una singola occorrenza di una serie ricorrente (aggiunge una EXDATE).
+#[tauri::command]
+pub async fn delete_occurrence(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    event_id: String,
+    occurrence_start: String,
+) -> AppResult<()> {
+    let needs_sync = state
+        .db
+        .with(|conn| repo::delete_occurrence(conn, &event_id, &occurrence_start))?;
+    if needs_sync {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn search_events(state: State<'_, AppState>, query: String) -> AppResult<Vec<Event>> {
     state.db.with(|conn| repo::search_events(conn, &query))

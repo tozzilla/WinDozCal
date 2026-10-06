@@ -689,10 +689,10 @@ fn list_events_includes_long_and_recurring_events_started_before_window() {
     insert_event(&conn, &long, &[], &[]).unwrap(); // finito prima della finestra: escluso
     insert_event(&conn, &long_in, &[], &[]).unwrap();
 
-    // Serie ricorrente iniziata un anno prima.
+    // Serie settimanale (mercoledi) iniziata quasi due anni prima: l'occorrenza del 7 ott compare.
     let mut rec = new_event("Ricorrente");
-    rec.start = "2025-01-06T09:00:00+01:00".into();
-    rec.end = "2025-01-06T10:00:00+01:00".into();
+    rec.start = "2025-01-08T09:00:00+01:00".into();
+    rec.end = "2025-01-08T10:00:00+01:00".into();
     rec.recurrence_rule = Some("FREQ=WEEKLY".into());
     insert_event(&conn, &rec, &[], &[]).unwrap();
 
@@ -706,7 +706,7 @@ fn list_events_includes_long_and_recurring_events_started_before_window() {
     let titles: Vec<String> = day_range(&conn).into_iter().map(|e| e.title).collect();
     assert_eq!(
         titles,
-        vec!["Ricorrente", "Lungo che copre la finestra", "Dentro"]
+        vec!["Lungo che copre la finestra", "Ricorrente", "Dentro"]
     );
 }
 
@@ -875,4 +875,537 @@ fn next_event_label_formats_today_other_day_all_day_and_truncation() {
     let label = crate::tray::next_event_label(&long, now);
     assert_eq!(label.chars().count(), "15:30 ".len() + 40);
     assert!(label.ends_with('…'));
+}
+
+// ---------------------------------------------------------------------------
+// Ricorrenze (stage 5)
+// ---------------------------------------------------------------------------
+
+fn series(conn: &Connection, title: &str, start: &str, end: &str, rule: &str) -> Event {
+    let mut ev = new_event(title);
+    ev.start = start.into();
+    ev.end = end.into();
+    ev.recurrence_rule = Some(rule.into());
+    insert_event(conn, &ev, &[], &[]).unwrap().event
+}
+
+fn range(conn: &Connection, from: &str, to: &str) -> Vec<Event> {
+    list_events(conn, from, to).unwrap()
+}
+
+fn starts(events: &[Event]) -> Vec<&str> {
+    events.iter().map(|e| e.start.as_str()).collect()
+}
+
+#[test]
+fn weekly_series_with_multiple_byday() {
+    let conn = setup();
+    series(
+        &conn,
+        "Standup",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T10:15:00+02:00",
+        "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR",
+    );
+    let events = range(
+        &conn,
+        "2026-10-05T00:00:00+02:00",
+        "2026-10-19T00:00:00+02:00",
+    );
+    assert_eq!(
+        starts(&events),
+        vec![
+            "2026-10-05T10:00:00+02:00",
+            "2026-10-07T10:00:00+02:00",
+            "2026-10-09T10:00:00+02:00",
+            "2026-10-12T10:00:00+02:00",
+            "2026-10-14T10:00:00+02:00",
+            "2026-10-16T10:00:00+02:00",
+        ]
+    );
+    // Stesso id della serie, occurrence_start valorizzato, durata mantenuta.
+    assert!(events
+        .iter()
+        .all(|e| e.occurrence_start.as_deref() == Some(e.start.as_str())));
+    assert_eq!(events[1].end, "2026-10-07T10:15:00+02:00");
+    assert!(events.iter().all(|e| e.id == events[0].id));
+}
+
+#[test]
+fn monthly_series() {
+    let conn = setup();
+    series(
+        &conn,
+        "Report",
+        "2026-01-15T10:00:00+01:00",
+        "2026-01-15T11:00:00+01:00",
+        "RRULE:FREQ=MONTHLY;BYMONTHDAY=15",
+    );
+    let events = range(&conn, "2026-10-01T00:00:00Z", "2026-12-31T00:00:00Z");
+    assert_eq!(
+        starts(&events),
+        vec![
+            "2026-10-15T10:00:00+02:00",
+            "2026-11-15T10:00:00+01:00",
+            "2026-12-15T10:00:00+01:00"
+        ]
+    );
+}
+
+#[test]
+fn exdate_removes_occurrences() {
+    let conn = setup();
+    // 12 ott 10:00+02:00 = 08:00Z.
+    series(
+        &conn,
+        "Settimanale",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "RRULE:FREQ=WEEKLY\nEXDATE:20261012T080000Z",
+    );
+    let events = range(
+        &conn,
+        "2026-10-05T00:00:00+02:00",
+        "2026-10-26T00:00:00+02:00",
+    );
+    assert_eq!(
+        starts(&events),
+        vec!["2026-10-05T10:00:00+02:00", "2026-10-19T10:00:00+02:00"]
+    );
+
+    // All-day: EXDATE a data, output a data.
+    let mut ev = new_event("Ferie");
+    ev.start = "2026-10-05".into();
+    ev.end = "2026-10-06".into();
+    ev.all_day = true;
+    ev.recurrence_rule = Some("RRULE:FREQ=DAILY;COUNT=5\nEXDATE:20261007".into());
+    insert_event(&conn, &ev, &[], &[]).unwrap();
+    let days: Vec<_> = range(&conn, "2026-10-01T00:00:00Z", "2026-10-31T00:00:00Z")
+        .into_iter()
+        .filter(|e| e.title == "Ferie")
+        .map(|e| (e.start, e.end))
+        .collect();
+    assert_eq!(
+        days,
+        vec![
+            ("2026-10-05".to_string(), "2026-10-06".to_string()),
+            ("2026-10-06".to_string(), "2026-10-07".to_string()),
+            ("2026-10-08".to_string(), "2026-10-09".to_string()),
+            ("2026-10-09".to_string(), "2026-10-10".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn weekly_series_keeps_local_time_across_dst_change() {
+    let conn = setup();
+    // 19 ott 2026 (CEST, +02:00); l'ora legale finisce il 25 ott 2026.
+    series(
+        &conn,
+        "Lunedi alle 9",
+        "2026-10-19T09:00:00+02:00",
+        "2026-10-19T10:00:00+02:00",
+        "RRULE:FREQ=WEEKLY;COUNT=3",
+    );
+    let events = range(&conn, "2026-10-19T00:00:00Z", "2026-11-30T00:00:00Z");
+    assert_eq!(
+        starts(&events),
+        vec![
+            "2026-10-19T09:00:00+02:00",
+            "2026-10-26T09:00:00+01:00", // dopo il cambio: sempre le 09:00 a Roma
+            "2026-11-02T09:00:00+01:00",
+        ]
+    );
+    assert_eq!(events[1].end, "2026-10-26T10:00:00+01:00");
+}
+
+#[test]
+fn series_is_capped_at_500_occurrences() {
+    let conn = setup();
+    series(
+        &conn,
+        "Ogni giorno",
+        "2025-01-01T09:00:00+01:00",
+        "2025-01-01T09:30:00+01:00",
+        "RRULE:FREQ=DAILY",
+    );
+    let events = range(&conn, "2025-01-01T00:00:00Z", "2028-01-01T00:00:00Z");
+    assert_eq!(events.len(), 500);
+    assert_eq!(events[0].start, "2025-01-01T09:00:00+01:00");
+}
+
+#[test]
+fn legacy_rule_without_prefix_is_expanded() {
+    let conn = setup();
+    series(
+        &conn,
+        "Legacy",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "FREQ=WEEKLY;BYDAY=MO",
+    );
+    series(
+        &conn,
+        "CRLF",
+        "2026-10-06T10:00:00+02:00",
+        "2026-10-06T11:00:00+02:00",
+        "RRULE:FREQ=WEEKLY\r\nEXDATE:20261013T080000Z",
+    );
+    let events = range(
+        &conn,
+        "2026-10-05T00:00:00+02:00",
+        "2026-10-20T00:00:00+02:00",
+    );
+    // Legacy: lunedi 5, 12, 19 ott. CRLF: martedi 6, (13 escluso), 20 ott fuori finestra.
+    assert_eq!(events.iter().filter(|e| e.title == "Legacy").count(), 3);
+    assert_eq!(events.iter().filter(|e| e.title == "CRLF").count(), 1);
+}
+
+#[test]
+fn invalid_rule_falls_back_to_base_event() {
+    let conn = setup();
+    series(
+        &conn,
+        "Rotta",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "RRULE:FREQ=BOGUS",
+    );
+    let mut bad_tz = new_event("Fuso errato");
+    bad_tz.recurrence_rule = Some("RRULE:FREQ=DAILY".into());
+    bad_tz.timezone = "Mars/Olympus".into();
+    insert_event(&conn, &bad_tz, &[], &[]).unwrap();
+
+    let events = range(&conn, "2026-10-01T00:00:00Z", "2026-12-01T00:00:00Z");
+    let broken: Vec<_> = events.iter().filter(|e| e.title == "Rotta").collect();
+    assert_eq!(broken.len(), 1);
+    assert!(broken[0].occurrence_start.is_none());
+    assert_eq!(
+        events.iter().filter(|e| e.title == "Fuso errato").count(),
+        1
+    );
+}
+
+#[test]
+fn delete_occurrence_adds_exdate() {
+    let conn = setup();
+    let account = create_local_account(&conn, "PC").unwrap();
+    let cal = list_calendars(&conn)
+        .unwrap()
+        .into_iter()
+        .find(|c| c.account_id == account.id)
+        .unwrap();
+    let mut ev = new_event("Locale ricorrente");
+    ev.calendar_id = cal.id.clone();
+    ev.start = "2026-10-05T10:00:00+02:00".into();
+    ev.end = "2026-10-05T11:00:00+02:00".into();
+    ev.recurrence_rule = Some("RRULE:FREQ=WEEKLY".into());
+    let id = insert_event(&conn, &ev, &[], &[]).unwrap().event.id;
+
+    let window = ("2026-10-05T00:00:00+02:00", "2026-10-27T00:00:00+01:00");
+    assert_eq!(range(&conn, window.0, window.1).len(), 4);
+    // Calendario local: nessun sync richiesto, stato synced.
+    assert!(!delete_occurrence(&conn, &id, "2026-10-12T10:00:00+02:00").unwrap());
+    let left = range(&conn, window.0, window.1);
+    assert_eq!(
+        starts(&left),
+        vec![
+            "2026-10-05T10:00:00+02:00",
+            "2026-10-19T10:00:00+02:00",
+            "2026-10-26T10:00:00+01:00"
+        ]
+    );
+    assert_eq!(
+        get_event(&conn, &id).unwrap().sync_status,
+        EventSyncStatus::Synced
+    );
+    // Idempotente: la EXDATE non si duplica.
+    delete_occurrence(&conn, &id, "2026-10-12T10:00:00+02:00").unwrap();
+    let rule = get_event(&conn, &id).unwrap().recurrence_rule.unwrap();
+    assert_eq!(rule.matches("EXDATE").count(), 1);
+
+    // Evento non ricorrente / inesistente / data non valida: errore.
+    let single = create(&conn, "Singolo");
+    assert!(delete_occurrence(&conn, &single.id, "2026-10-07T10:00:00+02:00").is_err());
+    assert!(delete_occurrence(&conn, "nope", "2026-10-07T10:00:00+02:00").is_err());
+    assert!(delete_occurrence(&conn, &id, "non-una-data").is_err());
+}
+
+#[test]
+fn delete_occurrence_on_remote_event_marks_pending_update() {
+    let conn = setup();
+    let ev = series(
+        &conn,
+        "Remota",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "RRULE:FREQ=WEEKLY",
+    );
+    make_synced(&conn, &ev.id, "r-series", "e1");
+    assert!(delete_occurrence(&conn, &ev.id, "2026-10-12T10:00:00+02:00").unwrap());
+    assert_eq!(
+        get_event(&conn, &ev.id).unwrap().sync_status,
+        EventSyncStatus::PendingUpdate
+    );
+
+    // Se e' ancora pending_create resta tale.
+    let fresh = series(
+        &conn,
+        "Nuova",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "RRULE:FREQ=WEEKLY",
+    );
+    delete_occurrence(&conn, &fresh.id, "2026-10-12T10:00:00+02:00").unwrap();
+    assert_eq!(
+        get_event(&conn, &fresh.id).unwrap().sync_status,
+        EventSyncStatus::PendingCreate
+    );
+}
+
+#[test]
+fn next_event_uses_expanded_occurrences() {
+    let conn = setup();
+    let now = crate::timeutil::parse_ts("2026-10-07T12:00:00Z").unwrap();
+    series(
+        &conn,
+        "Settimanale",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        "RRULE:FREQ=WEEKLY",
+    );
+    // Il lunedi base e' passato: la prossima occorrenza e' il 12 ott.
+    let next = next_event(&conn, now).unwrap().unwrap();
+    assert_eq!(next.start, "2026-10-12T10:00:00+02:00");
+    assert_eq!(
+        next.occurrence_start.as_deref(),
+        Some("2026-10-12T10:00:00+02:00")
+    );
+
+    // Un evento singolo piu vicino vince sulla serie.
+    event_at(
+        &conn,
+        "Domani",
+        "c1",
+        "2026-10-08T09:00:00Z",
+        "2026-10-08T10:00:00Z",
+    );
+    assert_eq!(next_event(&conn, now).unwrap().unwrap().title, "Domani");
+}
+
+// ---------------------------------------------------------------------------
+// Promemoria (stage 7)
+// ---------------------------------------------------------------------------
+
+use crate::reminders::{
+    conference_service, due_reminders, mark_fired, notification_lines, DueReminder,
+};
+
+fn popup(minutes: i64) -> NewReminder {
+    reminder(minutes, "popup")
+}
+
+fn with_reminders(
+    conn: &Connection,
+    title: &str,
+    calendar: &str,
+    start: &str,
+    end: &str,
+    reminders: &[NewReminder],
+) -> Event {
+    let mut ev = new_event(title);
+    ev.calendar_id = calendar.into();
+    ev.start = start.into();
+    ev.end = end.into();
+    insert_event(conn, &ev, &[], reminders).unwrap().event
+}
+
+fn at(value: &str) -> i64 {
+    crate::timeutil::parse_ts(value).unwrap()
+}
+
+#[test]
+fn reminder_fires_once_per_occurrence() {
+    let conn = setup();
+    let now = at("2026-10-07T12:00:00Z");
+    with_reminders(
+        &conn,
+        "Call",
+        "c1",
+        "2026-10-07T12:10:00Z",
+        "2026-10-07T12:40:00Z",
+        &[popup(10)],
+    );
+
+    let due = due_reminders(&conn, now).unwrap();
+    assert_eq!(due.len(), 1);
+    assert_eq!(due[0].title, "Call");
+    mark_fired(&conn, &due[0]).unwrap();
+    // Una volta sola, anche ai controlli successivi.
+    assert!(due_reminders(&conn, now).unwrap().is_empty());
+    assert!(due_reminders(&conn, now + 30).unwrap().is_empty());
+}
+
+#[test]
+fn reminder_not_due_yet_and_stale_ones_are_discarded() {
+    let conn = setup();
+    let now = at("2026-10-07T12:00:00Z");
+    // Fuoco alle 12:20: non ancora.
+    with_reminders(
+        &conn,
+        "Futuro",
+        "c1",
+        "2026-10-07T12:30:00Z",
+        "2026-10-07T13:00:00Z",
+        &[popup(10)],
+    );
+    // Fuoco alle 11:45 (15 minuti fa): arretrato, scartato.
+    with_reminders(
+        &conn,
+        "Vecchio",
+        "c1",
+        "2026-10-07T11:55:00Z",
+        "2026-10-07T13:00:00Z",
+        &[popup(10)],
+    );
+    assert!(due_reminders(&conn, now).unwrap().is_empty());
+
+    // Fuoco alle 11:55 (5 minuti fa): ancora entro i 10 minuti, anche a evento iniziato.
+    with_reminders(
+        &conn,
+        "Recente",
+        "c1",
+        "2026-10-07T12:05:00Z",
+        "2026-10-07T13:00:00Z",
+        &[popup(10)],
+    );
+    let due = due_reminders(&conn, now).unwrap();
+    assert_eq!(due.len(), 1);
+    assert_eq!(due[0].title, "Recente");
+
+    // Occorrenza gia finita: nessun avviso.
+    with_reminders(
+        &conn,
+        "Finito",
+        "c1",
+        "2026-10-07T11:00:00Z",
+        "2026-10-07T11:30:00Z",
+        &[popup(0)],
+    );
+    let later = due_reminders(&conn, at("2026-10-07T11:35:00Z")).unwrap();
+    assert!(later.iter().all(|d| d.title != "Finito"));
+}
+
+#[test]
+fn reminder_skips_email_type_and_hidden_calendars() {
+    let conn = setup();
+    let now = at("2026-10-07T12:00:00Z");
+    with_reminders(
+        &conn,
+        "Email",
+        "c1",
+        "2026-10-07T12:10:00Z",
+        "2026-10-07T12:40:00Z",
+        &[reminder(10, "email")],
+    );
+    with_reminders(
+        &conn,
+        "Nascosto",
+        "c2",
+        "2026-10-07T12:10:00Z",
+        "2026-10-07T12:40:00Z",
+        &[popup(10)],
+    );
+    set_calendar_visibility(&conn, "c2", false).unwrap();
+    assert!(due_reminders(&conn, now).unwrap().is_empty());
+    set_calendar_visibility(&conn, "c2", true).unwrap();
+    assert_eq!(due_reminders(&conn, now).unwrap().len(), 1);
+}
+
+#[test]
+fn editing_an_event_does_not_refire_a_shown_reminder() {
+    let conn = setup();
+    let now = at("2026-10-07T12:00:00Z");
+    let ev = with_reminders(
+        &conn,
+        "Call",
+        "c1",
+        "2026-10-07T12:10:00Z",
+        "2026-10-07T12:40:00Z",
+        &[popup(10)],
+    );
+    let due = due_reminders(&conn, now).unwrap();
+    mark_fired(&conn, &due[0]).unwrap();
+
+    // update_event ricrea i promemoria con id nuovi: la chiave e evento + minuti + occorrenza.
+    let mut edited = get_event(&conn, &ev.id).unwrap();
+    edited.title = "Call (rinviata di poco)".into();
+    update_event(&conn, &edited, &[], &[popup(10)]).unwrap();
+    assert!(due_reminders(&conn, now).unwrap().is_empty());
+}
+
+#[test]
+fn recurring_reminder_fires_per_occurrence() {
+    let conn = setup();
+    let mut ev = new_event("Daily");
+    ev.start = "2026-10-06T14:10:00+02:00".into();
+    ev.end = "2026-10-06T14:40:00+02:00".into();
+    ev.recurrence_rule = Some("RRULE:FREQ=DAILY".into());
+    insert_event(&conn, &ev, &[], &[popup(10)]).unwrap();
+
+    // 7 ott 12:00Z: l'occorrenza delle 14:10+02:00 (12:10Z) ha il fuoco adesso.
+    let now = at("2026-10-07T12:00:00Z");
+    let due = due_reminders(&conn, now).unwrap();
+    assert_eq!(due.len(), 1);
+    assert_eq!(due[0].start_ts, at("2026-10-07T12:10:00Z"));
+    mark_fired(&conn, &due[0]).unwrap();
+    assert!(due_reminders(&conn, now).unwrap().is_empty());
+
+    // Il giorno dopo scatta l'occorrenza successiva.
+    let tomorrow = due_reminders(&conn, now + 86_400).unwrap();
+    assert_eq!(tomorrow.len(), 1);
+    assert_eq!(tomorrow[0].start_ts, at("2026-10-08T12:10:00Z"));
+}
+
+#[test]
+fn notification_text_and_service_detection() {
+    use chrono::{DateTime, FixedOffset};
+    let now: DateTime<FixedOffset> =
+        DateTime::parse_from_rfc3339("2026-10-07T14:00:00+02:00").unwrap();
+    let mut due = DueReminder {
+        event_id: "e".into(),
+        title: "Call".into(),
+        minutes_before: 10,
+        start_ts: at("2026-10-07T12:10:00Z"),
+        end_ts: at("2026-10-07T12:40:00Z"),
+        conference_url: Some("https://meet.google.com/abc-defg-hij".into()),
+    };
+    let (line1, line2) = notification_lines(&due, now);
+    assert_eq!(line1, "in 10 minutes · 14:10–14:40");
+    assert_eq!(line2.as_deref(), Some("Google Meet"));
+
+    due.start_ts = at("2026-10-07T12:01:00Z");
+    assert!(notification_lines(&due, now).0.starts_with("in 1 minute "));
+    due.start_ts = at("2026-10-07T11:59:00Z");
+    assert!(notification_lines(&due, now).0.starts_with("now "));
+    due.conference_url = None;
+    assert_eq!(notification_lines(&due, now).1, None);
+
+    assert_eq!(
+        conference_service("https://us02web.zoom.us/j/123?pwd=x"),
+        Some("Zoom")
+    );
+    assert_eq!(
+        conference_service("https://teams.microsoft.com/l/meetup-join/x"),
+        Some("Microsoft Teams")
+    );
+    assert_eq!(
+        conference_service("https://acme.webex.com/meet/x"),
+        Some("Webex")
+    );
+    assert_eq!(conference_service("https://example.com/zoom.us"), None);
+    assert_eq!(
+        conference_service("https://notmeet.google.com.evil.io/x"),
+        None
+    );
 }

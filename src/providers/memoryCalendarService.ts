@@ -1,5 +1,6 @@
 import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder, Settings } from "@/types";
 import { validateAttendees, validateReminders } from "@/utils/validation";
+import { expandEvent, exdateValue } from "./memoryRecurrence";
 import { addDays, localTimezone, startOfWeek, toIsoWithOffset } from "@/utils/date";
 import type { CalendarService } from "./calendarService";
 
@@ -38,7 +39,7 @@ function seedEvents(): Event[] {
     start.setHours(h, m, 0, 0);
     const end = new Date(start.getTime() + minutes * 60_000);
     return {
-      id, calendar_id, remote_id: null, title, description: null, location: null, conference_url: null,
+      id, calendar_id, remote_id: null, title, description: null, location: null, conference_url: null, occurrence_start: null,
       start: toIsoWithOffset(start), end: toIsoWithOffset(end), timezone: localTimezone(),
       all_day: false, recurrence_rule: null, status: "busy", etag: null, updated_at: null,
       sync_status: "synced", local_updated_at: null, remote_updated_at: null, ...extra,
@@ -118,7 +119,10 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       const to = new Date(rangeEnd).getTime();
       const visible = new Set(calendars.filter((c) => c.visible).map((c) => c.id));
       return structuredClone(
-        events.filter((e) => visible.has(e.calendar_id) && new Date(e.start).getTime() < to && new Date(e.end).getTime() > from),
+        events
+          .filter((e) => visible.has(e.calendar_id))
+          .flatMap((e) => expandEvent(e, new Date(from), new Date(to)))
+          .sort((a, b) => a.start.localeCompare(b.start)),
       );
     },
     async getEvent(eventId) {
@@ -130,7 +134,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       validate(attendees, reminders);
       const created: Event = {
         ...input,
-        id: newId("ev"), remote_id: null, etag: null, updated_at: null,
+        id: newId("ev"), remote_id: null, etag: null, updated_at: null, occurrence_start: null,
         // Come il backend: gli eventi locali restano "synced", gli altri entrano in coda.
         sync_status: isLocal(input.calendar_id) ? "synced" : "pending_create",
         local_updated_at: toIsoWithOffset(new Date()), remote_updated_at: null,
@@ -143,6 +147,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       validate(attendees, reminders);
       const updated: Event = {
         ...event,
+        occurrence_start: null,
         sync_status: isLocal(event.calendar_id) ? "synced" : "pending_update",
         local_updated_at: toIsoWithOffset(new Date()),
       };
@@ -154,6 +159,14 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       events = events.filter((e) => e.id !== eventId);
       attendeesByEvent.delete(eventId);
       remindersByEvent.delete(eventId);
+    },
+    async deleteOccurrence(eventId, occurrenceStart) {
+      const event = events.find((e) => e.id === eventId);
+      if (!event?.recurrence_rule) throw new Error("L'evento non è una serie ricorrente");
+      const line = `EXDATE:${exdateValue(occurrenceStart, event.all_day)}`;
+      event.recurrence_rule = `${event.recurrence_rule}\n${line}`;
+      event.local_updated_at = toIsoWithOffset(new Date());
+      if (!isLocal(event.calendar_id)) event.sync_status = "pending_update";
     },
     async searchEvents(query) {
       const q = query.trim().toLowerCase();

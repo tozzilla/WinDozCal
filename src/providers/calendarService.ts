@@ -21,7 +21,10 @@ export interface CalendarService {
   createEvent(event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
   /** Gli array sostituiscono interamente partecipanti e promemoria esistenti. */
   updateEvent(event: Event, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /** Elimina la serie intera. */
   deleteEvent(eventId: string): Promise<void>;
+  /** Aggiunge una EXDATE alla serie: elimina solo l'occorrenza che inizia a `occurrenceStart`. */
+  deleteOccurrence(eventId: string, occurrenceStart: string): Promise<void>;
   searchEvents(query: string): Promise<Event[]>;
   syncNow(accountId?: string): Promise<void>;
   openLogFolder(): Promise<void>;

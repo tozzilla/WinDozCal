@@ -13,6 +13,12 @@ export interface CalendarRendererProps {
   calendars: Calendar[];
   onSelectSlot: (start: Date, end: Date) => void;
   onSelectEvent: (event: Event) => void;
+  /** Spostamento o ridimensionamento da drag & drop (solo eventi non ricorrenti). */
+  onChangeEventTime: (event: Event, start: Date, end: Date) => void;
+  /** Messaggio breve per l'utente. */
+  onNotice: (message: string) => void;
+  /** Porta alla vista giorno ("+N altri" del mese). */
+  onShowDay: (day: Date) => void;
 }
 
 /**

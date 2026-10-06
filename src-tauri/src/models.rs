@@ -137,6 +137,9 @@ pub struct Event {
     pub sync_status: EventSyncStatus,
     pub local_updated_at: Option<String>,
     pub remote_updated_at: Option<String>,
+    /// Solo nelle occorrenze espanse da `list_events`: inizio originale dell'occorrenza (ISO con
+    /// offset). `null` per gli eventi non ricorrenti e per la serie base.
+    pub occurrence_start: Option<String>,
 }
 
 /// Argomento di `create_event`: il contratto cita `NewEvent` senza elencarne i campi.

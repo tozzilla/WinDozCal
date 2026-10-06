@@ -80,7 +80,7 @@ These are design targets to be measured during development, not results yet: per
 
 ## Status
 
-**Pre-alpha — scaffolding.** The project structure, data model and frontend/backend contract are in place; no provider syncs yet. Nothing here is ready for daily use. Star or watch the repo to follow along.
+**Pre-alpha.** Releases 0.1.0 and 0.2.0 are available as unsigned installers. You can already use WinDozCal with local calendars only (no account): events, system tray and settings work; recurrence and reminder notifications are in progress. No external provider syncs yet — Google is the next step. Expect rough edges and breaking changes. Star or watch the repo to follow along.
 
 ## Architecture
 

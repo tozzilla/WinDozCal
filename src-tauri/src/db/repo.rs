@@ -11,6 +11,7 @@ use crate::models::{
     Account, AccountSyncStatus, Attendee, Calendar, Event, EventDetail, EventSyncStatus,
     NewAttendee, NewEvent, NewReminder, ProviderKind, Reminder, Settings,
 };
+use crate::recurrence;
 use crate::timeutil::{now_iso, parse_ts};
 
 /// Colonne di `events` nell'ordine atteso da `event_from_row` (alias tabella `e`).
@@ -43,6 +44,7 @@ pub(crate) fn event_from_row(row: &Row<'_>) -> rusqlite::Result<Event> {
         local_updated_at: row.get(15)?,
         remote_updated_at: row.get(16)?,
         conference_url: row.get(17)?,
+        occurrence_start: None,
     })
 }
 
@@ -277,33 +279,135 @@ pub(crate) fn list_events_sql() -> String {
 /// Eventi dei soli calendari visibili che intersecano `[range_start, range_end)`.
 ///
 /// Gli eventi `pending_delete` sono nascosti subito (la UI non deve aspettare il provider).
-/// TODO(ricorrenze, PRD 10): gli eventi con `recurrence_rule` vengono restituiti se la serie e'
-/// iniziata prima della fine del range; l'espansione delle occorrenze sta nel Calendar Domain.
+/// Le serie ricorrenti sono espanse in occorrenze (max 500 per serie, vedi `recurrence`): `id` e'
+/// quello della serie, `occurrence_start` identifica l'occorrenza.
 pub fn list_events(conn: &Connection, range_start: &str, range_end: &str) -> AppResult<Vec<Event>> {
     let start_ts = parse_ts(range_start)?;
     let end_ts = parse_ts(range_end)?;
     let mut stmt = conn.prepare(&list_events_sql())?;
     let rows = stmt.query_map(params![start_ts, end_ts], event_from_row)?;
+    let found = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+
+    // Le serie ricorrenti diventano una riga per occorrenza nel range (`recurrence::expand`).
+    let mut events = Vec::with_capacity(found.len());
+    for event in found {
+        if event.recurrence_rule.is_some() {
+            events.extend(recurrence::expand_or_base(&event, start_ts, end_ts));
+        } else {
+            events.push(event);
+        }
+    }
+    events.sort_by_key(|e| {
+        (
+            parse_ts(&e.start).unwrap_or(i64::MAX),
+            parse_ts(&e.end).unwrap_or(i64::MAX),
+        )
+    });
+    Ok(events)
+}
+
+/// Serie ricorrenti dei calendari visibili (eventi base con `recurrence_rule`).
+pub fn recurring_events(conn: &Connection) -> AppResult<Vec<Event>> {
+    let sql = format!(
+        "SELECT {EVENT_COLS}
+         FROM events e INDEXED BY idx_events_recurring JOIN calendars c ON c.id = e.calendar_id
+         WHERE c.visible = 1 AND e.sync_status <> 'pending_delete'
+           AND e.recurrence_rule IS NOT NULL"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map([], event_from_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// Orizzonte (un anno) entro cui si cerca la prossima occorrenza di una serie.
+const NEXT_EVENT_HORIZON_SECS: i64 = 366 * 86_400;
+
 /// Prossimo evento non ancora finito dei calendari visibili (in corso incluso), dal piu' vicino.
+/// Considera sia gli eventi singoli sia le occorrenze espanse delle serie ricorrenti (l'evento
+/// restituito ha l'`id` della serie e `occurrence_start` valorizzato).
 ///
-/// Semplificazioni (vedi `tray`): di una serie ricorrente conta solo l'evento base e gli eventi
-/// non ricorrenti piu' lunghi di `MAX_SPAN_SECS` non sono considerati (serve `start_ts >= now -
-/// MAX_SPAN` per usare l'indice senza scansionare tutto lo storico).
+/// Per gli eventi singoli serve `start_ts >= now - MAX_SPAN` (indice senza scansionare lo
+/// storico): quelli piu' lunghi di `MAX_SPAN_SECS` gia' iniziati non sono considerati.
 pub fn next_event(conn: &Connection, now_ts: i64) -> AppResult<Option<Event>> {
     let sql = format!(
         "SELECT {EVENT_COLS}
          FROM events e INDEXED BY idx_events_range JOIN calendars c ON c.id = e.calendar_id
          WHERE c.visible = 1 AND e.sync_status <> 'pending_delete'
+           AND e.recurrence_rule IS NULL
            AND e.start_ts >= ?1 - {MAX_SPAN_SECS} AND e.end_ts > ?1
          ORDER BY e.start_ts, e.end_ts
          LIMIT 1"
     );
-    Ok(conn
+    let mut best: Option<(i64, i64, Event)> = conn
         .query_row(&sql, params![now_ts], event_from_row)
-        .optional()?)
+        .optional()?
+        .map(|e| {
+            (
+                parse_ts(&e.start).unwrap_or(i64::MAX),
+                parse_ts(&e.end).unwrap_or(i64::MAX),
+                e,
+            )
+        });
+
+    for series in recurring_events(conn)? {
+        let occurrences =
+            recurrence::expand_or_base(&series, now_ts, now_ts + NEXT_EVENT_HORIZON_SECS);
+        let first = occurrences.into_iter().find_map(|o| {
+            let start = parse_ts(&o.start).ok()?;
+            let end = parse_ts(&o.end).ok()?;
+            (end > now_ts).then_some((start, end, o))
+        });
+        if let Some(candidate) = first {
+            if best
+                .as_ref()
+                .is_none_or(|b| (candidate.0, candidate.1) < (b.0, b.1))
+            {
+                best = Some(candidate);
+            }
+        }
+    }
+    Ok(best.map(|(_, _, event)| event))
+}
+
+/// Esclude una singola occorrenza di una serie ricorrente aggiungendo una `EXDATE` alla regola.
+/// Idempotente. Stato: `synced` sui calendari local, `pending_create` resta tale, altrimenti
+/// `pending_update`. Ritorna `true` se serve un sync.
+pub fn delete_occurrence(
+    conn: &Connection,
+    event_id: &str,
+    occurrence_start: &str,
+) -> AppResult<bool> {
+    let existing = get_event(conn, event_id)?;
+    if existing.sync_status == EventSyncStatus::PendingDelete {
+        return Err(AppError::NotFound(format!("event {event_id}")));
+    }
+    let calendar = get_calendar(conn, &existing.calendar_id)?;
+    ensure_writable(&calendar)?;
+    let Some(rule) = existing.recurrence_rule.as_deref() else {
+        return Err(AppError::InvalidInput("event is not recurring".into()));
+    };
+    let line = recurrence::exdate_line(&existing, occurrence_start)
+        .map_err(|reason| AppError::InvalidInput(format!("invalid occurrence_start: {reason}")))?;
+    if rule.lines().any(|l| l.trim().eq_ignore_ascii_case(&line)) {
+        return Ok(false);
+    }
+
+    let is_local = is_local_calendar(conn, &existing.calendar_id)?;
+    let next_status = if is_local {
+        EventSyncStatus::Synced
+    } else if existing.sync_status == EventSyncStatus::PendingCreate {
+        EventSyncStatus::PendingCreate
+    } else {
+        EventSyncStatus::PendingUpdate
+    };
+    let now = now_iso();
+    conn.execute(
+        "UPDATE events SET recurrence_rule = ?1, sync_status = ?2,
+                updated_at = ?3, local_updated_at = ?3
+         WHERE id = ?4",
+        params![format!("{rule}\n{line}"), next_status, now, event_id],
+    )?;
+    Ok(!is_local)
 }
 
 // ---------------------------------------------------------------------------

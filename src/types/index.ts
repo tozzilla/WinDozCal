@@ -49,12 +49,14 @@ export interface Event {
   sync_status: SyncStatus;
   local_updated_at: string | null;
   remote_updated_at: string | null;
+  /** Solo per le occorrenze espanse di una serie: inizio originale (ISO con offset); `null` altrimenti. */
+  occurrence_start: string | null;
 }
 
 /** Payload di `create_event`: i campi che assegna il backend (id, etag, stato di sync, timestamp) sono esclusi. */
 export type NewEvent = Omit<
   Event,
-  "id" | "remote_id" | "etag" | "updated_at" | "sync_status" | "local_updated_at" | "remote_updated_at"
+  "id" | "remote_id" | "etag" | "updated_at" | "sync_status" | "local_updated_at" | "remote_updated_at" | "occurrence_start"
 >;
 
 export type AttendeeStatus = "needs_action" | "accepted" | "declined" | "tentative";

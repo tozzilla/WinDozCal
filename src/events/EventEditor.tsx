@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { openExternal } from "@/providers/externalLinks";
-import { useCalendars, useCreateEvent, useDeleteEvent, useEventDetail, useUpdateEvent } from "@/providers/queries";
+import { useCalendars, useCreateEvent, useDeleteEvent, useDeleteOccurrence, useEventDetail, useUpdateEvent } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
 import { isValidConferenceUrl } from "@/utils/validation";
 import { AttendeesField } from "./AttendeesField";
-import { draftToFields, emptyDraft, eventToDraft, validateDraft, type EventDraft, type RecurrencePreset } from "./draft";
+import { draftToFields, emptyDraft, eventToDraft, validateDraft, type EventDraft } from "./draft";
+import { weekdayOf, WEEKDAYS, type RecurrenceFreq, type Weekday } from "./recurrence";
 import { RemindersField } from "./RemindersField";
+
+const WEEKDAY_LABEL: Record<Weekday, string> = { MO: "Lun", TU: "Mar", WE: "Mer", TH: "Gio", FR: "Ven", SA: "Sab", SU: "Dom" };
 
 const inputClass = "w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
 
@@ -28,31 +31,50 @@ function errorMessage(err: unknown): string {
 
 /** Editor evento minimo (PRD §7). Esc lo chiude (gestito da useKeyboardShortcuts). */
 export function EventEditor() {
-  const { open, event, slot, close } = useEditorStore();
+  const { open, openedAt, event, slot, close } = useEditorStore();
   const { data: calendars = [] } = useCalendars();
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const remove = useDeleteEvent();
+  const removeOccurrence = useDeleteOccurrence();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const initialised = useRef(false);
   const detail = useEventDetail(open && event ? event.id : null);
   const [draft, setDraft] = useState<EventDraft | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   const writable = calendars.filter((c) => !c.read_only);
 
-  // Il draft si inizializza all'apertura (e quando arriva il dettaglio di un evento esistente);
-  // un refetch dello stesso evento non deve azzerare ciò che l'utente sta scrivendo.
-  const detailId = detail.data?.event.id;
+  // Il draft si inizializza una sola volta per apertura, con dati freschi: per un evento esistente si attende
+  // il dettaglio (la serie intera, anche se si è cliccata un'occorrenza); i refetch successivi non devono
+  // azzerare ciò che l'utente sta scrivendo.
   useEffect(() => {
-    setErrors([]);
-    if (!open) return setDraft(null);
-    if (!event) return setDraft(emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot));
-    if (detail.data) setDraft(eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders));
-  }, [open, event?.id, detailId, slot]);
+    if (!open) {
+      initialised.current = false;
+      setDraft(null);
+      setErrors([]);
+      setConfirmDelete(false);
+      return;
+    }
+    if (initialised.current) return;
+    if (!event) {
+      initialised.current = true;
+      setDraft(emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot));
+    } else if (detail.data && !detail.isFetching) {
+      initialised.current = true;
+      setDraft(eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders));
+    }
+  }, [open, event, slot, detail.data, detail.isFetching, writable.length]);
+
+  // Chiude solo con un clic sul fondo; si ignora quello che arriva subito dopo l'apertura (secondo clic di un doppio clic).
+  const onBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && Date.now() - openedAt > 500) close();
+  };
 
   if (open && event && !draft) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={close}>
-        <div className="rounded-xl border bg-popover p-5 text-sm shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onBackdropClick}>
+        <div className="rounded-xl border bg-popover p-5 text-sm shadow-xl">
           {detail.isError ? (
             <>
               <p className="mb-3 text-destructive">Impossibile caricare l&apos;evento: {errorMessage(detail.error)}</p>
@@ -91,10 +113,9 @@ export function EventEditor() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={close}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onBackdropClick}>
       <form
         onSubmit={submit}
-        onMouseDown={(e) => e.stopPropagation()}
         className="max-h-full w-full max-w-lg space-y-3 overflow-y-auto rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
       >
         <input
@@ -141,12 +162,21 @@ export function EventEditor() {
 
         <div className="grid grid-cols-2 gap-2">
           <Field label="Ricorrenza">
-            <select value={draft.recurrence} onChange={(e) => set("recurrence", e.target.value as RecurrencePreset)} className={inputClass}>
+            <select
+              value={draft.recurrence}
+              onChange={(e) => {
+                const freq = e.target.value as RecurrenceFreq;
+                const days = freq === "weekly" && draft.recurrenceDays.length === 0 ? [weekdayOf(new Date(`${draft.date}T00:00`))] : draft.recurrenceDays;
+                setDraft({ ...draft, recurrence: freq, recurrenceDays: days });
+              }}
+              className={inputClass}
+            >
               <option value="none">Non si ripete</option>
               <option value="daily">Ogni giorno</option>
               <option value="weekly">Ogni settimana</option>
               <option value="monthly">Ogni mese</option>
               <option value="yearly">Ogni anno</option>
+              {draft.recurrence === "custom" && <option value="custom">Personalizzata (non modificabile qui)</option>}
             </select>
           </Field>
           <Field label="Stato">
@@ -156,6 +186,26 @@ export function EventEditor() {
             </select>
           </Field>
         </div>
+
+        {draft.recurrence === "weekly" && (
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Giorni della settimana">
+            {WEEKDAYS.map((d) => {
+              const on = draft.recurrenceDays.includes(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => set("recurrenceDays", on ? draft.recurrenceDays.filter((x) => x !== d) : [...draft.recurrenceDays, d])}
+                  className={`rounded-md border px-2.5 py-1 text-xs ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                >
+                  {WEEKDAY_LABEL[d]}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {event && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
 
         <Field label="Videoconferenza (link)">
           <div className="flex gap-2">
@@ -185,20 +235,49 @@ export function EventEditor() {
         )}
 
         <div className="flex items-center justify-between pt-1">
-          {event ? (
+          {event && !confirmDelete && (
             <Button
               type="button"
               variant="destructive"
               onClick={async () => {
+                if (draft.existingRule) return setConfirmDelete(true);
                 await remove.mutateAsync(event.id);
                 close();
               }}
             >
               Elimina
             </Button>
-          ) : (
-            <span />
           )}
+          {event && confirmDelete && (
+            <div className="flex flex-wrap items-center gap-2">
+              {event.occurrence_start && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={async () => {
+                    await removeOccurrence.mutateAsync({ eventId: event.id, occurrenceStart: event.occurrence_start as string });
+                    close();
+                  }}
+                >
+                  Solo questa occorrenza
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  await remove.mutateAsync(event.id);
+                  close();
+                }}
+              >
+                Tutta la serie
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>
+                Indietro
+              </Button>
+            </div>
+          )}
+          {!event && <span />}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={close}>
               Annulla

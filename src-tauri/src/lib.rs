@@ -16,6 +16,8 @@ mod logging;
 pub mod models;
 mod notifications;
 mod providers;
+mod recurrence;
+mod reminders;
 mod state;
 mod sync;
 pub mod timeutil;
@@ -64,6 +66,7 @@ pub fn run() {
 
             tray::init(app.handle())?;
             tray::spawn_refresh_loop(app.handle().clone());
+            reminders::spawn(app.handle().clone());
 
             // La finestra e' `visible: false` in tauri.conf.json (niente lampo all'avvio
             // automatico): si mostra qui, tranne con `--autostart` + start_minimized.
@@ -92,6 +95,7 @@ pub fn run() {
             commands::create_event,
             commands::update_event,
             commands::delete_event,
+            commands::delete_occurrence,
             commands::search_events,
             commands::sync_now,
             commands::open_log_folder,

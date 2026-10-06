@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
 import { formatWeekday, getMonthGrid, getWeekDays, isSameDay } from "@/utils/date";
-import { eventsOnDay } from "@/utils/events";
+import { eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
 import type { CalendarRendererProps } from "./types";
 
 const MAX_CHIPS = 3;
 
-/** Vista mensile con eventi compatti (PRD §5). */
-export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent }: CalendarRendererProps) {
+/** Vista mensile compatta (PRD §5): al massimo MAX_CHIPS eventi per cella, poi "+N altri" porta al giorno. */
+export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent, onShowDay }: CalendarRendererProps) {
   const today = new Date();
   const grid = getMonthGrid(date);
 
@@ -23,11 +23,13 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
       <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6">
         {grid.map((day) => {
           const dayEvents = eventsOnDay(events, day);
+          const hidden = dayEvents.length - MAX_CHIPS;
           return (
             <div
               key={day.toISOString()}
               className="min-h-0 overflow-hidden border-b border-l p-1"
-              onDoubleClick={() => {
+              onDoubleClick={(e) => {
+                if ((e.target as HTMLElement).closest("button")) return;
                 const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
                 onSelectSlot(start, new Date(start.getTime() + 60 * 60_000));
               }}
@@ -43,18 +45,19 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
               </div>
               {dayEvents.slice(0, MAX_CHIPS).map((e) => (
                 <button
-                  key={e.id}
+                  key={eventKey(e)}
                   type="button"
                   onClick={() => onSelectEvent(e)}
-                  onDoubleClick={(ev) => ev.stopPropagation()}
                   className="mb-0.5 flex w-full items-center gap-1 truncate text-left text-xs"
                 >
                   <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }} />
                   <span className="truncate">{e.title}</span>
                 </button>
               ))}
-              {dayEvents.length > MAX_CHIPS && (
-                <div className="text-xs text-muted-foreground">+{dayEvents.length - MAX_CHIPS}</div>
+              {hidden > 0 && (
+                <button type="button" onClick={() => onShowDay(day)} className="text-xs text-muted-foreground hover:underline">
+                  +{hidden} altri
+                </button>
               )}
             </div>
           );

@@ -107,6 +107,48 @@ export function useDeleteEvent() {
   return useMutation({ mutationFn: (eventId: string) => calendarService.deleteEvent(eventId), onSuccess: () => invalidate() });
 }
 
+export function useDeleteOccurrence() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { eventId: string; occurrenceStart: string }) => calendarService.deleteOccurrence(v.eventId, v.occurrenceStart),
+    onSuccess: () => invalidate(),
+  });
+}
+
+/**
+ * Sposta o ridimensiona un evento non ricorrente con aggiornamento ottimistico delle liste di eventi in cache;
+ * se il backend rifiuta, la cache torna com'era (il chiamante mostra l'errore).
+ * L'update rinvia partecipanti e promemoria letti con `get_event`, perché gli array sostituiscono quelli esistenti.
+ */
+export function useChangeEventTime() {
+  const qc = useQueryClient();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (v: { event: Event; start: string; end: string }) => {
+      const detail = await calendarService.getEvent(v.event.id);
+      return calendarService.updateEvent(
+        { ...detail.event, start: v.start, end: v.end },
+        detail.attendees.map((a) => ({ email: a.email, name: a.name })),
+        detail.reminders.map((r) => ({ minutes_before: r.minutes_before, type: r.type })),
+      );
+    },
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ["events"] });
+      const snapshots = qc.getQueriesData({ queryKey: ["events"] });
+      qc.setQueriesData({ queryKey: ["events"] }, (old: unknown) =>
+        Array.isArray(old)
+          ? (old as Event[]).map((e) =>
+              e.id === v.event.id && e.occurrence_start === v.event.occurrence_start ? { ...e, start: v.start, end: v.end } : e,
+            )
+          : old,
+      );
+      return { snapshots };
+    },
+    onError: (_err, _v, ctx) => ctx?.snapshots.forEach(([key, data]) => qc.setQueryData(key, data)),
+    onSettled: () => invalidate(),
+  });
+}
+
 export function useSyncNow() {
   const qc = useQueryClient();
   return useMutation({

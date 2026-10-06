@@ -79,6 +79,23 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 - nessuna credenziale, nessun accesso di rete;
 - si possono aggiungere account esterni in seguito, e un account locale può convivere con loro.
 
+## Ricorrenze (stage 5, 7 ott 2026)
+
+- `recurrence_rule` contiene righe RFC 5545 separate da `
+`: una `RRULE:...` ed eventuali `EXDATE:...` (istanti UTC `YYYYMMDDTHHMMSSZ`, o `YYYYMMDD` per eventi all-day). Il backend accetta anche una regola senza prefisso (`FREQ=...`, formato scritto dalle versioni 0.1-0.2) e la tratta come `RRULE:`
+- `list_events` espande le serie nel range richiesto: ogni occorrenza è un `Event` con `id` = id della serie, `start`/`end` dell'occorrenza e il nuovo campo `occurrence_start` (inizio originale dell'occorrenza, ISO con offset). Per gli eventi non ricorrenti `occurrence_start` è `null`. Chiave univoca lato UI: `id` + `occurrence_start`. Massimo 500 occorrenze per serie per richiesta
+- `get_event`, `update_event`, `delete_event` agiscono sulla serie intera. `update_event` va chiamato con i dati della serie (da `get_event`), mai con quelli di un'occorrenza espansa
+- nuovo comando `delete_occurrence(eventId, occurrenceStart) -> void`: aggiunge una `EXDATE`; su eventi remoti synced porta la serie a `pending_update`
+- modifica di una singola occorrenza ("solo questo") e "questo e i successivi": non supportate in Fase 1 (PRD §10 lo consente). Nella UI il drag di un'occorrenza ricorrente è disabilitato con un messaggio; l'editor modifica la serie
+- il "Next event" del tray e i promemoria usano le occorrenze espanse
+
+## Promemoria e notifiche (stage 7, 7 ott 2026)
+
+- il backend controlla ogni 30 secondi i promemoria `popup` in scadenza (inizio occorrenza − `minutes_before`) dei calendari visibili e mostra una notifica nativa: titolo dell'evento, "in N minutes" / "now", orario `HH:MM–HH:MM`, e il nome del servizio se c'è `conference_url` (Meet, Teams, Zoom, Webex)
+- ogni promemoria scatta una sola volta per occorrenza (tabella `fired_reminders`); promemoria scaduti da più di 10 minuti all'avvio non vengono mostrati
+- pulsante Join nella notifica: solo se l'API di notifica di Windows lo consente dal backend; altrimenti la notifica rimanda all'app e "Join meeting" resta nell'editor. Il clic sulla notifica, se supportato, emette `tray-open-event`
+- i promemoria `email` non generano notifiche locali (sono del provider)
+
 ## System tray e impostazioni generali (anticipo dello stage 7, 6 ott 2026)
 
 Comandi:

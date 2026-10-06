@@ -14,6 +14,7 @@ export const tauriCalendarService: CalendarService = {
   createEvent: (event, attendees, reminders) => invoke<EventDetail>("create_event", { event, attendees, reminders }),
   updateEvent: (event, attendees, reminders) => invoke<EventDetail>("update_event", { event, attendees, reminders }),
   deleteEvent: (eventId) => invoke<void>("delete_event", { eventId }),
+  deleteOccurrence: (eventId, occurrenceStart) => invoke<void>("delete_occurrence", { eventId, occurrenceStart }),
   searchEvents: (query) => invoke<Event[]>("search_events", { query }),
   syncNow: (accountId) => invoke<void>("sync_now", { accountId }),
   openLogFolder: () => invoke<void>("open_log_folder"),

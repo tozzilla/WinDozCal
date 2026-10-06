@@ -2,9 +2,9 @@
 
 Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare dopo aver implementato.
 
-## Stato attuale (6 ott 2026)
+## Stato attuale (7 ott 2026)
 
-Scaffolding (Fase 1, stage 0). Struttura Tauri 2 + React/TS, trait `CalendarProvider` con stub, nessun provider funzionante, nessuna sincronizzazione reale. Piano attivo: [Tasks/fase-1.md](Tasks/fase-1.md).
+Fase 1 in corso (v0.2.0): calendari locali, tray, ricorrenze e notifiche in lavorazione; stage 3 (Google) bloccato. Struttura Tauri 2 + React/TS, trait `CalendarProvider` con stub, nessun provider funzionante, nessuna sincronizzazione reale. Piano attivo: [Tasks/fase-1.md](Tasks/fase-1.md).
 
 ## Gerarchia documenti
 
@@ -21,7 +21,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-010 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-011 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/fase-2.md](Tasks/fase-2.md), [Tasks/fase-3.md](Tasks/fase-3.md) | Bozze Fase 2 (§43) e Fase 3 (§44) |
 
@@ -34,11 +34,12 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 003 | `CalendarProvider` e adapter separati | Accettato |
 | 004 | Zustand + TanStack Query | Accettato |
 | 005 | Segreti in Windows Credential Manager | Accettato |
-| 006 | Renderer calendario | Proposto/aperto |
+| 006 | Renderer calendario: custom | Accettato |
 | 007 | Conflitti: server wins, pending preservati | Accettato nel principio |
 | 008 | Licenza duale MIT OR Apache-2.0 | Accettato |
 | 009 | Modalità locale senza account | Accettato |
 | 010 | Dettaglio evento e `conference_url` (deviazione da PRD §12) | Accettato |
+| 011 | Ricorrenze espanse nel backend | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 
