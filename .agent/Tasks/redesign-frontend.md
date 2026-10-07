@@ -25,4 +25,4 @@ Finish reviewer, DESIGN.md e `.impeccable/design.json`, release successiva (solo
 
 ## Registro sessioni
 
-- 7 ott 2026: PRODUCT.md scritto e committato; `.impeccable/config.json` con `buildPath: comp`. Giro delle direzioni avviato. La chiave OpenAI configurata viene rifiutata ("Incorrect API key"): i cinque comp di decisione sono pagine HTML reali (`.impeccable/comps/mock.html?dir=...`) catturate con Edge headless a 1536x1024, con sidecar di provenienza. Pagina di decisione su http://127.0.0.1:51023/ (key 8fa91a03), in attesa della scelta del proprietario.
+- 7 ott 2026: PRODUCT.md scritto e committato; `.impeccable/config.json` con `buildPath: comp`. Giro delle direzioni avviato. La chiave OpenAI configurata viene rifiutata ("Incorrect API key"): i cinque comp di decisione sono pagine HTML reali (`.impeccable/comps/mock.html?dir=...`) catturate con Edge headless a 1536x1024, con sidecar di provenienza. Pagina di decisione su http://127.0.0.1:51663/ (key 8fa91a03, riavviata staccata dopo la chiusura del primo server), in attesa della scelta del proprietario.

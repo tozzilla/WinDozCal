@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Scaffold reference: palinsesto-1.png</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=National+Park:wght@700&display=swap">
+  <link rel="stylesheet" href="layout.css">
+  <style>html,body{margin:0}body{background:#f6f7f7}.region{box-sizing:border-box}.region.text p{white-space:pre-wrap}</style>
+</head>
+<body>
+<!-- Reference only. Every region sits at its measured box inside a comp-aspect frame. Take the boxes (layout.css), keep your own semantic structure. -->
+<main class="comp-frame" style="max-width:1536px">
+  <div class="r-rail region chrome" data-region="rail"><!-- navy rail #10142A a tutta altezza --></div>
+  <div class="r-brand region text" data-region="brand"><!-- WinDozCal bold bianco --><p style="font-size:var(--r-brand-font);line-height:1.05;margin:0">brand</p></div>
+  <div class="r-acc-local region text" data-region="acc-local"><!-- intestazione QUESTO COMPUTER con barretta ambra e calendario Personale --><p style="font-size:var(--r-acc-local-font);line-height:1.05;margin:0">acc-local</p></div>
+  <div class="r-acc-google region text" data-region="acc-google"><!-- intestazione GOOGLE · LAVORO con barretta blu, calendari Riunioni e Commerciale --><p style="font-size:var(--r-acc-google-font);line-height:1.05;margin:0">acc-google</p></div>
+  <div class="r-acc-ms region text" data-region="acc-ms"><!-- intestazione MICROSOFT · STUDIO ROSSI con barretta verde, calendario Cliente --><p style="font-size:var(--r-acc-ms-font);line-height:1.05;margin:0">acc-ms</p></div>
+  <div class="r-settings region text" data-region="settings"><!-- Impostazioni in fondo alla rail --><p style="font-size:var(--r-settings-font);line-height:1.05;margin:0">settings</p></div>
+  <div class="r-header region chrome" data-region="header"><!-- header bianco con filetto inferiore --></div>
+  <div class="r-nav region control" data-region="nav"><!-- frecce precedente e successivo e pulsante Oggi: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop nav); a control need not have button chrome --></div>
+  <div class="r-title region text" data-region="title"><!-- titolo Ottobre 2026 grottesco condensato bold 26px --><p style="font-size:var(--r-title-font);font-family:var(--r-title-family),sans-serif;font-weight:var(--r-title-weight);line-height:1.05;margin:0">title</p></div>
+  <div class="r-search region control" data-region="search"><!-- campo Cerca eventi con Ctrl+K: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop search); a control need not have button chrome --></div>
+  <div class="r-views region control" data-region="views"><!-- segmentato Giorno Settimana Mese Agenda, Settimana attivo navy: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop views); a control need not have button chrome --></div>
+  <div class="r-new region control" data-region="new"><!-- pulsante + navy: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop new); a control need not have button chrome --></div>
+  <div class="r-days region text" data-region="days"><!-- intestazioni giorni LUN 5 ... DOM 11, numeri 24px bold, oggi MER 7 rosso --><p style="font-size:var(--r-days-font);line-height:1.05;margin:0">days</p></div>
+  <div class="r-allday region chrome" data-region="allday"><!-- fascia eventi di tutto il giorno --></div>
+  <div class="r-allday-ev region control" data-region="allday-ev"><!-- Weekend fuori porta su fondo ambra chiaro: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop allday-ev); a control need not have button chrome --></div>
+  <div class="r-hours region text" data-region="hours"><!-- asse ore 08:00-19:00 cifre tabulari 15px bold --><p style="line-height:1.05;margin:0">hours</p></div>
+  <div class="r-grid region chrome" data-region="grid"><!-- griglia settimana bianca, colonna di oggi leggermente grigia, filetti orari --></div>
+  <div class="r-ev-lun-riunione region control" data-region="ev-lun-riunione"><!-- evento Riunione commerciale banda blu: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-lun-riunione); a control need not have button chrome --></div>
+  <div class="r-ev-lun-standup region control" data-region="ev-lun-standup"><!-- evento Standup banda ambra: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-lun-standup); a control need not have button chrome --></div>
+  <div class="r-ev-mar-call region control" data-region="ev-mar-call"><!-- evento selezionato Call cliente Teams banda verde espanso con ombra: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mar-call); a control need not have button chrome --></div>
+  <div class="r-ev-mer-standup region control" data-region="ev-mer-standup"><!-- evento Standup banda ambra: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mer-standup); a control need not have button chrome --></div>
+  <div class="r-ev-mer-onair region control" data-region="ev-mer-onair"><!-- evento in onda Revisione progetto contorno rosso tag IN ONDA: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mer-onair); a control need not have button chrome --></div>
+  <div class="r-ev-mer-conflict region control" data-region="ev-mer-conflict"><!-- evento sovrapposto Call Studio Rossi banda verde tag CONFLITTO: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mer-conflict); a control need not have button chrome --></div>
+  <div class="r-ev-mer-next region control" data-region="ev-mer-next"><!-- evento Sintesi con Marta tag A SEGUIRE: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mer-next); a control need not have button chrome --></div>
+  <div class="r-ev-mar-free region control" data-region="ev-mar-free"><!-- evento libero Preparazione offerta tratteggiato: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-mar-free); a control need not have button chrome --></div>
+  <div class="r-ev-gio region control" data-region="ev-gio"><!-- evento Revisione progetto banda blu: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-gio); a control need not have button chrome --></div>
+  <div class="r-ev-ven-dentista region control" data-region="ev-ven-dentista"><!-- evento Dentista banda ambra: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-ven-dentista); a control need not have button chrome --></div>
+  <div class="r-ev-ven-pranzo region control" data-region="ev-ven-pranzo"><!-- evento libero Pranzo con Giulia tratteggiato: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-ven-pranzo); a control need not have button chrome --></div>
+  <div class="r-ev-sab region control" data-region="ev-sab"><!-- evento libero Mercato tratteggiato: match the control's lettering and visible shape to the crop (comp-spec.mjs --crop ev-sab); a control need not have button chrome --></div>
+  <div class="r-now-line region chrome" data-region="now-line"><!-- banda IN ONDA rossa 3px attraverso tutte le colonne --></div>
+  <div class="r-now-label region text" data-region="now-label"><!-- etichetta rossa IN ONDA 14:20 sull'asse --><p style="font-size:var(--r-now-label-font);line-height:1.05;margin:0">now-label</p></div>
+</main>
+</body>
+</html>

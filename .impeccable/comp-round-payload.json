@@ -1,0 +1,10 @@
+{
+  "title": "Palinsesto: scegli la composizione",
+  "question": "Tre organizzazioni dello stesso mondo. Quale approvi come riferimento per la build (eventualmente con modifiche)?",
+  "options": [
+    { "id": "palinsesto-1", "label": "1 · Rail e settimana", "thesis": "Rail scuro con i canali-account a sinistra, settimana a tutta larghezza, banda IN ONDA attraverso tutti i giorni.", "palette": ["#10142A", "#F5F6F8", "#E4262B", "#2F6BFF", "#1BA672", "#F2A900"], "materials": ["rail navy", "bande-canale", "cifre tabulari condensate"], "viewport": "Sidebar 248px, header con ricerca e viste, griglia settimana; evento in onda acceso, il successivo A SEGUIRE.", "risk": "La più vicina all'app attuale: la differenza sta nel carattere, non nella struttura.", "comp": ".impeccable/mocks/palinsesto-1.png" },
+    { "id": "palinsesto-2", "label": "2 · Barra canali e scaletta", "thesis": "Barra superiore scura, canali-account come filtri on/off, a destra una scaletta: cosa è in onda, quanto manca, cosa segue oggi e domani.", "palette": ["#10142A", "#F5F6F8", "#E4262B", "#2F6BFF", "#1BA672", "#F2A900"], "materials": ["scaletta di regia", "barra di avanzamento dell'evento in corso", "avviso sovrapposizioni"], "viewport": "Settimana a sinistra, scaletta 340px a destra con l'evento in onda grande e la lista A SEGUIRE.", "risk": "La scaletta toglie circa il 20% di larghezza alla settimana.", "comp": ".impeccable/mocks/palinsesto-2.png" },
+    { "id": "palinsesto-3", "label": "3 · Giornata per canali", "thesis": "La giornata come palinsesto vero: una colonna per calendario, così i conflitti tra account si vedono affiancati; sopra la striscia della settimana con il carico per canale.", "palette": ["#10142A", "#F5F6F8", "#E4262B", "#2F6BFF", "#1BA672", "#F2A900"], "materials": ["rail a icone 64px", "striscia settimana con barre di carico", "colonne-canale"], "viewport": "Vista Giorno con quattro colonne (Personale, Riunioni, Commerciale, Cliente), evento in onda acceso, sovrapposizione segnalata.", "risk": "È la vista Giorno: la Settimana resta da progettare nello stesso linguaggio.", "comp": ".impeccable/mocks/palinsesto-3.png" }
+  ],
+  "steer": true
+}

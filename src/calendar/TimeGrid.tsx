@@ -5,18 +5,24 @@ import { addDays, formatTime, formatWeekday, isSameDay, startOfDay, toIsoWithOff
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
 import { layoutOverlaps } from "./layout";
+import { broadcastMarks, eventSurface, MARK_LABEL, type BroadcastMark } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 import { useEventDrag } from "./useEventDrag";
 
-const HOUR_HEIGHT = 48;
+/** Scala oraria del palinsesto, identica in Giorno e Settimana (le viste restano a registro). */
+const HOUR_HEIGHT = 72;
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MIN_EVENT_HEIGHT = 18;
+const MIN_EVENT_HEIGHT = 20;
+/** Sotto questa altezza orario e titolo stanno su una riga sola. */
+const ONE_LINE_HEIGHT = 44;
+/** All'apertura la griglia parte da qui. */
+const FIRST_HOUR = 8;
 
 interface TimeGridProps extends CalendarRendererProps {
   days: Date[];
 }
 
-/** Data corrente, aggiornata ogni minuto (per l'indicatore dell'ora). */
+/** Data corrente, aggiornata ogni minuto (banda IN ONDA e segni del palinsesto). */
 function useNow(intervalMs = 60_000) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -28,7 +34,37 @@ function useNow(intervalMs = 60_000) {
 
 const isInteractive = (target: EventTarget) => !!(target as HTMLElement).closest("[data-event],button");
 
-/** Griglia oraria condivisa da Giorno e Settimana: eventi affiancati, ora corrente, drag & drop. */
+const MARK_CLASS: Record<BroadcastMark, string> = {
+  onair: "bg-onair text-onair-foreground",
+  next: "bg-primary text-primary-foreground",
+  conflict: "bg-onair/12 text-onair ring-1 ring-onair/40",
+};
+
+/**
+ * Eventi di tutto il giorno nella fascia sopra la griglia: una barra per evento, estesa sui giorni visibili
+ * che copre, impilata nella prima riga libera.
+ */
+function allDayRows(events: Event[], days: Date[]) {
+  const first = startOfDay(days[0]);
+  const last = addDays(startOfDay(days[days.length - 1]), 1);
+  const dayIndex = (d: Date) => Math.round((startOfDay(d).getTime() - first.getTime()) / 86_400_000);
+  const rows: number[][] = [];
+  return events
+    .filter((e) => e.all_day)
+    .map((e) => ({ e, ...eventInterval(e) }))
+    .filter(({ start, end }) => start < last && end > first)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+    .map(({ e, start, end }) => {
+      const from = Math.max(0, dayIndex(start));
+      const to = Math.min(days.length, Math.max(from + 1, dayIndex(new Date(end.getTime() - 1)) + 1));
+      let row = rows.findIndex((taken) => taken.every((d) => d < from || d >= to));
+      if (row === -1) row = rows.push([]) - 1;
+      for (let d = from; d < to; d++) rows[row].push(d);
+      return { e, from, span: to - from, row };
+    });
+}
+
+/** Griglia oraria condivisa da Giorno e Settimana: palinsesto con banda IN ONDA, eventi affiancati, drag & drop. */
 export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
   const now = useNow();
   const scroller = useRef<HTMLDivElement>(null);
@@ -36,15 +72,15 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
   const { drag, begin } = useEventDrag({ days, hourHeight: HOUR_HEIGHT, columnsRef, calendars, onSelectEvent, onChangeEventTime, onNotice });
   const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
 
-  // All'apertura la griglia parte dalle 7:00 invece che da mezzanotte.
   useEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = 7 * HOUR_HEIGHT;
+    if (scroller.current) scroller.current.scrollTop = FIRST_HOUR * HOUR_HEIGHT;
   }, [days.length]);
 
   // Durante il drag l'evento appare già nella nuova posizione e il layout delle sovrapposizioni si ricalcola.
   const shown: Event[] = drag
     ? events.map((e) => (eventKey(e) === drag.key ? { ...e, start: toIsoWithOffset(drag.start), end: toIsoWithOffset(drag.end) } : e))
     : events;
+  const marks = broadcastMarks(shown, calendars, now);
 
   const slotFromClick = (day: Date, e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -53,50 +89,44 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
     onSelectSlot(start, new Date(start.getTime() + 60 * 60_000));
   };
 
-  const hasAllDay = days.some((day) => eventsOnDay(shown, day).some((e) => e.all_day));
+  const allDay = allDayRows(shown, days);
+  const todayVisible = days.some((day) => isSameDay(day, now));
+  const nowTop = ((now.getTime() - startOfDay(now).getTime()) / 3_600_000) * HOUR_HEIGHT;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-grid">
       {/* Intestazioni: stesso scrollbar-gutter del corpo, così le colonne restano allineate. */}
-      <div className="overflow-y-hidden border-b [scrollbar-gutter:stable]">
+      <div className="overflow-y-hidden border-b bg-card [scrollbar-gutter:stable]">
         <div className="flex">
-          <div className="w-14 shrink-0" />
+          <div className="w-16 shrink-0" />
           <div className="grid flex-1" style={cols}>
-            {days.map((day) => (
-              <div key={day.toISOString()} className="border-l px-2 py-1.5 text-center">
-                <div className="text-xs text-muted-foreground">{formatWeekday(day)}</div>
-                <div
-                  className={cn(
-                    "mx-auto flex size-7 items-center justify-center rounded-full text-sm font-medium",
-                    isSameDay(day, now) && "bg-primary text-primary-foreground",
-                  )}
-                >
-                  {day.getDate()}
+            {days.map((day) => {
+              const today = isSameDay(day, now);
+              return (
+                <div key={day.toISOString()} className="flex items-baseline gap-1.5 px-2.5 pt-2.5 pb-2">
+                  <span className="text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">{formatWeekday(day)}</span>
+                  <span className={cn("text-[24px] leading-none font-bold tracking-[-0.02em]", today && "text-onair")} aria-current={today ? "date" : undefined}>
+                    {day.getDate()}
+                  </span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-        {hasAllDay && (
-          <div className="flex border-t">
-            <div className="flex w-14 shrink-0 items-center justify-end pr-2 text-[10px] text-muted-foreground">Tutto il giorno</div>
-            <div className="grid flex-1" style={cols}>
-              {days.map((day) => (
-                <div key={day.toISOString()} className="space-y-0.5 border-l p-0.5">
-                  {eventsOnDay(shown, day)
-                    .filter((e) => e.all_day)
-                    .map((e) => (
-                      <button
-                        key={eventKey(e)}
-                        type="button"
-                        onClick={() => onSelectEvent(e)}
-                        className="block w-full truncate rounded px-1.5 py-0.5 text-left text-xs font-medium text-white"
-                        style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }}
-                      >
-                        {e.title}
-                      </button>
-                    ))}
-                </div>
+        {allDay.length > 0 && (
+          <div className="flex border-t bg-background">
+            <div className="w-16 shrink-0" />
+            <div className="grid flex-1 gap-y-0.5 p-0.5" style={cols}>
+              {allDay.map(({ e, from, span, row }) => (
+                <button
+                  key={eventKey(e)}
+                  type="button"
+                  onClick={() => onSelectEvent(e)}
+                  className="truncate rounded-sm px-2 py-0.5 text-left text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  style={{ gridColumn: `${from + 1} / span ${span}`, gridRow: row + 1, ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free") }}
+                >
+                  {e.title}
+                </button>
               ))}
             </div>
           </div>
@@ -104,15 +134,15 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
       </div>
 
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="flex" style={{ height: HOUR_HEIGHT * 24 }}>
-          <div className="w-14 shrink-0">
+        <div className="relative flex" style={{ height: HOUR_HEIGHT * 24 }}>
+          <div className="w-16 shrink-0">
             {HOURS.map((h) => (
-              <div key={h} className="pr-2 text-right text-[11px] text-muted-foreground" style={{ height: HOUR_HEIGHT }}>
-                {h > 0 && `${String(h).padStart(2, "0")}:00`}
+              <div key={h} className="pt-0.5 pr-2 text-right text-[15px] leading-none font-bold" style={{ height: HOUR_HEIGHT }}>
+                {`${String(h).padStart(2, "0")}:00`}
               </div>
             ))}
           </div>
-          <div ref={columnsRef} className="grid flex-1" style={cols}>
+          <div ref={columnsRef} className="tg-cols grid flex-1" style={cols}>
             {days.map((day) => {
               const dayStart = startOfDay(day);
               const dayEnd = addDays(dayStart, 1);
@@ -130,12 +160,12 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
               return (
                 <div
                   key={day.toISOString()}
-                  className="relative border-l"
+                  className={cn("relative border-l border-grid-line", isSameDay(day, now) && "bg-today")}
                   onDoubleClick={(e) => {
                     if (!isInteractive(e.target)) slotFromClick(day, e);
                   }}
                   style={{
-                    backgroundImage: "linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+                    backgroundImage: "linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px)",
                     backgroundSize: `100% ${HOUR_HEIGHT}px`,
                   }}
                 >
@@ -144,34 +174,49 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                     const { start, end } = eventInterval(e);
                     const top = ((Math.max(start.getTime(), dayStart.getTime()) - dayStart.getTime()) / 3_600_000) * HOUR_HEIGHT;
                     const bottom = ((Math.min(end.getTime(), dayEnd.getTime()) - dayStart.getTime()) / 3_600_000) * HOUR_HEIGHT;
-                    const height = Math.max(bottom - top, MIN_EVENT_HEIGHT);
+                    const height = Math.max(bottom - top - 3, MIN_EVENT_HEIGHT);
                     const { column, columns } = layout.get(key) ?? { column: 0, columns: 1 };
                     const dragging = drag?.key === key;
+                    const mark = marks.get(key);
+                    const oneLine = height < ONE_LINE_HEIGHT;
                     return (
                       <div
                         key={key}
                         data-event
                         role="button"
                         tabIndex={0}
+                        aria-label={`${e.title}, ${formatTime(start)}–${formatTime(end)}${mark ? `, ${MARK_LABEL[mark].toLowerCase()}` : ""}`}
                         onPointerDown={(down) => begin(e, "move", down)}
                         onKeyDown={(k) => k.key === "Enter" && onSelectEvent(e)}
                         className={cn(
-                          "absolute cursor-grab touch-none select-none overflow-hidden rounded px-1.5 py-0.5 text-left text-xs text-white outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          dragging && "z-20 cursor-grabbing opacity-90 shadow-lg",
+                          "absolute cursor-grab touch-none overflow-hidden rounded-[4px] px-2 pt-[5px] pb-1 text-left text-[12.5px] leading-[1.3] text-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
+                          mark === "onair" && "ring-2 ring-onair",
+                          dragging && "z-20 cursor-grabbing opacity-90 shadow-[0_8px_22px_rgb(16_20_42/0.22)]",
                         )}
                         style={{
-                          top,
+                          top: top + 1,
                           height,
-                          left: `calc(${(column / columns) * 100}% + 1px)`,
-                          width: `calc(${100 / columns}% - 3px)`,
-                          backgroundColor: calendarColor(calendars, e.calendar_id),
+                          left: `calc(${(column / columns) * 100}% + 4px)`,
+                          width: `calc(${100 / columns}% - 8px)`,
+                          ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"),
                         }}
                       >
-                        <div className="truncate font-medium">{e.title}</div>
-                        {height >= 34 && (
-                          <div className="truncate opacity-80">
-                            {formatTime(start)}–{formatTime(end)}
+                        {mark && !oneLine && (
+                          <span className={cn("mb-1 inline-block max-w-full truncate rounded-[3px] px-1 py-px align-top text-[10px] font-bold tracking-[0.05em]", MARK_CLASS[mark])}>
+                            {MARK_LABEL[mark]}
+                          </span>
+                        )}
+                        {oneLine ? (
+                          <div className="truncate">
+                            <span className="font-bold">{formatTime(start)}</span> <span className="font-semibold">{e.title}</span>
                           </div>
+                        ) : (
+                          <>
+                            <div className="text-[13px] font-bold break-words text-foreground/75">
+                              {formatTime(start)}–{formatTime(end)}
+                            </div>
+                            <div className="line-clamp-2 font-semibold">{e.title}</div>
+                          </>
                         )}
                         <div
                           aria-hidden
@@ -184,19 +229,18 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                       </div>
                     );
                   })}
-                  {isSameDay(day, now) && (
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 z-10 h-px bg-destructive"
-                      style={{ top: ((now.getTime() - dayStart.getTime()) / 3_600_000) * HOUR_HEIGHT }}
-                    >
-                      <span className="absolute -top-[3px] -left-1 size-[7px] rounded-full bg-destructive" />
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
+          {todayVisible && (
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 z-10" style={{ top: nowTop }}>
+              <div className="absolute right-0 left-16 h-[3px] -translate-y-1/2 bg-onair" />
+              <span className="absolute left-0.5 -translate-y-1/2 rounded-[3px] bg-onair px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em] whitespace-nowrap text-onair-foreground">
+                IN ONDA {formatTime(now)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

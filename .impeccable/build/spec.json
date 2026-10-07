@@ -1,0 +1,1868 @@
+{
+  "tool": "comp-spec",
+  "version": 1,
+  "createdAt": "2026-10-07T20:43:21.060Z",
+  "comp": ".impeccable/mocks/palinsesto-1.png",
+  "warnings": [
+    "region rail: \"container\": true set in the regions file (the region-size refusal is overridden: one undivided element)",
+    "region header: \"container\": true set in the regions file (the region-size refusal is overridden: one undivided element)",
+    "region allday: \"container\": true set in the regions file (the region-size refusal is overridden: one undivided element)",
+    "region grid: \"container\": true set in the regions file (the region-size refusal is overridden: one undivided element)"
+  ],
+  "uncoveredInkCells": [],
+  "compSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "aspect": 1.5,
+  "orientation": "landscape",
+  "palette": [
+    {
+      "hex": "#f6f7f7",
+      "coverage": 0.8211
+    },
+    {
+      "hex": "#181828",
+      "coverage": 0.1648
+    },
+    {
+      "hex": "#f2f2d8",
+      "coverage": 0.0091
+    },
+    {
+      "hex": "#e82828",
+      "coverage": 0.0038
+    },
+    {
+      "hex": "#f8b838",
+      "coverage": 0.0012
+    }
+  ],
+  "bands": [
+    {
+      "y": 0.0118,
+      "strength": 0.2249
+    },
+    {
+      "y": 0.0471,
+      "strength": 0.2553
+    },
+    {
+      "y": 0.5882,
+      "strength": 0.5702
+    }
+  ],
+  "regions": [
+    {
+      "id": "rail",
+      "kind": "chrome",
+      "note": "navy rail #10142A a tutta altezza",
+      "grid": null,
+      "container": true,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 0.1615,
+        "h": 1
+      },
+      "px": {
+        "x": 0,
+        "y": 0,
+        "w": 248,
+        "h": 1024
+      },
+      "aspect": 0.2422,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.9947
+        },
+        {
+          "hex": "#f4f8f8",
+          "coverage": 0.0029
+        },
+        {
+          "hex": "#18a878",
+          "coverage": 0.0008
+        },
+        {
+          "hex": "#2868f8",
+          "coverage": 0.0008
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.0008
+        }
+      ],
+      "detail": {
+        "energy": 4.5086
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    },
+    {
+      "id": "brand",
+      "kind": "text",
+      "note": "WinDozCal bold bianco",
+      "grid": null,
+      "parentId": "rail",
+      "box": {
+        "x": 0.0078,
+        "y": 0.0137,
+        "w": 0.0651,
+        "h": 0.0234
+      },
+      "px": {
+        "x": 12,
+        "y": 14,
+        "w": 100,
+        "h": 24
+      },
+      "aspect": 4.1667,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.7976
+        },
+        {
+          "hex": "#f2f8f7",
+          "coverage": 0.1429
+        },
+        {
+          "hex": "#f8eace",
+          "coverage": 0.0317
+        },
+        {
+          "hex": "#74b8e8",
+          "coverage": 0.0159
+        },
+        {
+          "hex": "#181853",
+          "coverage": 0.0119
+        }
+      ],
+      "detail": {
+        "energy": 33.822
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 1,
+          "glyphs": 9,
+          "capHeightPx": 12.1,
+          "inkIsDark": false,
+          "allCaps": false,
+          "advance": 0.6626,
+          "advTall": 0.7454,
+          "advX": 0.635,
+          "gap": 0.138,
+          "xRatio": 0.739,
+          "stemW": 0.2425,
+          "contrast": 1.1955,
+          "serif": 0.6913,
+          "densTall": 0.6917,
+          "densX": 0.7471,
+          "weight": 0.6917
+        },
+        "widthClass": "normal",
+        "weightClass": "black"
+      }
+    },
+    {
+      "id": "acc-local",
+      "kind": "text",
+      "note": "intestazione QUESTO COMPUTER con barretta ambra e calendario Personale",
+      "grid": null,
+      "parentId": "rail",
+      "box": {
+        "x": 0.0078,
+        "y": 0.0527,
+        "w": 0.1042,
+        "h": 0.0469
+      },
+      "px": {
+        "x": 12,
+        "y": 54,
+        "w": 160,
+        "h": 48
+      },
+      "aspect": 3.3333,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.9144
+        },
+        {
+          "hex": "#f5f7f2",
+          "coverage": 0.0277
+        },
+        {
+          "hex": "#f8a808",
+          "coverage": 0.0277
+        },
+        {
+          "hex": "#a9780a",
+          "coverage": 0.0189
+        },
+        {
+          "hex": "#5f94ba",
+          "coverage": 0.0113
+        }
+      ],
+      "detail": {
+        "energy": 24.091
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 2,
+          "glyphs": 22,
+          "capHeightPx": 9.2,
+          "inkIsDark": false,
+          "allCaps": false,
+          "advance": 0.7422,
+          "advTall": 0.7422,
+          "advX": 0.6736,
+          "gap": 0.2474,
+          "xRatio": 0.7074,
+          "stemW": 0.239,
+          "contrast": 1.1245,
+          "serif": 0.7409,
+          "densTall": 0.6556,
+          "densX": 0.7278,
+          "weight": 0.6556
+        },
+        "widthClass": "normal",
+        "weightClass": "bold"
+      }
+    },
+    {
+      "id": "acc-google",
+      "kind": "text",
+      "note": "intestazione GOOGLE · LAVORO con barretta blu, calendari Riunioni e Commerciale",
+      "grid": null,
+      "parentId": "rail",
+      "box": {
+        "x": 0.0078,
+        "y": 0.1172,
+        "w": 0.1107,
+        "h": 0.0742
+      },
+      "px": {
+        "x": 12,
+        "y": 120,
+        "w": 170,
+        "h": 76
+      },
+      "aspect": 2.2368,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.9334
+        },
+        {
+          "hex": "#f1f7f5",
+          "coverage": 0.0205
+        },
+        {
+          "hex": "#2867f5",
+          "coverage": 0.0176
+        },
+        {
+          "hex": "#5787f5",
+          "coverage": 0.0176
+        },
+        {
+          "hex": "#2757b7",
+          "coverage": 0.011
+        }
+      ],
+      "detail": {
+        "energy": 20.8666
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 3,
+          "glyphs": 33,
+          "capHeightPx": 9.5,
+          "inkIsDark": false,
+          "allCaps": false,
+          "advance": 0.7185,
+          "advTall": 0.7607,
+          "advX": 0.6736,
+          "gap": 0.0979,
+          "xRatio": 0.6915,
+          "stemW": 0.2416,
+          "contrast": 1.1089,
+          "serif": 0.7459,
+          "densTall": 0.6669,
+          "densX": 0.7147,
+          "weight": 0.6669
+        },
+        "widthClass": "normal",
+        "weightClass": "black"
+      }
+    },
+    {
+      "id": "acc-ms",
+      "kind": "text",
+      "note": "intestazione MICROSOFT · STUDIO ROSSI con barretta verde, calendario Cliente",
+      "grid": null,
+      "parentId": "rail",
+      "box": {
+        "x": 0.0078,
+        "y": 0.207,
+        "w": 0.1367,
+        "h": 0.0469
+      },
+      "px": {
+        "x": 12,
+        "y": 212,
+        "w": 210,
+        "h": 48
+      },
+      "aspect": 4.375,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.925
+        },
+        {
+          "hex": "#b1b6b7",
+          "coverage": 0.0253
+        },
+        {
+          "hex": "#18a878",
+          "coverage": 0.0195
+        },
+        {
+          "hex": "#ab927b",
+          "coverage": 0.0166
+        },
+        {
+          "hex": "#187858",
+          "coverage": 0.0136
+        }
+      ],
+      "detail": {
+        "energy": 23.8557
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 2,
+          "glyphs": 30,
+          "capHeightPx": 9.2,
+          "inkIsDark": false,
+          "allCaps": false,
+          "advance": 0.7417,
+          "advTall": 0.7622,
+          "advX": 0.6631,
+          "gap": 0.2465,
+          "xRatio": 0.695,
+          "stemW": 0.2556,
+          "contrast": 1.1113,
+          "serif": 0.7597,
+          "densTall": 0.6976,
+          "densX": 0.7459,
+          "weight": 0.6976
+        },
+        "widthClass": "normal",
+        "weightClass": "black"
+      }
+    },
+    {
+      "id": "settings",
+      "kind": "text",
+      "note": "Impostazioni in fondo alla rail",
+      "grid": null,
+      "parentId": "rail",
+      "box": {
+        "x": 0.0078,
+        "y": 0.9629,
+        "w": 0.0716,
+        "h": 0.0215
+      },
+      "px": {
+        "x": 12,
+        "y": 986,
+        "w": 110,
+        "h": 22
+      },
+      "aspect": 5,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.8974
+        },
+        {
+          "hex": "#a6c4c8",
+          "coverage": 0.033
+        },
+        {
+          "hex": "#c0a486",
+          "coverage": 0.0293
+        },
+        {
+          "hex": "#70a0c0",
+          "coverage": 0.022
+        },
+        {
+          "hex": "#986828",
+          "coverage": 0.0183
+        }
+      ],
+      "detail": {
+        "energy": 24.8309
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 1,
+          "glyphs": 12,
+          "capHeightPx": 9.8,
+          "inkIsDark": false,
+          "allCaps": false,
+          "advance": 0.6143,
+          "advTall": 0.273,
+          "advX": 0.6143,
+          "gap": 0.1024,
+          "xRatio": 0.7136,
+          "stemW": 0.2157,
+          "contrast": 1.1367,
+          "serif": 0.6916,
+          "densTall": 0.6943,
+          "densX": 0.7291,
+          "weight": 0.6943
+        },
+        "widthClass": "normal",
+        "weightClass": "black"
+      }
+    },
+    {
+      "id": "header",
+      "kind": "chrome",
+      "note": "header bianco con filetto inferiore",
+      "grid": null,
+      "container": true,
+      "box": {
+        "x": 0.1615,
+        "y": 0,
+        "w": 0.8385,
+        "h": 0.0586
+      },
+      "px": {
+        "x": 248,
+        "y": 0,
+        "w": 1288,
+        "h": 60
+      },
+      "aspect": 21.4667,
+      "palette": [
+        {
+          "hex": "#f7f8f8",
+          "coverage": 0.9425
+        },
+        {
+          "hex": "#181828",
+          "coverage": 0.0524
+        },
+        {
+          "hex": "#c4f8f8",
+          "coverage": 0.0031
+        },
+        {
+          "hex": "#1868c8",
+          "coverage": 0.0011
+        },
+        {
+          "hex": "#181858",
+          "coverage": 0.001
+        }
+      ],
+      "detail": {
+        "energy": 30.619
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    },
+    {
+      "id": "nav",
+      "kind": "control",
+      "note": "frecce precedente e successivo e pulsante Oggi",
+      "grid": null,
+      "parentId": "header",
+      "box": {
+        "x": 0.1745,
+        "y": 0.0117,
+        "w": 0.0911,
+        "h": 0.0352
+      },
+      "px": {
+        "x": 268,
+        "y": 12,
+        "w": 140,
+        "h": 36
+      },
+      "aspect": 3.8889,
+      "palette": [
+        {
+          "hex": "#f5f6f7",
+          "coverage": 0.9819
+        },
+        {
+          "hex": "#181878",
+          "coverage": 0.0054
+        },
+        {
+          "hex": "#f8f3b3",
+          "coverage": 0.0054
+        },
+        {
+          "hex": "#1868c8",
+          "coverage": 0.0036
+        },
+        {
+          "hex": "#201828",
+          "coverage": 0.0036
+        }
+      ],
+      "detail": {
+        "energy": 12.4331
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "title",
+      "kind": "text",
+      "note": "titolo Ottobre 2026 grottesco condensato bold 26px",
+      "grid": null,
+      "parentId": "header",
+      "box": {
+        "x": 0.2747,
+        "y": 0.0117,
+        "w": 0.099,
+        "h": 0.0352
+      },
+      "px": {
+        "x": 422,
+        "y": 12,
+        "w": 152,
+        "h": 36
+      },
+      "aspect": 4.2222,
+      "palette": [
+        {
+          "hex": "#f8f8f8",
+          "coverage": 0.8
+        },
+        {
+          "hex": "#191829",
+          "coverage": 0.1544
+        },
+        {
+          "hex": "#182268",
+          "coverage": 0.0175
+        },
+        {
+          "hex": "#1866c6",
+          "coverage": 0.0158
+        },
+        {
+          "hex": "#9a3d2a",
+          "coverage": 0.0123
+        }
+      ],
+      "detail": {
+        "energy": 41.9876
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 1,
+          "glyphs": 11,
+          "capHeightPx": 18,
+          "inkIsDark": true,
+          "allCaps": false,
+          "advance": 0.6119,
+          "advTall": 0.6119,
+          "advX": 0.6675,
+          "gap": 0.1112,
+          "xRatio": 0.7115,
+          "stemW": 0.2105,
+          "contrast": 1.0562,
+          "serif": null,
+          "densTall": 0.6136,
+          "densX": 0.6624,
+          "weight": 0.6136
+        },
+        "widthClass": "normal",
+        "weightClass": "bold",
+        "chosen": {
+          "family": "National Park",
+          "weight": 700,
+          "fontSizePx": 25,
+          "source": "index",
+          "fp": {
+            "lines": 1,
+            "glyphs": 11,
+            "capHeightPx": 18.3,
+            "inkIsDark": true,
+            "allCaps": false,
+            "advance": 0.6849,
+            "advTall": 0.7123,
+            "advX": 0.6575,
+            "gap": 0.1096,
+            "xRatio": 0.7178,
+            "stemW": 0.2021,
+            "contrast": 1.0993,
+            "serif": 1.3371,
+            "densTall": 0.555,
+            "densX": 0.6225,
+            "weight": 0.555
+          },
+          "stamp": "1e352ce46452"
+        }
+      }
+    },
+    {
+      "id": "search",
+      "kind": "control",
+      "note": "campo Cerca eventi con Ctrl+K",
+      "grid": null,
+      "parentId": "header",
+      "box": {
+        "x": 0.6185,
+        "y": 0.0117,
+        "w": 0.1523,
+        "h": 0.0352
+      },
+      "px": {
+        "x": 950,
+        "y": 12,
+        "w": 234,
+        "h": 36
+      },
+      "aspect": 6.5,
+      "palette": [
+        {
+          "hex": "#f5f6f6",
+          "coverage": 0.9672
+        },
+        {
+          "hex": "#bfebf5",
+          "coverage": 0.012
+        },
+        {
+          "hex": "#9dc8f6",
+          "coverage": 0.0076
+        },
+        {
+          "hex": "#606b93",
+          "coverage": 0.0066
+        },
+        {
+          "hex": "#f0c098",
+          "coverage": 0.0066
+        }
+      ],
+      "detail": {
+        "energy": 15.9867
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "views",
+      "kind": "control",
+      "note": "segmentato Giorno Settimana Mese Agenda, Settimana attivo navy",
+      "grid": null,
+      "parentId": "header",
+      "box": {
+        "x": 0.7747,
+        "y": 0.0117,
+        "w": 0.1836,
+        "h": 0.0352
+      },
+      "px": {
+        "x": 1190,
+        "y": 12,
+        "w": 282,
+        "h": 36
+      },
+      "aspect": 7.8333,
+      "palette": [
+        {
+          "hex": "#f4f6f6",
+          "coverage": 0.743
+        },
+        {
+          "hex": "#181828",
+          "coverage": 0.2308
+        },
+        {
+          "hex": "#aef3f8",
+          "coverage": 0.0122
+        },
+        {
+          "hex": "#3290e0",
+          "coverage": 0.0075
+        },
+        {
+          "hex": "#f8c683",
+          "coverage": 0.0066
+        }
+      ],
+      "detail": {
+        "energy": 50.3121
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "new",
+      "kind": "control",
+      "note": "pulsante + navy",
+      "grid": null,
+      "parentId": "header",
+      "box": {
+        "x": 0.9622,
+        "y": 0.0117,
+        "w": 0.0247,
+        "h": 0.0352
+      },
+      "px": {
+        "x": 1478,
+        "y": 12,
+        "w": 38,
+        "h": 36
+      },
+      "aspect": 1.0556,
+      "palette": [
+        {
+          "hex": "#181828",
+          "coverage": 0.7179
+        },
+        {
+          "hex": "#f6f8f8",
+          "coverage": 0.2564
+        },
+        {
+          "hex": "#545c70",
+          "coverage": 0.0256
+        }
+      ],
+      "detail": {
+        "energy": 8.4265
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "days",
+      "kind": "text",
+      "note": "intestazioni giorni LUN 5 ... DOM 11, numeri 24px bold, oggi MER 7 rosso",
+      "grid": null,
+      "box": {
+        "x": 0.1615,
+        "y": 0.0586,
+        "w": 0.8385,
+        "h": 0.0449
+      },
+      "px": {
+        "x": 248,
+        "y": 60,
+        "w": 1288,
+        "h": 46
+      },
+      "aspect": 28,
+      "palette": [
+        {
+          "hex": "#f6f7f7",
+          "coverage": 0.9854
+        },
+        {
+          "hex": "#181828",
+          "coverage": 0.0095
+        },
+        {
+          "hex": "#c7f2f8",
+          "coverage": 0.0021
+        },
+        {
+          "hex": "#586878",
+          "coverage": 0.0016
+        },
+        {
+          "hex": "#d89880",
+          "coverage": 0.0015
+        }
+      ],
+      "detail": {
+        "energy": 16.5557
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 1,
+          "glyphs": 29,
+          "capHeightPx": 17.1,
+          "inkIsDark": true,
+          "allCaps": false,
+          "advance": 0.3809,
+          "advTall": 0.5568,
+          "advX": 0.3516,
+          "gap": 0.1758,
+          "xRatio": 0.5164,
+          "stemW": 0.0759,
+          "contrast": 0.5548,
+          "serif": 1.6052,
+          "densTall": 0.6321,
+          "densX": 0.4392,
+          "weight": 0.6321
+        },
+        "widthClass": "compressed",
+        "weightClass": "bold"
+      }
+    },
+    {
+      "id": "allday",
+      "kind": "chrome",
+      "note": "fascia eventi di tutto il giorno",
+      "grid": null,
+      "container": true,
+      "box": {
+        "x": 0.1615,
+        "y": 0.1035,
+        "w": 0.8385,
+        "h": 0.0273
+      },
+      "px": {
+        "x": 248,
+        "y": 106,
+        "w": 1288,
+        "h": 28
+      },
+      "aspect": 46,
+      "palette": [
+        {
+          "hex": "#f4f6f6",
+          "coverage": 0.822
+        },
+        {
+          "hex": "#f8f8d8",
+          "coverage": 0.174
+        },
+        {
+          "hex": "#684808",
+          "coverage": 0.0021
+        },
+        {
+          "hex": "#b8d8d8",
+          "coverage": 0.0009
+        },
+        {
+          "hex": "#f8c848",
+          "coverage": 0.0009
+        }
+      ],
+      "detail": {
+        "energy": 5.8848
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": true
+      }
+    },
+    {
+      "id": "allday-ev",
+      "kind": "control",
+      "note": "Weekend fuori porta su fondo ambra chiaro",
+      "grid": null,
+      "parentId": "allday",
+      "box": {
+        "x": 0.7734,
+        "y": 0.1055,
+        "w": 0.2253,
+        "h": 0.0215
+      },
+      "px": {
+        "x": 1188,
+        "y": 108,
+        "w": 346,
+        "h": 22
+      },
+      "aspect": 15.7273,
+      "palette": [
+        {
+          "hex": "#f8f8d8",
+          "coverage": 0.8328
+        },
+        {
+          "hex": "#f8f8f8",
+          "coverage": 0.1479
+        },
+        {
+          "hex": "#cd8b0d",
+          "coverage": 0.0068
+        },
+        {
+          "hex": "#759dad",
+          "coverage": 0.0068
+        },
+        {
+          "hex": "#f8f898",
+          "coverage": 0.0057
+        }
+      ],
+      "detail": {
+        "energy": 16.6917
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "hours",
+      "kind": "text",
+      "note": "asse ore 08:00-19:00 cifre tabulari 15px bold",
+      "grid": null,
+      "box": {
+        "x": 0.1615,
+        "y": 0.1309,
+        "w": 0.0417,
+        "h": 0.8691
+      },
+      "px": {
+        "x": 248,
+        "y": 134,
+        "w": 64,
+        "h": 890
+      },
+      "aspect": 0.0719,
+      "palette": [
+        {
+          "hex": "#f8f8f8",
+          "coverage": 0.9519
+        },
+        {
+          "hex": "#181829",
+          "coverage": 0.0172
+        },
+        {
+          "hex": "#e92828",
+          "coverage": 0.0114
+        },
+        {
+          "hex": "#aff2f8",
+          "coverage": 0.0104
+        },
+        {
+          "hex": "#181878",
+          "coverage": 0.0091
+        }
+      ],
+      "detail": {
+        "energy": 5.4795
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": null,
+        "measuredAt": "2026-10-07T20:44:41.527Z",
+        "note": "no separable lettering in the crop; size by the region box"
+      }
+    },
+    {
+      "id": "grid",
+      "kind": "chrome",
+      "note": "griglia settimana bianca, colonna di oggi leggermente grigia, filetti orari",
+      "grid": null,
+      "container": true,
+      "box": {
+        "x": 0.2031,
+        "y": 0.1309,
+        "w": 0.7969,
+        "h": 0.8691
+      },
+      "px": {
+        "x": 312,
+        "y": 134,
+        "w": 1224,
+        "h": 890
+      },
+      "aspect": 1.3753,
+      "palette": [
+        {
+          "hex": "#f6f8f7",
+          "coverage": 0.9908
+        },
+        {
+          "hex": "#e82828",
+          "coverage": 0.005
+        },
+        {
+          "hex": "#f8b838",
+          "coverage": 0.0017
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.0015
+        },
+        {
+          "hex": "#484858",
+          "coverage": 0.001
+        }
+      ],
+      "detail": {
+        "energy": 6.2637
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-lun-riunione",
+      "kind": "control",
+      "note": "evento Riunione commerciale banda blu",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.2057,
+        "y": 0.2373,
+        "w": 0.1087,
+        "h": 0.0674
+      },
+      "px": {
+        "x": 316,
+        "y": 243,
+        "w": 167,
+        "h": 69
+      },
+      "aspect": 2.4203,
+      "palette": [
+        {
+          "hex": "#e9f7f8",
+          "coverage": 0.9197
+        },
+        {
+          "hex": "#565565",
+          "coverage": 0.0336
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.018
+        },
+        {
+          "hex": "#e7d6b5",
+          "coverage": 0.0164
+        },
+        {
+          "hex": "#62a8e7",
+          "coverage": 0.0123
+        }
+      ],
+      "detail": {
+        "energy": 18.4063
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-lun-standup",
+      "kind": "control",
+      "note": "evento Standup banda ambra",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.2057,
+        "y": 0.3428,
+        "w": 0.1087,
+        "h": 0.0322
+      },
+      "px": {
+        "x": 316,
+        "y": 351,
+        "w": 167,
+        "h": 33
+      },
+      "aspect": 5.0606,
+      "palette": [
+        {
+          "hex": "#f8f7e7",
+          "coverage": 0.8521
+        },
+        {
+          "hex": "#e8e8f7",
+          "coverage": 0.1004
+        },
+        {
+          "hex": "#f8b838",
+          "coverage": 0.0176
+        },
+        {
+          "hex": "#666868",
+          "coverage": 0.0158
+        },
+        {
+          "hex": "#5692c2",
+          "coverage": 0.0141
+        }
+      ],
+      "detail": {
+        "energy": 18.3897
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mar-call",
+      "kind": "control",
+      "note": "evento selezionato Call cliente Teams banda verde espanso con ombra",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.3145,
+        "y": 0.3428,
+        "w": 0.1178,
+        "h": 0.0498
+      },
+      "px": {
+        "x": 483,
+        "y": 351,
+        "w": 181,
+        "h": 51
+      },
+      "aspect": 3.549,
+      "palette": [
+        {
+          "hex": "#e8f8e8",
+          "coverage": 0.8691
+        },
+        {
+          "hex": "#dcdde8",
+          "coverage": 0.0764
+        },
+        {
+          "hex": "#1a1829",
+          "coverage": 0.0199
+        },
+        {
+          "hex": "#53abdd",
+          "coverage": 0.0178
+        },
+        {
+          "hex": "#18a878",
+          "coverage": 0.0168
+        }
+      ],
+      "detail": {
+        "energy": 22.727
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mer-standup",
+      "kind": "control",
+      "note": "evento Standup banda ambra",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.4336,
+        "y": 0.3428,
+        "w": 0.1087,
+        "h": 0.0322
+      },
+      "px": {
+        "x": 666,
+        "y": 351,
+        "w": 167,
+        "h": 33
+      },
+      "aspect": 5.0606,
+      "palette": [
+        {
+          "hex": "#f7f7e6",
+          "coverage": 0.8544
+        },
+        {
+          "hex": "#e8e8f6",
+          "coverage": 0.0971
+        },
+        {
+          "hex": "#8fc7dd",
+          "coverage": 0.0225
+        },
+        {
+          "hex": "#606868",
+          "coverage": 0.0139
+        },
+        {
+          "hex": "#4f5183",
+          "coverage": 0.0121
+        }
+      ],
+      "detail": {
+        "energy": 17.0574
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mer-onair",
+      "kind": "control",
+      "note": "evento in onda Revisione progetto contorno rosso tag IN ONDA",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.4336,
+        "y": 0.5361,
+        "w": 0.054,
+        "h": 0.1025
+      },
+      "px": {
+        "x": 666,
+        "y": 549,
+        "w": 83,
+        "h": 105
+      },
+      "aspect": 0.7905,
+      "palette": [
+        {
+          "hex": "#e8f8f8",
+          "coverage": 0.7463
+        },
+        {
+          "hex": "#e82828",
+          "coverage": 0.1806
+        },
+        {
+          "hex": "#2868f8",
+          "coverage": 0.0377
+        },
+        {
+          "hex": "#3b1b29",
+          "coverage": 0.0194
+        },
+        {
+          "hex": "#393749",
+          "coverage": 0.016
+        }
+      ],
+      "detail": {
+        "energy": 20.2241
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mer-conflict",
+      "kind": "control",
+      "note": "evento sovrapposto Call Studio Rossi banda verde tag CONFLITTO",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.4876,
+        "y": 0.5889,
+        "w": 0.054,
+        "h": 0.1025
+      },
+      "px": {
+        "x": 749,
+        "y": 603,
+        "w": 83,
+        "h": 105
+      },
+      "aspect": 0.7905,
+      "palette": [
+        {
+          "hex": "#e8f8f7",
+          "coverage": 0.8976
+        },
+        {
+          "hex": "#48b898",
+          "coverage": 0.0374
+        },
+        {
+          "hex": "#67adde",
+          "coverage": 0.0286
+        },
+        {
+          "hex": "#50485a",
+          "coverage": 0.0231
+        },
+        {
+          "hex": "#596769",
+          "coverage": 0.0132
+        }
+      ],
+      "detail": {
+        "energy": 14.335
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mer-next",
+      "kind": "control",
+      "note": "evento Sintesi con Marta tag A SEGUIRE",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.4336,
+        "y": 0.7119,
+        "w": 0.1087,
+        "h": 0.0674
+      },
+      "px": {
+        "x": 666,
+        "y": 729,
+        "w": 167,
+        "h": 69
+      },
+      "aspect": 2.4203,
+      "palette": [
+        {
+          "hex": "#e9f7f8",
+          "coverage": 0.8808
+        },
+        {
+          "hex": "#49495b",
+          "coverage": 0.0806
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.0181
+        },
+        {
+          "hex": "#83c2ef",
+          "coverage": 0.0107
+        },
+        {
+          "hex": "#4f5fac",
+          "coverage": 0.0099
+        }
+      ],
+      "detail": {
+        "energy": 21.3617
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-mar-free",
+      "kind": "control",
+      "note": "evento libero Preparazione offerta tratteggiato",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.3197,
+        "y": 0.624,
+        "w": 0.1087,
+        "h": 0.0674
+      },
+      "px": {
+        "x": 491,
+        "y": 639,
+        "w": 167,
+        "h": 69
+      },
+      "aspect": 2.4203,
+      "palette": [
+        {
+          "hex": "#e8f8f8",
+          "coverage": 0.7535
+        },
+        {
+          "hex": "#dcdcec",
+          "coverage": 0.1898
+        },
+        {
+          "hex": "#4e4958",
+          "coverage": 0.0275
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.0183
+        },
+        {
+          "hex": "#5e697e",
+          "coverage": 0.0108
+        }
+      ],
+      "detail": {
+        "energy": 22.881
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-gio",
+      "kind": "control",
+      "note": "evento Revisione progetto banda blu",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.5475,
+        "y": 0.6592,
+        "w": 0.1087,
+        "h": 0.1025
+      },
+      "px": {
+        "x": 841,
+        "y": 675,
+        "w": 167,
+        "h": 105
+      },
+      "aspect": 1.5905,
+      "palette": [
+        {
+          "hex": "#e9f8f8",
+          "coverage": 0.9554
+        },
+        {
+          "hex": "#5888f8",
+          "coverage": 0.018
+        },
+        {
+          "hex": "#4e4858",
+          "coverage": 0.0133
+        },
+        {
+          "hex": "#dcb488",
+          "coverage": 0.0069
+        },
+        {
+          "hex": "#484b7b",
+          "coverage": 0.0064
+        }
+      ],
+      "detail": {
+        "energy": 11.6481
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-ven-dentista",
+      "kind": "control",
+      "note": "evento Dentista banda ambra",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.6608,
+        "y": 0.2373,
+        "w": 0.1087,
+        "h": 0.0674
+      },
+      "px": {
+        "x": 1015,
+        "y": 243,
+        "w": 167,
+        "h": 69
+      },
+      "aspect": 2.4203,
+      "palette": [
+        {
+          "hex": "#f8f8e8",
+          "coverage": 0.95
+        },
+        {
+          "hex": "#f8b838",
+          "coverage": 0.0178
+        },
+        {
+          "hex": "#525b67",
+          "coverage": 0.0137
+        },
+        {
+          "hex": "#d99c6c",
+          "coverage": 0.0105
+        },
+        {
+          "hex": "#536b9d",
+          "coverage": 0.0081
+        }
+      ],
+      "detail": {
+        "energy": 12.4632
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-ven-pranzo",
+      "kind": "control",
+      "note": "evento libero Pranzo con Giulia tratteggiato",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.6608,
+        "y": 0.4482,
+        "w": 0.1087,
+        "h": 0.0674
+      },
+      "px": {
+        "x": 1015,
+        "y": 459,
+        "w": 167,
+        "h": 69
+      },
+      "aspect": 2.4203,
+      "palette": [
+        {
+          "hex": "#f5f5e6",
+          "coverage": 0.9394
+        },
+        {
+          "hex": "#4d5265",
+          "coverage": 0.0254
+        },
+        {
+          "hex": "#f8b838",
+          "coverage": 0.018
+        },
+        {
+          "hex": "#70add5",
+          "coverage": 0.0098
+        },
+        {
+          "hex": "#c8f3e4",
+          "coverage": 0.0074
+        }
+      ],
+      "detail": {
+        "energy": 23.7336
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "ev-sab",
+      "kind": "control",
+      "note": "evento libero Mercato tratteggiato",
+      "grid": null,
+      "parentId": "grid",
+      "box": {
+        "x": 0.7747,
+        "y": 0.2725,
+        "w": 0.1087,
+        "h": 0.1377
+      },
+      "px": {
+        "x": 1190,
+        "y": 279,
+        "w": 167,
+        "h": 141
+      },
+      "aspect": 1.1844,
+      "palette": [
+        {
+          "hex": "#f5f5e5",
+          "coverage": 0.9518
+        },
+        {
+          "hex": "#e8e8f8",
+          "coverage": 0.0222
+        },
+        {
+          "hex": "#f8b838",
+          "coverage": 0.0179
+        },
+        {
+          "hex": "#484858",
+          "coverage": 0.0043
+        },
+        {
+          "hex": "#92cbe5",
+          "coverage": 0.0039
+        }
+      ],
+      "detail": {
+        "energy": 14.5631
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      }
+    },
+    {
+      "id": "now-line",
+      "kind": "chrome",
+      "note": "banda IN ONDA rossa 3px attraverso tutte le colonne",
+      "grid": null,
+      "box": {
+        "x": 0.2031,
+        "y": 0.5742,
+        "w": 0.7969,
+        "h": 0.0078
+      },
+      "px": {
+        "x": 312,
+        "y": 588,
+        "w": 1224,
+        "h": 8
+      },
+      "aspect": 153,
+      "palette": [
+        {
+          "hex": "#f7f8f8",
+          "coverage": 0.6505
+        },
+        {
+          "hex": "#e82828",
+          "coverage": 0.3437
+        },
+        {
+          "hex": "#f8f8cd",
+          "coverage": 0.0025
+        },
+        {
+          "hex": "#2868f8",
+          "coverage": 0.0016
+        },
+        {
+          "hex": "#383848",
+          "coverage": 0.0016
+        }
+      ],
+      "detail": {
+        "energy": 65.0191
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": true
+      }
+    },
+    {
+      "id": "now-label",
+      "kind": "text",
+      "note": "etichetta rossa IN ONDA 14:20 sull'asse",
+      "grid": null,
+      "box": {
+        "x": 0.1615,
+        "y": 0.5684,
+        "w": 0.056,
+        "h": 0.0176
+      },
+      "px": {
+        "x": 248,
+        "y": 582,
+        "w": 86,
+        "h": 18
+      },
+      "aspect": 4.7778,
+      "palette": [
+        {
+          "hex": "#e82828",
+          "coverage": 0.6364
+        },
+        {
+          "hex": "#f8f7f8",
+          "coverage": 0.2909
+        },
+        {
+          "hex": "#e8a8d8",
+          "coverage": 0.0303
+        },
+        {
+          "hex": "#f0d0f4",
+          "coverage": 0.0242
+        },
+        {
+          "hex": "#f8b878",
+          "coverage": 0.0182
+        }
+      ],
+      "detail": {
+        "energy": 39.2718
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "type": {
+        "comp": {
+          "lines": 1,
+          "glyphs": 13,
+          "capHeightPx": 11.6,
+          "inkIsDark": false,
+          "allCaps": true,
+          "advance": 0.4589,
+          "advTall": 0.4589,
+          "advX": null,
+          "gap": 0.1291,
+          "xRatio": null,
+          "stemW": 0.1767,
+          "contrast": 2.852,
+          "serif": 1.2822,
+          "densTall": 0.5076,
+          "densX": null,
+          "weight": 0.5076
+        },
+        "widthClass": "condensed",
+        "weightClass": "medium"
+      }
+    }
+  ],
+  "compSha256": "6d1b36a06eb05b6f2542280cd3537fcb8a931a2e0b5fa5950316f969c893fad4",
+  "regionsSource": {
+    "path": ".impeccable/build/regions.json",
+    "sha256": "9143b46d83c96984e4286a7c5897f560d67c4138e908e281bbdfa13ad17fc2e5"
+  }
+}

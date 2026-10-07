@@ -11,31 +11,22 @@ const DEFAULT_COLOR = "#2563eb";
 // Parte vuoto, così si vede la WelcomeScreen; i dati d'esempio si attivano con `?demo` nell'URL.
 
 const demoAccounts = (): Account[] => [
-  { id: "acc-google", provider: "google", name: "Google", email: "demo@example.com", sync_status: "idle", last_sync: null },
-  { id: "acc-work", provider: "caldav", name: "Work", email: "demo@example.com", sync_status: "idle", last_sync: null },
-  { id: "acc-ms", provider: "microsoft", name: "Microsoft", email: "demo@contoso.example", sync_status: "idle", last_sync: null },
+  { id: "acc-local", provider: "local", name: "Questo computer", email: "", sync_status: "idle", last_sync: null },
+  { id: "acc-google", provider: "google", name: "Lavoro", email: "demo@example.com", sync_status: "idle", last_sync: null },
+  { id: "acc-ms", provider: "microsoft", name: "Studio Rossi", email: "demo@studiorossi.example", sync_status: "idle", last_sync: null },
 ];
 
 const demoCalendars = (): Calendar[] => [
-  { id: "cal-personale", account_id: "acc-google", remote_id: "personale", name: "Personale", color: "#2563eb", visible: true, read_only: false },
-  { id: "cal-famiglia", account_id: "acc-google", remote_id: "famiglia", name: "Famiglia", color: "#16a34a", visible: true, read_only: false },
-  { id: "cal-riunioni", account_id: "acc-work", remote_id: "riunioni", name: "Riunioni", color: "#9333ea", visible: true, read_only: false },
-  { id: "cal-commerciale", account_id: "acc-work", remote_id: "commerciale", name: "Commerciale", color: "#ea580c", visible: true, read_only: false },
-  { id: "cal-cliente", account_id: "acc-ms", remote_id: "cliente-xyz", name: "Cliente XYZ", color: "#0891b2", visible: true, read_only: true },
+  { id: "cal-personale", account_id: "acc-local", remote_id: "personale", name: "Personale", color: "#F2A900", visible: true, read_only: false },
+  { id: "cal-riunioni", account_id: "acc-google", remote_id: "riunioni", name: "Riunioni", color: "#2F6BFF", visible: true, read_only: false },
+  { id: "cal-commerciale", account_id: "acc-google", remote_id: "commerciale", name: "Commerciale", color: "#5B8CFF", visible: true, read_only: false },
+  { id: "cal-cliente", account_id: "acc-ms", remote_id: "cliente", name: "Cliente", color: "#1BA672", visible: true, read_only: false },
 ];
 
+/** Settimana d'esempio (`?demo`), relativa al lunedì corrente: gli stessi contenuti del comp approvato del Palinsesto. */
 function seedEvents(): Event[] {
   const monday = startOfWeek(new Date());
-  const make = (
-    id: string,
-    calendar_id: string,
-    title: string,
-    day: number,
-    h: number,
-    m: number,
-    minutes: number,
-    extra: Partial<Event> = {},
-  ): Event => {
+  const make = (id: string, calendar_id: string, title: string, day: number, h: number, m: number, minutes: number, extra: Partial<Event> = {}): Event => {
     const start = addDays(monday, day);
     start.setHours(h, m, 0, 0);
     const end = new Date(start.getTime() + minutes * 60_000);
@@ -47,17 +38,26 @@ function seedEvents(): Event[] {
       sync_status: "synced", local_updated_at: null, remote_updated_at: null, ...extra,
     };
   };
+  const allDay = (id: string, calendar_id: string, title: string, day: number, days: number): Event => {
+    const start = addDays(monday, day);
+    return { ...make(id, calendar_id, title, day, 0, 0, 0), start: toIsoWithOffset(start), end: toIsoWithOffset(addDays(start, days)), all_day: true };
+  };
   return [
     make("ev-1", "cal-riunioni", "Riunione commerciale", 0, 9, 30, 60),
-    make("ev-2", "cal-commerciale", "Call cliente", 1, 11, 0, 45, { location: "Videoconferenza" }),
-    make("ev-3", "cal-riunioni", "Revisione progetto", 1, 15, 30, 90),
-    make("ev-4", "cal-cliente", "Presentazione", 2, 10, 0, 60),
-    make("ev-5", "cal-personale", "Dentista", 3, 14, 30, 60),
-    make("ev-6", "cal-famiglia", "Cena di famiglia", 4, 20, 0, 120),
-    make("ev-7", "cal-personale", "Weekend fuori porta", 5, 0, 0, 48 * 60, { all_day: true }),
+    make("ev-2", "cal-personale", "Standup", 0, 11, 0, 30),
+    make("ev-3", "cal-cliente", "Call cliente · Teams", 1, 11, 0, 45, { conference_url: "https://teams.microsoft.com/l/meetup-join/demo" }),
+    make("ev-4", "cal-personale", "Standup", 2, 11, 0, 30),
+    make("ev-5", "cal-riunioni", "Revisione progetto", 2, 13, 45, 90),
+    make("ev-6", "cal-cliente", "Call Studio Rossi", 2, 14, 30, 90),
+    make("ev-7", "cal-riunioni", "Sintesi con Marta", 2, 16, 15, 60),
+    make("ev-8", "cal-commerciale", "Preparazione offerta", 1, 15, 0, 60, { status: "free" }),
+    make("ev-9", "cal-riunioni", "Revisione progetto", 3, 15, 30, 90),
+    make("ev-10", "cal-personale", "Dentista", 4, 9, 30, 60),
+    make("ev-11", "cal-personale", "Pranzo con Giulia", 4, 12, 30, 60, { status: "free" }),
+    make("ev-12", "cal-personale", "Mercato", 5, 10, 0, 120, { status: "free" }),
+    allDay("ev-13", "cal-personale", "Weekend fuori porta", 5, 2),
   ];
 }
-
 
 export function createMemoryCalendarService(demo = false): CalendarService {
   const accounts: Account[] = demo ? demoAccounts() : [];

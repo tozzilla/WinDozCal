@@ -1,0 +1,372 @@
+{
+ "regions": [
+  {
+   "id": "rail",
+   "kind": "chrome",
+   "pixelBox": {
+    "x": 0,
+    "y": 0,
+    "w": 248,
+    "h": 1024
+   },
+   "note": "navy rail #10142A a tutta altezza",
+   "container": true
+  },
+  {
+   "id": "brand",
+   "kind": "text",
+   "pixelBox": {
+    "x": 12,
+    "y": 14,
+    "w": 100,
+    "h": 24
+   },
+   "note": "WinDozCal bold bianco",
+   "parentId": "rail"
+  },
+  {
+   "id": "acc-local",
+   "kind": "text",
+   "pixelBox": {
+    "x": 12,
+    "y": 54,
+    "w": 160,
+    "h": 48
+   },
+   "note": "intestazione QUESTO COMPUTER con barretta ambra e calendario Personale",
+   "parentId": "rail"
+  },
+  {
+   "id": "acc-google",
+   "kind": "text",
+   "pixelBox": {
+    "x": 12,
+    "y": 120,
+    "w": 170,
+    "h": 76
+   },
+   "note": "intestazione GOOGLE · LAVORO con barretta blu, calendari Riunioni e Commerciale",
+   "parentId": "rail"
+  },
+  {
+   "id": "acc-ms",
+   "kind": "text",
+   "pixelBox": {
+    "x": 12,
+    "y": 212,
+    "w": 210,
+    "h": 48
+   },
+   "note": "intestazione MICROSOFT · STUDIO ROSSI con barretta verde, calendario Cliente",
+   "parentId": "rail"
+  },
+  {
+   "id": "settings",
+   "kind": "text",
+   "pixelBox": {
+    "x": 12,
+    "y": 986,
+    "w": 110,
+    "h": 22
+   },
+   "note": "Impostazioni in fondo alla rail",
+   "parentId": "rail"
+  },
+  {
+   "id": "header",
+   "kind": "chrome",
+   "pixelBox": {
+    "x": 248,
+    "y": 0,
+    "w": 1288,
+    "h": 60
+   },
+   "note": "header bianco con filetto inferiore",
+   "container": true
+  },
+  {
+   "id": "nav",
+   "kind": "control",
+   "pixelBox": {
+    "x": 268,
+    "y": 12,
+    "w": 140,
+    "h": 36
+   },
+   "note": "frecce precedente e successivo e pulsante Oggi",
+   "parentId": "header"
+  },
+  {
+   "id": "title",
+   "kind": "text",
+   "pixelBox": {
+    "x": 422,
+    "y": 12,
+    "w": 152,
+    "h": 36
+   },
+   "note": "titolo Ottobre 2026 grottesco condensato bold 26px",
+   "parentId": "header"
+  },
+  {
+   "id": "search",
+   "kind": "control",
+   "pixelBox": {
+    "x": 950,
+    "y": 12,
+    "w": 234,
+    "h": 36
+   },
+   "note": "campo Cerca eventi con Ctrl+K",
+   "parentId": "header"
+  },
+  {
+   "id": "views",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1190,
+    "y": 12,
+    "w": 282,
+    "h": 36
+   },
+   "note": "segmentato Giorno Settimana Mese Agenda, Settimana attivo navy",
+   "parentId": "header"
+  },
+  {
+   "id": "new",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1478,
+    "y": 12,
+    "w": 38,
+    "h": 36
+   },
+   "note": "pulsante + navy",
+   "parentId": "header"
+  },
+  {
+   "id": "days",
+   "kind": "text",
+   "pixelBox": {
+    "x": 248,
+    "y": 60,
+    "w": 1288,
+    "h": 46
+   },
+   "note": "intestazioni giorni LUN 5 ... DOM 11, numeri 24px bold, oggi MER 7 rosso"
+  },
+  {
+   "id": "allday",
+   "kind": "chrome",
+   "pixelBox": {
+    "x": 248,
+    "y": 106,
+    "w": 1288,
+    "h": 28
+   },
+   "note": "fascia eventi di tutto il giorno",
+   "container": true
+  },
+  {
+   "id": "allday-ev",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1188,
+    "y": 108,
+    "w": 346,
+    "h": 22
+   },
+   "note": "Weekend fuori porta su fondo ambra chiaro",
+   "parentId": "allday"
+  },
+  {
+   "id": "hours",
+   "kind": "text",
+   "pixelBox": {
+    "x": 248,
+    "y": 134,
+    "w": 64,
+    "h": 890
+   },
+   "note": "asse ore 08:00-19:00 cifre tabulari 15px bold"
+  },
+  {
+   "id": "grid",
+   "kind": "chrome",
+   "pixelBox": {
+    "x": 312,
+    "y": 134,
+    "w": 1224,
+    "h": 890
+   },
+   "note": "griglia settimana bianca, colonna di oggi leggermente grigia, filetti orari",
+   "container": true
+  },
+  {
+   "id": "ev-lun-riunione",
+   "kind": "control",
+   "pixelBox": {
+    "x": 316,
+    "y": 243,
+    "w": 167,
+    "h": 69
+   },
+   "note": "evento Riunione commerciale banda blu",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-lun-standup",
+   "kind": "control",
+   "pixelBox": {
+    "x": 316,
+    "y": 351,
+    "w": 167,
+    "h": 33
+   },
+   "note": "evento Standup banda ambra",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mar-call",
+   "kind": "control",
+   "pixelBox": {
+    "x": 483,
+    "y": 351,
+    "w": 181,
+    "h": 51
+   },
+   "note": "evento selezionato Call cliente Teams banda verde espanso con ombra",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mer-standup",
+   "kind": "control",
+   "pixelBox": {
+    "x": 666,
+    "y": 351,
+    "w": 167,
+    "h": 33
+   },
+   "note": "evento Standup banda ambra",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mer-onair",
+   "kind": "control",
+   "pixelBox": {
+    "x": 666,
+    "y": 549,
+    "w": 83,
+    "h": 105
+   },
+   "note": "evento in onda Revisione progetto contorno rosso tag IN ONDA",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mer-conflict",
+   "kind": "control",
+   "pixelBox": {
+    "x": 749,
+    "y": 603,
+    "w": 83,
+    "h": 105
+   },
+   "note": "evento sovrapposto Call Studio Rossi banda verde tag CONFLITTO",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mer-next",
+   "kind": "control",
+   "pixelBox": {
+    "x": 666,
+    "y": 729,
+    "w": 167,
+    "h": 69
+   },
+   "note": "evento Sintesi con Marta tag A SEGUIRE",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-mar-free",
+   "kind": "control",
+   "pixelBox": {
+    "x": 491,
+    "y": 639,
+    "w": 167,
+    "h": 69
+   },
+   "note": "evento libero Preparazione offerta tratteggiato",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-gio",
+   "kind": "control",
+   "pixelBox": {
+    "x": 841,
+    "y": 675,
+    "w": 167,
+    "h": 105
+   },
+   "note": "evento Revisione progetto banda blu",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-ven-dentista",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1015,
+    "y": 243,
+    "w": 167,
+    "h": 69
+   },
+   "note": "evento Dentista banda ambra",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-ven-pranzo",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1015,
+    "y": 459,
+    "w": 167,
+    "h": 69
+   },
+   "note": "evento libero Pranzo con Giulia tratteggiato",
+   "parentId": "grid"
+  },
+  {
+   "id": "ev-sab",
+   "kind": "control",
+   "pixelBox": {
+    "x": 1190,
+    "y": 279,
+    "w": 167,
+    "h": 141
+   },
+   "note": "evento libero Mercato tratteggiato",
+   "parentId": "grid"
+  },
+  {
+   "id": "now-line",
+   "kind": "chrome",
+   "pixelBox": {
+    "x": 312,
+    "y": 588,
+    "w": 1224,
+    "h": 8
+   },
+   "note": "banda IN ONDA rossa 3px attraverso tutte le colonne"
+  },
+  {
+   "id": "now-label",
+   "kind": "text",
+   "pixelBox": {
+    "x": 248,
+    "y": 582,
+    "w": 86,
+    "h": 18
+   },
+   "note": "etichetta rossa IN ONDA 14:20 sull'asse"
+  }
+ ]
+}

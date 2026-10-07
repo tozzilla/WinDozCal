@@ -1,0 +1,411 @@
+{
+  "tool": "build-phase",
+  "version": 2,
+  "startedAt": "2026-10-07T20:25:42.319Z",
+  "comp": ".impeccable/mocks/palinsesto-1.png",
+  "direction": "8d1d189d",
+  "breakpoint": "1536x1024",
+  "artifact": "src/App.tsx",
+  "phase": "hero",
+  "phases": {
+    "comps": {
+      "status": "closed",
+      "openedAt": "2026-10-07T20:25:42.319Z",
+      "closedAt": "2026-10-07T20:42:53.381Z",
+      "attempts": 1,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "3 comps, 1 approved",
+        "approved": ".impeccable/mocks/palinsesto-1.png",
+        "at": "2026-10-07T20:42:53.381Z"
+      },
+      "forced": null
+    },
+    "spec": {
+      "status": "closed",
+      "openedAt": "2026-10-07T20:42:53.390Z",
+      "closedAt": "2026-10-07T20:44:41.720Z",
+      "attempts": 2,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "31 regions, 0 plates, 9 text regions measured",
+        "at": "2026-10-07T20:44:41.720Z"
+      },
+      "forced": null
+    },
+    "plates": {
+      "status": "closed",
+      "openedAt": "2026-10-07T20:44:41.720Z",
+      "closedAt": "2026-10-07T20:44:45.096Z",
+      "attempts": 1,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "no plates owed",
+        "at": "2026-10-07T20:44:45.095Z"
+      },
+      "forced": null
+    },
+    "hero": {
+      "status": "open",
+      "openedAt": "2026-10-07T20:44:45.096Z",
+      "closedAt": null,
+      "attempts": 3,
+      "notes": [
+        {
+          "at": "2026-10-07T20:50:20.528Z",
+          "text": "Hero accepted by the owner on 2026-10-07 via structured question after three gate attempts (overall 96%, verdict match; residual: ev-mar-call selected state shown on hover only, 30-min events on one line, CONFLITTO tag truncated in narrow split). The artifact is a Vite/React SPA, so component-review capture of a static page entry does not apply; acceptance recorded here and in .agent/Tasks/redesign-frontend.md."
+        }
+      ],
+      "gate": {
+        "ok": false,
+        "reasons": [
+          "region acc-google is missing (detail 0%, structure 76%): the comp shows material the build does not",
+          "region acc-ms is missing (detail 0%, structure 75%): the comp shows material the build does not",
+          "region ev-mar-call (control) is contradicted (structure 73%, detail added 20%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+          "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+          "control ev-mar-free drifts to 64% (structure 71%, color 50%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+        ],
+        "regionReasons": {
+          "acc-google": [
+            "region acc-google is missing (detail 0%, structure 76%): the comp shows material the build does not"
+          ],
+          "acc-ms": [
+            "region acc-ms is missing (detail 0%, structure 75%): the comp shows material the build does not"
+          ],
+          "ev-mar-call": [
+            "region ev-mar-call (control) is contradicted (structure 73%, detail added 20%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification"
+          ],
+          "allday-ev": [
+            "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+          ],
+          "ev-mar-free": [
+            "control ev-mar-free drifts to 64% (structure 71%, color 50%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+          ]
+        },
+        "summary": "hero 96% (match)",
+        "score": 0.9565,
+        "verdict": "match",
+        "report": ".impeccable/review/diff/hero/report.json",
+        "sideBySide": "C:/Developer/WinDozCal/.impeccable/review/diff/hero/side-by-side.png",
+        "worst": [
+          "ev-mar-call contradicted 60%",
+          "ev-mar-free drift 64%",
+          "allday-ev drift 65%"
+        ],
+        "worstIds": [
+          "ev-mar-call",
+          "ev-mar-free",
+          "allday-ev"
+        ],
+        "worstCrops": [
+          {
+            "id": "ev-mar-call",
+            "verdict": "contradicted",
+            "score": {
+              "overall": 0.5989,
+              "structure": 0.7258,
+              "color": 0.4476,
+              "colorIntersection": 0.068,
+              "paletteMatch": 0.652,
+              "detail": 0.5781,
+              "detailRaw": 0.677,
+              "detailAdded": 0.1979,
+              "bands": 0.8444
+            },
+            "file": ".impeccable/review/diff/hero/regions/ev-mar-call.png"
+          },
+          {
+            "id": "ev-mar-free",
+            "verdict": "drift",
+            "score": {
+              "overall": 0.6386,
+              "structure": 0.7098,
+              "color": 0.4961,
+              "colorIntersection": 0.0524,
+              "paletteMatch": 0.735,
+              "detail": 0.7277,
+              "detailRaw": 0.7798,
+              "detailAdded": 0.1042,
+              "bands": 0.8667
+            },
+            "file": ".impeccable/review/diff/hero/regions/ev-mar-free.png"
+          },
+          {
+            "id": "allday-ev",
+            "verdict": "drift",
+            "score": {
+              "overall": 0.6481,
+              "structure": 0.9005,
+              "color": 0.4165,
+              "colorIntersection": 0.0352,
+              "paletteMatch": 0.6219,
+              "detail": 0.4852,
+              "detailRaw": 0.5268,
+              "detailAdded": 0.0833,
+              "bands": 0.3
+            },
+            "file": ".impeccable/review/diff/hero/regions/allday-ev.png"
+          }
+        ],
+        "advisories": [
+          "(advisory, above the 72% bar) region nav: its ink sits in a 108x13px box in the comp and 131x14px in the build (padding, row height, or size); match the box, not only the position",
+          "(advisory, above the 72% bar; fix in the polish pass before responsive) 6 readings:",
+          "  text nav: cap height 14.1px in the build, 10.3px in the comp (+37%); set font-size so the cap height renders at 10.3px",
+          "  text acc-local: ink is #a5a7b9 in the build, #f5f7f2 in the comp; use the comp's colour",
+          "  text acc-google: ink is #9fa4b5 in the build, #f1f7f5 in the comp; use the comp's colour",
+          "  text settings: ink is #387dad in the build, #a6c4c8 in the comp; use the comp's colour",
+          "  text hours: ink is #e82828 in the build, #181829 in the comp; use the comp's colour",
+          "  text now-label: ink is #f89898 in the build, #e8a8d8 in the comp; use the comp's colour"
+        ],
+        "regionVerdicts": {
+          "rail": "match",
+          "brand": "drift",
+          "acc-local": "drift",
+          "acc-google": "missing",
+          "acc-ms": "missing",
+          "settings": "drift",
+          "header": "match",
+          "nav": "drift",
+          "title": "drift",
+          "search": "match",
+          "views": "match",
+          "new": "match",
+          "days": "match",
+          "allday": "drift",
+          "allday-ev": "drift",
+          "hours": "match",
+          "grid": "match",
+          "ev-lun-riunione": "match",
+          "ev-lun-standup": "drift",
+          "ev-mar-call": "contradicted",
+          "ev-mer-standup": "drift",
+          "ev-mer-onair": "drift",
+          "ev-mer-conflict": "drift",
+          "ev-mer-next": "match",
+          "ev-mar-free": "drift",
+          "ev-gio": "match",
+          "ev-ven-dentista": "match",
+          "ev-ven-pranzo": "drift",
+          "ev-sab": "match",
+          "now-line": "drift",
+          "now-label": "drift"
+        },
+        "at": "2026-10-07T20:48:18.409Z"
+      },
+      "forced": null,
+      "readingsSeen": {
+        "text nav: cap height 14.1px in the build, 10.3px in the comp (+37%); set font-size so the cap height renders at 10.3px": 3,
+        "text acc-local: ink is #94a6b2 in the build, #f5f7f2 in the comp; use the comp's colour": 1,
+        "text acc-google: ink is #2a69f8 in the build, #f1f7f5 in the comp; use the comp's colour": 1,
+        "text settings: ink is #387dad in the build, #a6c4c8 in the comp; use the comp's colour": 3,
+        "text hours: ink is #e82828 in the build, #181829 in the comp; use the comp's colour": 3,
+        "text now-label: ink is #f89898 in the build, #e8a8d8 in the comp; use the comp's colour": 3,
+        "text acc-local: ink is #f8a808 in the build, #f5f7f2 in the comp; use the comp's colour": 1,
+        "text acc-local: ink is #a5a7b9 in the build, #f5f7f2 in the comp; use the comp's colour": 1,
+        "text acc-google: ink is #9fa4b5 in the build, #f1f7f5 in the comp; use the comp's colour": 1
+      },
+      "history": [
+        {
+          "at": "2026-10-07T20:47:31.468Z",
+          "score": 0.9141,
+          "worstIds": [
+            "ev-mer-onair",
+            "ev-mer-conflict",
+            "ev-mer-standup"
+          ],
+          "blockingReasons": [
+            "region acc-google is missing (detail 2%, structure 58%): the comp shows material the build does not",
+            "region acc-ms is missing (detail 0%, structure 60%): the comp shows material the build does not",
+            "region ev-lun-standup (control) is contradicted (structure 78%, detail added 14%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "region ev-mer-standup (control) is contradicted (structure 76%, detail added 18%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "region ev-mer-onair (control) is contradicted (structure 49%, detail added 33%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "region ev-mer-conflict (control) is contradicted (structure 61%, detail added 16%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "region ev-mer-next (control) is contradicted (structure 73%, detail added 18%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "control ev-lun-riunione drifts to 64% (structure 83%, color 40%): open .impeccable/review/diff/hero/regions/ev-lun-riunione.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+            "control ev-mar-call drifts to 63% (structure 82%, color 51%): open .impeccable/review/diff/hero/regions/ev-mar-call.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+            "control ev-mar-free drifts to 62% (structure 74%, color 44%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+            "control ev-ven-pranzo drifts to 64% (structure 73%, color 48%): open .impeccable/review/diff/hero/regions/ev-ven-pranzo.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+          ],
+          "regionVerdicts": {
+            "rail": "match",
+            "brand": "drift",
+            "acc-local": "drift",
+            "acc-google": "missing",
+            "acc-ms": "missing",
+            "settings": "drift",
+            "header": "match",
+            "nav": "drift",
+            "title": "drift",
+            "search": "match",
+            "views": "match",
+            "new": "match",
+            "days": "match",
+            "allday": "drift",
+            "allday-ev": "match",
+            "hours": "match",
+            "grid": "match",
+            "ev-lun-riunione": "drift",
+            "ev-lun-standup": "contradicted",
+            "ev-mar-call": "drift",
+            "ev-mer-standup": "contradicted",
+            "ev-mer-onair": "contradicted",
+            "ev-mer-conflict": "contradicted",
+            "ev-mer-next": "contradicted",
+            "ev-mar-free": "drift",
+            "ev-gio": "drift",
+            "ev-ven-dentista": "drift",
+            "ev-ven-pranzo": "drift",
+            "ev-sab": "drift",
+            "now-line": "drift",
+            "now-label": "drift"
+          },
+          "artifactHash": "8cdbd213b17f"
+        },
+        {
+          "at": "2026-10-07T20:47:53.411Z",
+          "score": 0.9378,
+          "worstIds": [
+            "acc-ms",
+            "acc-google",
+            "ev-mar-call"
+          ],
+          "blockingReasons": [
+            "region acc-google is missing (detail 0%, structure 60%): the comp shows material the build does not",
+            "region acc-ms is missing (detail 0%, structure 57%): the comp shows material the build does not",
+            "region ev-mar-call (control) is contradicted (structure 74%, detail added 19%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+            "control ev-mer-standup drifts to 65% (structure 69%, color 83%): open .impeccable/review/diff/hero/regions/ev-mer-standup.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+          ],
+          "regionVerdicts": {
+            "rail": "match",
+            "brand": "drift",
+            "acc-local": "drift",
+            "acc-google": "missing",
+            "acc-ms": "missing",
+            "settings": "drift",
+            "header": "match",
+            "nav": "drift",
+            "title": "drift",
+            "search": "match",
+            "views": "match",
+            "new": "match",
+            "days": "match",
+            "allday": "drift",
+            "allday-ev": "drift",
+            "hours": "match",
+            "grid": "match",
+            "ev-lun-riunione": "match",
+            "ev-lun-standup": "drift",
+            "ev-mar-call": "contradicted",
+            "ev-mer-standup": "drift",
+            "ev-mer-onair": "drift",
+            "ev-mer-conflict": "drift",
+            "ev-mer-next": "drift",
+            "ev-mar-free": "drift",
+            "ev-gio": "match",
+            "ev-ven-dentista": "match",
+            "ev-ven-pranzo": "drift",
+            "ev-sab": "match",
+            "now-line": "drift",
+            "now-label": "drift"
+          },
+          "artifactHash": "8cdbd213b17f"
+        },
+        {
+          "at": "2026-10-07T20:48:18.410Z",
+          "score": 0.9565,
+          "worstIds": [
+            "ev-mar-call",
+            "ev-mar-free",
+            "allday-ev"
+          ],
+          "blockingReasons": [
+            "region acc-google is missing (detail 0%, structure 76%): the comp shows material the build does not",
+            "region acc-ms is missing (detail 0%, structure 75%): the comp shows material the build does not",
+            "region ev-mar-call (control) is contradicted (structure 73%, detail added 20%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+            "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+            "control ev-mar-free drifts to 64% (structure 71%, color 50%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+          ],
+          "regionVerdicts": {
+            "rail": "match",
+            "brand": "drift",
+            "acc-local": "drift",
+            "acc-google": "missing",
+            "acc-ms": "missing",
+            "settings": "drift",
+            "header": "match",
+            "nav": "drift",
+            "title": "drift",
+            "search": "match",
+            "views": "match",
+            "new": "match",
+            "days": "match",
+            "allday": "drift",
+            "allday-ev": "drift",
+            "hours": "match",
+            "grid": "match",
+            "ev-lun-riunione": "match",
+            "ev-lun-standup": "drift",
+            "ev-mar-call": "contradicted",
+            "ev-mer-standup": "drift",
+            "ev-mer-onair": "drift",
+            "ev-mer-conflict": "drift",
+            "ev-mer-next": "match",
+            "ev-mar-free": "drift",
+            "ev-gio": "match",
+            "ev-ven-dentista": "match",
+            "ev-ven-pranzo": "drift",
+            "ev-sab": "match",
+            "now-line": "drift",
+            "now-label": "drift"
+          },
+          "artifactHash": "8cdbd213b17f"
+        }
+      ]
+    },
+    "sections": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "motion": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "responsive": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "review": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    }
+  },
+  "finish": null,
+  "plates": {}
+}

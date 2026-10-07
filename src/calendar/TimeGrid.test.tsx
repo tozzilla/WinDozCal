@@ -36,7 +36,7 @@ describe("TimeGrid", () => {
       );
     });
     const nodes = [...host.querySelectorAll<HTMLElement>("[data-event]")];
-    expect(nodes.map((n) => n.style.width)).toEqual(["calc(50% - 3px)", "calc(50% - 3px)", "calc(100% - 3px)"]);
+    expect(nodes.map((n) => n.style.width)).toEqual(["calc(50% - 8px)", "calc(50% - 8px)", "calc(100% - 8px)"]);
 
     const fire = (type: string, x: number, y: number) =>
       window.dispatchEvent(Object.assign(new Event(type), { clientX: x, clientY: y, button: 0 }));
@@ -47,9 +47,9 @@ describe("TimeGrid", () => {
     await act(async () => { down(nodes[0], 5, 5); fire("pointerup", 5, 5); });
     expect(onSelectEvent).toHaveBeenCalledTimes(1);
 
-    // drag verticale di 48px (1 ora) -> sposta, snap a 15 minuti
-    await act(async () => { down(nodes[0], 5, 5); fire("pointermove", 5, 53); });
-    await act(async () => { fire("pointerup", 5, 53); });
+    // drag verticale di 72px (1 ora) -> sposta, snap a 15 minuti
+    await act(async () => { down(nodes[0], 5, 5); fire("pointermove", 5, 77); });
+    await act(async () => { fire("pointerup", 5, 77); });
     expect(onChangeEventTime).toHaveBeenCalledTimes(1);
     expect(new Date(onChangeEventTime.mock.calls[0][1]).getHours()).toBe(11);
 

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Palinsesto 2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1536px; height: 1024px; overflow: hidden; }
+  body { font-family: "Bahnschrift", "Segoe UI Variable Display", sans-serif; background: #F5F6F8; color: #10142A; font-size: 14px; }
+  .top { height: 56px; background: #10142A; color: #F5F6F8; display: flex; align-items: center; gap: 14px; padding: 0 20px; }
+  .brand { font-weight: 700; font-size: 17px; letter-spacing: .02em; margin-right: 10px; }
+  .ib { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #2B3150; border-radius: 6px; }
+  .btn { height: 30px; padding: 0 12px; display: inline-flex; align-items: center; border: 1px solid #2B3150; border-radius: 6px; font-weight: 600; font-size: 13px; }
+  .title { font-size: 24px; font-weight: 700; margin-left: 6px; }
+  .search { margin-left: auto; width: 240px; height: 32px; border-radius: 6px; background: #1B2140; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: #9AA1BD; font-size: 13px; }
+  .seg { display: flex; border: 1px solid #2B3150; border-radius: 6px; overflow: hidden; } .seg span { padding: 6px 12px; font-size: 13px; font-weight: 600; color: #C9CDE0; } .seg .on { background: #F5F6F8; color: #10142A; }
+  .plus { width: 34px; height: 32px; border-radius: 6px; background: #E4262B; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 18px; }
+  .channels { height: 48px; background: #fff; border-bottom: 1px solid #DDE0E8; display: flex; align-items: center; gap: 10px; padding: 0 20px; }
+  .channels .lab { font-size: 11px; letter-spacing: .14em; color: #5B6075; font-weight: 700; margin-right: 6px; }
+  .ch { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 0; border-radius: 6px; border: 1px solid #DDE0E8; font-weight: 600; font-size: 13px; overflow: hidden; }
+  .ch i { width: 8px; align-self: stretch; background: var(--c); }
+  .ch.off { opacity: .45; text-decoration: line-through; }
+  .body { display: grid; grid-template-columns: 1fr 340px; height: calc(1024px - 104px); }
+  .week { display: grid; grid-template-rows: auto auto 1fr; min-width: 0; background: #fff; border-right: 1px solid #DDE0E8; }
+  .days, .allday, .grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); }
+  .days { border-bottom: 1px solid #DDE0E8; } .days div { padding: 8px 10px; font-size: 12px; letter-spacing: .08em; color: #5B6075; display: flex; align-items: baseline; gap: 6px; text-transform: uppercase; }
+  .days b { font-size: 22px; color: #10142A; letter-spacing: -.02em; } .days .today b { color: #E4262B; }
+  .allday { border-bottom: 1px solid #DDE0E8; min-height: 26px; } .allday i { grid-column: 7 / span 2; margin: 3px; padding: 3px 8px; font-style: normal; font-size: 12px; font-weight: 600; background: #FFF4D6; color: #6B4E00; border-radius: 4px; border-left: 4px solid #F2A900; }
+  .grid { position: relative; overflow: hidden; }
+  .hours div { height: 66px; font-size: 14px; font-weight: 700; text-align: right; padding: 2px 8px 0 0; font-variant-numeric: tabular-nums; }
+  .col { position: relative; border-left: 1px solid #E3E6EE; background-image: linear-gradient(#ECEEF3 1px, transparent 1px); background-size: 100% 66px; }
+  .col.today { background-color: #FAFAFC; }
+  .ev { position: absolute; left: 3px; right: 3px; padding: 4px 7px; border-radius: 4px; font-size: 12px; line-height: 1.3; overflow: hidden; border-left: 5px solid var(--c); background: var(--bg); }
+  .ev .t { font-weight: 700; font-size: 12px; display: block; font-variant-numeric: tabular-nums; } .ev .n { font-weight: 600; }
+  .g { --c: #2F6BFF; --bg: #EAF0FF; } .m { --c: #1BA672; --bg: #E6F6EF; } .l { --c: #F2A900; --bg: #FFF5DB; }
+  .free { background-image: repeating-linear-gradient(135deg, transparent 0 5px, rgba(16,20,42,.12) 5px 6px); }
+  .onair { box-shadow: 0 0 0 2px #E4262B; }
+  .now { position: absolute; left: 60px; right: 0; height: 3px; background: #E4262B; z-index: 5; }
+  .nowlab { position: absolute; left: 2px; background: #E4262B; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 3px; transform: translateY(-50%); z-index: 6; letter-spacing: .06em; }
+  .rundown { background: #F5F6F8; padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .rundown h3 { font-size: 12px; letter-spacing: .16em; color: #5B6075; }
+  .card { background: #fff; border: 1px solid #DDE0E8; border-radius: 8px; padding: 14px; border-left: 6px solid var(--c); }
+  .card .when { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .card .what { font-size: 17px; font-weight: 700; margin-top: 2px; } .card .meta { color: #5B6075; font-size: 13px; margin-top: 6px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; background: #E4262B; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .12em; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
+  .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+  .progress { height: 5px; background: #F1D2D3; border-radius: 3px; margin-top: 10px; } .progress i { display: block; height: 100%; width: 39%; background: #E4262B; border-radius: 3px; }
+  .warn { background: #FFF1F1; border: 1px solid #F5B5B7; color: #8E1418; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-weight: 600; }
+  .row { display: grid; grid-template-columns: 58px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid #DDE0E8; align-items: baseline; }
+  .row b { font-variant-numeric: tabular-nums; font-size: 15px; } .row span { font-weight: 600; display: flex; align-items: center; gap: 8px; } .row span i { width: 6px; height: 16px; background: var(--c); display: inline-block; border-radius: 1px; }
+  .next-tag { font-size: 10px; font-weight: 800; letter-spacing: .12em; background: #10142A; color: #fff; padding: 2px 6px; border-radius: 3px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <span class="brand">WinDozCal</span>
+    <span class="ib">‹</span><span class="ib">›</span><span class="btn">Oggi</span>
+    <span class="title">Ottobre 2026</span>
+    <span class="search">Cerca eventi <span>Ctrl+K</span></span>
+    <span class="seg"><span>Giorno</span><span class="on">Settimana</span><span>Mese</span><span>Agenda</span></span>
+    <span class="plus">+</span>
+  </div>
+  <div class="channels">
+    <span class="lab">CANALI</span>
+    <span class="ch" style="--c:#F2A900"><i></i>Personale</span>
+    <span class="ch" style="--c:#2F6BFF"><i></i>Riunioni</span>
+    <span class="ch" style="--c:#5B8CFF"><i></i>Commerciale</span>
+    <span class="ch" style="--c:#1BA672"><i></i>Studio Rossi · Cliente</span>
+    <span class="ch off" style="--c:#9C6ADE"><i></i>Festività</span>
+  </div>
+  <div class="body">
+    <div class="week">
+      <div class="days" id="days"></div>
+      <div class="allday"><span></span><span></span><span></span><span></span><span></span><span></span><i>Weekend fuori porta</i></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <aside class="rundown">
+      <h3>IN ONDA</h3>
+      <div class="card" style="--c:#2F6BFF"><span class="live">IN ONDA</span><div class="when">13:45–15:15</div><div class="what">Revisione progetto</div><div class="meta">Riunioni · Sala 2 · 4 partecipanti</div><div class="progress"><i></i></div></div>
+      <div class="warn">Sovrapposizione: alle 14:30 inizia “Call Studio Rossi” (Cliente).</div>
+      <h3>A SEGUIRE OGGI</h3>
+      <div>
+        <div class="row" style="--c:#1BA672"><b>14:30</b><span><i></i>Call Studio Rossi · Teams</span></div>
+        <div class="row" style="--c:#2F6BFF"><b>16:15</b><span><i></i>Sintesi con Marta <em class="next-tag">A SEGUIRE</em></span></div>
+        <div class="row" style="--c:#F2A900"><b>19:00</b><span><i></i>Palestra</span></div>
+      </div>
+      <h3>DOMANI</h3>
+      <div>
+        <div class="row" style="--c:#2F6BFF"><b>15:30</b><span><i></i>Revisione progetto</span></div>
+      </div>
+    </aside>
+  </div>
+<script>
+  const H = 66, START = 8;
+  const days = [["Lun",5],["Mar",6],["Mer",7],["Gio",8],["Ven",9],["Sab",10],["Dom",11]];
+  document.getElementById("days").innerHTML = "<div></div>" + days.map(([d,n],i) => `<div class="${i===2?"today":""}">${d} <b>${n}</b></div>`).join("");
+  const ev = [[0,9.5,10.5,"Riunione commerciale","g"],[0,11,11.5,"Standup","l"],[2,11,11.5,"Standup","l"],[1,11,11.75,"Call cliente · Teams","m"],[2,13.75,15.25,"Revisione progetto","g","onair L"],[2,14.5,16,"Call Studio Rossi","m","R"],[2,16.25,17.25,"Sintesi con Marta","g"],[3,15.5,17,"Revisione progetto","g"],[4,9.5,10.5,"Dentista","l"],[4,12.5,13.5,"Pranzo con Giulia","l","free"],[1,15,16,"Preparazione offerta","g","free"],[5,10,12,"Mercato","l","free"],[2,19,20,"Palestra","l"]];
+  const fmt = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+  let html = `<div class="hours">${Array.from({length:14},(_,i)=>`<div>${fmt(START+i)}</div>`).join("")}</div>`;
+  html += days.map((_, di) => `<div class="col ${di===2?"today":""}">` + ev.filter(e=>e[0]===di).map(([,s,e,t,a,x=""]) => `<div class="ev ${a} ${x}" style="top:${(s-START)*H+1}px;height:${(e-s)*H-3}px;${x.includes("L")?"right:50%;":x.includes("R")?"left:50%;":""}"><span class="t">${fmt(s)}–${fmt(e)}</span><span class="n">${t}</span></div>`).join("") + `</div>`).join("");
+  const y = (14 + 20/60 - START) * H;
+  html += `<div class="now" style="top:${y}px"></div><div class="nowlab" style="top:${y}px">14:20</div>`;
+  document.getElementById("grid").innerHTML = html;
+</script>
+</body>
+</html>

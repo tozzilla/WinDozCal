@@ -1,0 +1,1299 @@
+{
+  "tool": "comp-diff",
+  "version": 1,
+  "createdAt": "2026-10-07T20:48:17.796Z",
+  "label": "hero",
+  "comp": ".impeccable/mocks/palinsesto-1.png",
+  "build": ".impeccable/review/hero-repro.png",
+  "spec": ".impeccable/build/spec.json",
+  "compSize": "1536x1024",
+  "buildSize": "1536x1024",
+  "align": "top",
+  "overall": 0.9565,
+  "verdict": "match",
+  "scores": {
+    "overall": 0.9565,
+    "structure": 0.9621,
+    "color": 0.9822,
+    "colorIntersection": 0.964,
+    "paletteMatch": 0.992,
+    "detail": 0.8968,
+    "detailRaw": 0.9072,
+    "detailAdded": 0.0208,
+    "bands": 1
+  },
+  "palette": {
+    "comp": [
+      {
+        "hex": "#f6f7f7",
+        "coverage": 0.8202
+      },
+      {
+        "hex": "#181828",
+        "coverage": 0.1646
+      },
+      {
+        "hex": "#f2f2d8",
+        "coverage": 0.0091
+      },
+      {
+        "hex": "#e82828",
+        "coverage": 0.0038
+      },
+      {
+        "hex": "#f8b838",
+        "coverage": 0.0012
+      },
+      {
+        "hex": "#5888f8",
+        "coverage": 0.0012
+      }
+    ],
+    "build": [
+      {
+        "hex": "#f6f7f7",
+        "coverage": 0.8295
+      },
+      {
+        "hex": "#181828",
+        "coverage": 0.1645
+      },
+      {
+        "hex": "#e82828",
+        "coverage": 0.0031
+      },
+      {
+        "hex": "#f8b838",
+        "coverage": 0.0012
+      },
+      {
+        "hex": "#5888f8",
+        "coverage": 0.0011
+      },
+      {
+        "hex": "#e85858",
+        "coverage": 0.0007
+      }
+    ]
+  },
+  "regions": [
+    {
+      "id": "rail",
+      "x": 0,
+      "y": 0,
+      "w": 0.1615,
+      "h": 1,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.9402,
+        "structure": 0.9291,
+        "color": 0.993,
+        "colorIntersection": 0.9868,
+        "paletteMatch": 0.9963,
+        "detail": 0.8669,
+        "detailRaw": 0.8877,
+        "detailAdded": 0.0417,
+        "bands": 1
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 14,
+          "y": 20,
+          "w": 195,
+          "h": 984
+        },
+        "build": {
+          "x": 14,
+          "y": 20,
+          "w": 204,
+          "h": 983
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "brand",
+      "x": 0.0078,
+      "y": 0.0137,
+      "w": 0.0651,
+      "h": 0.0234,
+      "kind": "text",
+      "score": {
+        "overall": 0.7123,
+        "structure": 0.5653,
+        "color": 0.927,
+        "colorIntersection": 0.87,
+        "paletteMatch": 0.9577,
+        "detail": 0.7027,
+        "detailRaw": 0.7756,
+        "detailAdded": 0.1458,
+        "bands": 0.925
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 6,
+          "w": 84,
+          "h": 12
+        },
+        "build": {
+          "x": 2,
+          "y": 6,
+          "w": 86,
+          "h": 14
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "acc-local",
+      "x": 0.0078,
+      "y": 0.0527,
+      "w": 0.1042,
+      "h": 0.0469,
+      "kind": "text",
+      "score": {
+        "overall": 0.68,
+        "structure": 0.6131,
+        "color": 0.9403,
+        "colorIntersection": 0.8854,
+        "paletteMatch": 0.9698,
+        "detail": 0.4354,
+        "detailRaw": 0.5395,
+        "detailAdded": 0.2083,
+        "bands": 0.7311
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 4,
+          "w": 147,
+          "h": 40
+        },
+        "build": {
+          "x": 4,
+          "y": 5,
+          "w": 151,
+          "h": 43
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "acc-google",
+      "x": 0.0078,
+      "y": 0.1172,
+      "w": 0.1107,
+      "h": 0.0742,
+      "kind": "text",
+      "score": {
+        "overall": 0.6708,
+        "structure": 0.7621,
+        "color": 0.961,
+        "colorIntersection": 0.9241,
+        "paletteMatch": 0.9809,
+        "detail": 0,
+        "detailRaw": 0.1206,
+        "detailAdded": 0.2604,
+        "bands": 0.4952
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 4,
+          "w": 137,
+          "h": 67
+        },
+        "build": {
+          "x": 4,
+          "y": 11,
+          "w": 141,
+          "h": 65
+        }
+      },
+      "blocking": true,
+      "blockingReasons": [
+        "region acc-google is missing (detail 0%, structure 76%): the comp shows material the build does not"
+      ],
+      "rawVerdict": "missing"
+    },
+    {
+      "id": "acc-ms",
+      "x": 0.0078,
+      "y": 0.207,
+      "w": 0.1367,
+      "h": 0.0469,
+      "kind": "text",
+      "score": {
+        "overall": 0.6483,
+        "structure": 0.752,
+        "color": 0.9454,
+        "colorIntersection": 0.9083,
+        "paletteMatch": 0.9654,
+        "detail": 0,
+        "detailRaw": 0.0727,
+        "detailAdded": 0.2813,
+        "bands": 0.36
+      },
+      "verdict": "missing",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 5,
+          "w": 195,
+          "h": 40
+        },
+        "build": {
+          "x": 4,
+          "y": 14,
+          "w": 202,
+          "h": 34
+        }
+      },
+      "blocking": true,
+      "blockingReasons": [
+        "region acc-ms is missing (detail 0%, structure 75%): the comp shows material the build does not"
+      ],
+      "rawVerdict": "missing"
+    },
+    {
+      "id": "settings",
+      "x": 0.0078,
+      "y": 0.9629,
+      "w": 0.0716,
+      "h": 0.0215,
+      "kind": "text",
+      "score": {
+        "overall": 0.6462,
+        "structure": 0.515,
+        "color": 0.8486,
+        "colorIntersection": 0.7289,
+        "paletteMatch": 0.9131,
+        "detail": 0.51,
+        "detailRaw": 0.6037,
+        "detailAdded": 0.1875,
+        "bands": 1
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 5,
+          "w": 88,
+          "h": 13
+        },
+        "build": {
+          "x": 5,
+          "y": 3,
+          "w": 105,
+          "h": 14
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "header",
+      "x": 0.1615,
+      "y": 0,
+      "w": 0.8385,
+      "h": 0.0586,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.8651,
+        "structure": 0.9039,
+        "color": 0.9882,
+        "colorIntersection": 0.9783,
+        "paletteMatch": 0.9935,
+        "detail": 0.6968,
+        "detailRaw": 0.7905,
+        "detailAdded": 0.1875,
+        "bands": 0.85
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 36,
+          "y": 14,
+          "w": 1230,
+          "h": 32
+        },
+        "build": {
+          "x": 29,
+          "y": 14,
+          "w": 1239,
+          "h": 32
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "nav",
+      "x": 0.1745,
+      "y": 0.0117,
+      "w": 0.0911,
+      "h": 0.0352,
+      "kind": "control",
+      "score": {
+        "overall": 0.7304,
+        "structure": 0.7235,
+        "color": 0.9599,
+        "colorIntersection": 0.9317,
+        "paletteMatch": 0.9751,
+        "detail": 0.3445,
+        "detailRaw": 0.4018,
+        "detailAdded": 0.1146,
+        "bands": 0.72
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 16,
+          "y": 11,
+          "w": 108,
+          "h": 13
+        },
+        "build": {
+          "x": 9,
+          "y": 11,
+          "w": 131,
+          "h": 14
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "title",
+      "x": 0.2747,
+      "y": 0.0117,
+      "w": 0.099,
+      "h": 0.0352,
+      "kind": "text",
+      "score": {
+        "overall": 0.6054,
+        "structure": 0.4116,
+        "color": 0.9158,
+        "colorIntersection": 0.8677,
+        "paletteMatch": 0.9418,
+        "detail": 0.4709,
+        "detailRaw": 0.5334,
+        "detailAdded": 0.125,
+        "bands": 1
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 3,
+          "y": 8,
+          "w": 142,
+          "h": 18
+        },
+        "build": {
+          "x": 0,
+          "y": 8,
+          "w": 152,
+          "h": 19
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "search",
+      "x": 0.6185,
+      "y": 0.0117,
+      "w": 0.1523,
+      "h": 0.0352,
+      "kind": "control",
+      "score": {
+        "overall": 0.8731,
+        "structure": 0.8726,
+        "color": 0.9722,
+        "colorIntersection": 0.9539,
+        "paletteMatch": 0.9821,
+        "detail": 0.7007,
+        "detailRaw": 0.7215,
+        "detailAdded": 0.0417,
+        "bands": 0.8333
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 14,
+          "y": 12,
+          "w": 207,
+          "h": 9
+        },
+        "build": {
+          "x": 0,
+          "y": 12,
+          "w": 205,
+          "h": 12
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "views",
+      "x": 0.7747,
+      "y": 0.0117,
+      "w": 0.1836,
+      "h": 0.0352,
+      "kind": "control",
+      "score": {
+        "overall": 0.8085,
+        "structure": 0.7458,
+        "color": 0.9641,
+        "colorIntersection": 0.9338,
+        "paletteMatch": 0.9804,
+        "detail": 0.6773,
+        "detailRaw": 0.7398,
+        "detailAdded": 0.125,
+        "bands": 0.84
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 17,
+          "y": 3,
+          "w": 248,
+          "h": 30
+        },
+        "build": {
+          "x": 2,
+          "y": 3,
+          "w": 263,
+          "h": 30
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "new",
+      "x": 0.9622,
+      "y": 0.0117,
+      "w": 0.0247,
+      "h": 0.0352,
+      "kind": "control",
+      "score": {
+        "overall": 0.8568,
+        "structure": 0.8419,
+        "color": 0.9575,
+        "colorIntersection": 0.9035,
+        "paletteMatch": 0.9866,
+        "detail": 0.714,
+        "detailRaw": 0.7505,
+        "detailAdded": 0.0729,
+        "bands": 0.8
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 38,
+          "h": 36
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 38,
+          "h": 36
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "days",
+      "x": 0.1615,
+      "y": 0.0586,
+      "w": 0.8385,
+      "h": 0.0449,
+      "kind": "text",
+      "score": {
+        "overall": 0.8631,
+        "structure": 0.9528,
+        "color": 0.9764,
+        "colorIntersection": 0.9793,
+        "paletteMatch": 0.9748,
+        "detail": 0.6616,
+        "detailRaw": 0.7658,
+        "detailAdded": 0.2083,
+        "bands": 0.4333
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 75,
+          "y": 13,
+          "w": 1106,
+          "h": 17
+        },
+        "build": {
+          "x": 75,
+          "y": 14,
+          "w": 1099,
+          "h": 18
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "allday",
+      "x": 0.1615,
+      "y": 0.1035,
+      "w": 0.8385,
+      "h": 0.0273,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.6957,
+        "structure": 0.9768,
+        "color": 0.8368,
+        "colorIntersection": 0.7204,
+        "paletteMatch": 0.8996,
+        "detail": 0.3383,
+        "detailRaw": 0.4321,
+        "detailAdded": 0.1875,
+        "bands": 0.4
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 949,
+          "y": 9,
+          "w": 108,
+          "h": 12
+        },
+        "build": {
+          "x": 930,
+          "y": 1,
+          "w": 126,
+          "h": 22
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "allday-ev",
+      "x": 0.7734,
+      "y": 0.1055,
+      "w": 0.2253,
+      "h": 0.0215,
+      "kind": "control",
+      "score": {
+        "overall": 0.6481,
+        "structure": 0.9005,
+        "color": 0.4165,
+        "colorIntersection": 0.0352,
+        "paletteMatch": 0.6219,
+        "detail": 0.4852,
+        "detailRaw": 0.5268,
+        "detailAdded": 0.0833,
+        "bands": 0.3
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 9,
+          "y": 7,
+          "w": 108,
+          "h": 12
+        },
+        "build": {
+          "x": 3,
+          "y": 5,
+          "w": 113,
+          "h": 12
+        }
+      },
+      "blocking": true,
+      "blockingReasons": [
+        "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+      ],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "hours",
+      "x": 0.1615,
+      "y": 0.1309,
+      "w": 0.0417,
+      "h": 0.8691,
+      "kind": "text",
+      "score": {
+        "overall": 0.879,
+        "structure": 0.8625,
+        "color": 0.9641,
+        "colorIntersection": 0.9498,
+        "paletteMatch": 0.9718,
+        "detail": 0.7308,
+        "detailRaw": 0.7985,
+        "detailAdded": 0.1354,
+        "bands": 0.9714
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 2,
+          "y": 5,
+          "w": 62,
+          "h": 803
+        },
+        "build": {
+          "x": 2,
+          "y": 1,
+          "w": 62,
+          "h": 875
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "grid",
+      "x": 0.2031,
+      "y": 0.1309,
+      "w": 0.7969,
+      "h": 0.8691,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.9501,
+        "structure": 0.9706,
+        "color": 0.9816,
+        "colorIntersection": 0.9607,
+        "paletteMatch": 0.9929,
+        "detail": 0.8598,
+        "detailRaw": 0.8598,
+        "detailAdded": 0,
+        "bands": 1
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 110,
+          "w": 1224,
+          "h": 555
+        },
+        "build": {
+          "x": 0,
+          "y": 107,
+          "w": 1214,
+          "h": 555
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "ev-lun-riunione",
+      "x": 0.2057,
+      "y": 0.2373,
+      "w": 0.1087,
+      "h": 0.0674,
+      "kind": "control",
+      "score": {
+        "overall": 0.8261,
+        "structure": 0.7803,
+        "color": 0.9449,
+        "colorIntersection": 0.9228,
+        "paletteMatch": 0.9568,
+        "detail": 0.7211,
+        "detailRaw": 0.768,
+        "detailAdded": 0.0938,
+        "bands": 0.82
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 138,
+          "h": 68
+        },
+        "build": {
+          "x": 1,
+          "y": 0,
+          "w": 141,
+          "h": 67
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "ev-lun-standup",
+      "x": 0.2057,
+      "y": 0.3428,
+      "w": 0.1087,
+      "h": 0.0322,
+      "kind": "control",
+      "score": {
+        "overall": 0.6942,
+        "structure": 0.7253,
+        "color": 0.8473,
+        "colorIntersection": 0.7962,
+        "paletteMatch": 0.8748,
+        "detail": 0.3564,
+        "detailRaw": 0.4554,
+        "detailAdded": 0.1979,
+        "bands": 0.4114
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 81,
+          "h": 32
+        },
+        "build": {
+          "x": 1,
+          "y": 0,
+          "w": 166,
+          "h": 33
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-mar-call",
+      "x": 0.3145,
+      "y": 0.3428,
+      "w": 0.1178,
+      "h": 0.0498,
+      "kind": "control",
+      "score": {
+        "overall": 0.5989,
+        "structure": 0.7258,
+        "color": 0.4476,
+        "colorIntersection": 0.068,
+        "paletteMatch": 0.652,
+        "detail": 0.5781,
+        "detailRaw": 0.677,
+        "detailAdded": 0.1979,
+        "bands": 0.8444
+      },
+      "verdict": "contradicted",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 120,
+          "h": 50
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 124,
+          "h": 49
+        }
+      },
+      "blocking": true,
+      "blockingReasons": [
+        "region ev-mar-call (control) is contradicted (structure 73%, detail added 20%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification"
+      ],
+      "rawVerdict": "contradicted"
+    },
+    {
+      "id": "ev-mer-standup",
+      "x": 0.4336,
+      "y": 0.3428,
+      "w": 0.1087,
+      "h": 0.0322,
+      "kind": "control",
+      "score": {
+        "overall": 0.6729,
+        "structure": 0.7002,
+        "color": 0.8387,
+        "colorIntersection": 0.7584,
+        "paletteMatch": 0.882,
+        "detail": 0.3211,
+        "detailRaw": 0.4044,
+        "detailAdded": 0.1667,
+        "bands": 0.3733
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 5,
+          "y": 1,
+          "w": 77,
+          "h": 32
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 96,
+          "h": 31
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-mer-onair",
+      "x": 0.4336,
+      "y": 0.5361,
+      "w": 0.054,
+      "h": 0.1025,
+      "kind": "control",
+      "score": {
+        "overall": 0.653,
+        "structure": 0.5772,
+        "color": 0.8166,
+        "colorIntersection": 0.6563,
+        "paletteMatch": 0.9029,
+        "detail": 0.5369,
+        "detailRaw": 0.688,
+        "detailAdded": 0.3021,
+        "bands": 0.9733
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 83,
+          "h": 105
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 83,
+          "h": 105
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-mer-conflict",
+      "x": 0.4876,
+      "y": 0.5889,
+      "w": 0.054,
+      "h": 0.1025,
+      "kind": "control",
+      "score": {
+        "overall": 0.7472,
+        "structure": 0.7125,
+        "color": 0.8511,
+        "colorIntersection": 0.7583,
+        "paletteMatch": 0.901,
+        "detail": 0.6432,
+        "detailRaw": 0.6744,
+        "detailAdded": 0.0625,
+        "bands": 0.9036
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 77,
+          "h": 105
+        },
+        "build": {
+          "x": 1,
+          "y": 0,
+          "w": 71,
+          "h": 103
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-mer-next",
+      "x": 0.4336,
+      "y": 0.7119,
+      "w": 0.1087,
+      "h": 0.0674,
+      "kind": "control",
+      "score": {
+        "overall": 0.8238,
+        "structure": 0.7868,
+        "color": 0.9523,
+        "colorIntersection": 0.9211,
+        "paletteMatch": 0.9692,
+        "detail": 0.6822,
+        "detailRaw": 0.7082,
+        "detailAdded": 0.0521,
+        "bands": 0.82
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 110,
+          "h": 68
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 112,
+          "h": 67
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "ev-mar-free",
+      "x": 0.3197,
+      "y": 0.624,
+      "w": 0.1087,
+      "h": 0.0674,
+      "kind": "control",
+      "score": {
+        "overall": 0.6386,
+        "structure": 0.7098,
+        "color": 0.4961,
+        "colorIntersection": 0.0524,
+        "paletteMatch": 0.735,
+        "detail": 0.7277,
+        "detailRaw": 0.7798,
+        "detailAdded": 0.1042,
+        "bands": 0.8667
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 128,
+          "h": 68
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 131,
+          "h": 67
+        }
+      },
+      "blocking": true,
+      "blockingReasons": [
+        "control ev-mar-free drifts to 64% (structure 71%, color 50%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+      ],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-gio",
+      "x": 0.5475,
+      "y": 0.6592,
+      "w": 0.1087,
+      "h": 0.1025,
+      "kind": "control",
+      "score": {
+        "overall": 0.8717,
+        "structure": 0.874,
+        "color": 0.9575,
+        "colorIntersection": 0.9358,
+        "paletteMatch": 0.9692,
+        "detail": 0.7165,
+        "detailRaw": 0.7321,
+        "detailAdded": 0.0313,
+        "bands": 0.82
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 117,
+          "h": 104
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 118,
+          "h": 103
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "ev-ven-dentista",
+      "x": 0.6608,
+      "y": 0.2373,
+      "w": 0.1087,
+      "h": 0.0674,
+      "kind": "control",
+      "score": {
+        "overall": 0.8416,
+        "structure": 0.8375,
+        "color": 0.9539,
+        "colorIntersection": 0.9153,
+        "paletteMatch": 0.9747,
+        "detail": 0.6542,
+        "detailRaw": 0.675,
+        "detailAdded": 0.0417,
+        "bands": 0.7467
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 81,
+          "h": 68
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 88,
+          "h": 67
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "ev-ven-pranzo",
+      "x": 0.6608,
+      "y": 0.4482,
+      "w": 0.1087,
+      "h": 0.0674,
+      "kind": "control",
+      "score": {
+        "overall": 0.7992,
+        "structure": 0.7055,
+        "color": 0.9441,
+        "colorIntersection": 0.9109,
+        "paletteMatch": 0.9619,
+        "detail": 0.7566,
+        "detailRaw": 0.7827,
+        "detailAdded": 0.0521,
+        "bands": 0.7086
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 111,
+          "h": 68
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 108,
+          "h": 67
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "ev-sab",
+      "x": 0.7747,
+      "y": 0.2725,
+      "w": 0.1087,
+      "h": 0.1377,
+      "kind": "control",
+      "score": {
+        "overall": 0.9224,
+        "structure": 0.9279,
+        "color": 0.9428,
+        "colorIntersection": 0.9261,
+        "paletteMatch": 0.9519,
+        "detail": 0.8744,
+        "detailRaw": 0.8796,
+        "detailAdded": 0.0104,
+        "bands": 0.92
+      },
+      "verdict": "match",
+      "inkBox": {
+        "comp": {
+          "x": 1,
+          "y": 1,
+          "w": 81,
+          "h": 140
+        },
+        "build": {
+          "x": 8,
+          "y": 6,
+          "w": 78,
+          "h": 26
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "match"
+    },
+    {
+      "id": "now-line",
+      "x": 0.2031,
+      "y": 0.5742,
+      "w": 0.7969,
+      "h": 0.0078,
+      "kind": "chrome",
+      "score": {
+        "overall": 0.6354,
+        "structure": 0.9761,
+        "color": 0.986,
+        "colorIntersection": 0.9743,
+        "paletteMatch": 0.9924,
+        "detail": 0.0812,
+        "detailRaw": 0.1541,
+        "detailAdded": 0.1458,
+        "bands": 0.18
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 1224,
+          "h": 8
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 1214,
+          "h": 8
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    },
+    {
+      "id": "now-label",
+      "x": 0.1615,
+      "y": 0.5684,
+      "w": 0.056,
+      "h": 0.0176,
+      "kind": "text",
+      "score": {
+        "overall": 0.6191,
+        "structure": 0.6289,
+        "color": 0.91,
+        "colorIntersection": 0.8398,
+        "paletteMatch": 0.9478,
+        "detail": 0.2921,
+        "detailRaw": 0.4223,
+        "detailAdded": 0.2604,
+        "bands": 0.3333
+      },
+      "verdict": "drift",
+      "inkBox": {
+        "comp": {
+          "x": 0,
+          "y": 0,
+          "w": 86,
+          "h": 18
+        },
+        "build": {
+          "x": 0,
+          "y": 0,
+          "w": 86,
+          "h": 18
+        }
+      },
+      "blocking": false,
+      "blockingReasons": [],
+      "rawVerdict": "drift"
+    }
+  ],
+  "files": {
+    "sideBySide": "C:/Developer/WinDozCal/.impeccable/review/diff/hero/side-by-side.png",
+    "heatmap": "C:/Developer/WinDozCal/.impeccable/review/diff/hero/heatmap.png",
+    "regionFiles": [
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/rail.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/brand.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/acc-local.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/acc-google.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/acc-ms.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/settings.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/header.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/nav.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/title.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/search.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/views.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/new.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/days.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/allday.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/allday-ev.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/hours.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/grid.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-lun-riunione.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-lun-standup.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mar-call.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mer-standup.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mer-onair.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mer-conflict.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mer-next.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-mar-free.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-gio.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-ven-dentista.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-ven-pranzo.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/ev-sab.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/now-line.png",
+      "C:/Developer/WinDozCal/.impeccable/review/diff/hero/regions/now-label.png"
+    ]
+  },
+  "interpretation": "hero-gate",
+  "measurementsAvailable": true,
+  "gate": {
+    "ok": false,
+    "reasons": [
+      "region acc-google is missing (detail 0%, structure 76%): the comp shows material the build does not",
+      "region acc-ms is missing (detail 0%, structure 75%): the comp shows material the build does not",
+      "region ev-mar-call (control) is contradicted (structure 73%, detail added 20%): this control differs from the comp: inspect its lettering and visible shape separately against the crop and the measured readings; preserve the region's control classification",
+      "control allday-ev drifts to 65% (structure 90%, color 42%): open .impeccable/review/diff/hero/regions/allday-ev.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification",
+      "control ev-mar-free drifts to 64% (structure 71%, color 50%): open .impeccable/review/diff/hero/regions/ev-mar-free.png and compare its lettering and visible shape separately; use the measured readings and preserve the region's control classification"
+    ],
+    "advisories": [
+      "(advisory, above the 72% bar) region nav: its ink sits in a 108x13px box in the comp and 131x14px in the build (padding, row height, or size); match the box, not only the position",
+      "(advisory, above the 72% bar; fix in the polish pass before responsive) 6 readings:",
+      "  text nav: cap height 14.1px in the build, 10.3px in the comp (+37%); set font-size so the cap height renders at 10.3px",
+      "  text acc-local: ink is #a5a7b9 in the build, #f5f7f2 in the comp; use the comp's colour",
+      "  text acc-google: ink is #9fa4b5 in the build, #f1f7f5 in the comp; use the comp's colour",
+      "  text settings: ink is #387dad in the build, #a6c4c8 in the comp; use the comp's colour",
+      "  text hours: ink is #e82828 in the build, #181829 in the comp; use the comp's colour",
+      "  text now-label: ink is #f89898 in the build, #e8a8d8 in the comp; use the comp's colour"
+    ],
+    "unscopedReasons": []
+  },
+  "rawReport": ".impeccable/review/diff/hero/raw-report.json"
+}
