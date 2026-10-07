@@ -502,18 +502,25 @@ fn fts_query(query: &str) -> Option<String> {
     }
 }
 
-/// Ricerca full-text su titolo, descrizione e luogo nei calendari visibili (max 200 risultati,
-/// dal piu' recente). Query vuota o senza caratteri alfanumerici: nessun risultato.
+/// Ricerca full-text su titolo, descrizione, luogo e partecipanti (email e nome) nei calendari
+/// visibili (max 200 risultati, dal piu' recente). Query vuota o senza caratteri alfanumerici:
+/// nessun risultato.
 pub fn search_events(conn: &Connection, query: &str) -> AppResult<Vec<Event>> {
     let Some(fts) = fts_query(query) else {
         return Ok(Vec::new());
     };
     let sql = format!(
         "SELECT {EVENT_COLS}
-         FROM events_fts
-         JOIN events e ON e.rowid = events_fts.rowid
+         FROM events e
          JOIN calendars c ON c.id = e.calendar_id
-         WHERE events_fts MATCH ?1
+         WHERE e.rowid IN (
+                 SELECT rowid FROM events_fts WHERE events_fts MATCH ?1
+                 UNION
+                 SELECT ev.rowid FROM attendees_fts
+                 JOIN attendees a ON a.rowid = attendees_fts.rowid
+                 JOIN events ev ON ev.id = a.event_id
+                 WHERE attendees_fts MATCH ?1
+               )
            AND c.visible = 1
            AND e.sync_status <> 'pending_delete'
          ORDER BY e.start_ts DESC

@@ -4,7 +4,7 @@ Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare do
 
 ## Stato attuale (7 ott 2026)
 
-Fase 1 in corso (v0.2.0): calendari locali, tray, ricorrenze e notifiche in lavorazione; stage 3 (Google) bloccato. Struttura Tauri 2 + React/TS, trait `CalendarProvider` con stub, nessun provider funzionante, nessuna sincronizzazione reale. Piano attivo: [Tasks/fase-1.md](Tasks/fase-1.md).
+Release v0.3.0. Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 avviata su richiesta del proprietario. Piano attivo: [Tasks/fase-2.md](Tasks/fase-2.md).
 
 ## Gerarchia documenti
 
@@ -21,9 +21,10 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-011 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-012 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
-| [Tasks/fase-2.md](Tasks/fase-2.md), [Tasks/fase-3.md](Tasks/fase-3.md) | Bozze Fase 2 (§43) e Fase 3 (§44) |
+| [Tasks/fase-2.md](Tasks/fase-2.md) | Piano a stage Fase 2 (PRD §43), attivo |
+| [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
 
 ## ADR
 
@@ -40,6 +41,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 009 | Modalità locale senza account | Accettato |
 | 010 | Dettaglio evento e `conference_url` (deviazione da PRD §12) | Accettato |
 | 011 | Ricorrenze espanse nel backend | Accettato |
+| 012 | `Ctrl + N` apre Quick Add (conflitto §8/§25) | Accettato, da confermare |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 

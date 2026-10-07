@@ -21,13 +21,17 @@ export function useKeyboardShortcuts() {
 
       if (e.key === "Escape") {
         if (editor.open) editor.close();
+        else if (ui.quickAddOpen) ui.setQuickAddOpen(false);
         else if (ui.searchOpen) ui.setSearchOpen(false);
         else if (ui.settingsOpen) ui.setSettingsOpen(false);
         return;
       }
 
       if (e.ctrlKey && !e.altKey && !e.shiftKey) {
-        if (key === "n") editor.openNew();
+        // Con l'editor aperto le scorciatoie che aprono altre finestre non agiscono (il browser non deve però aprire una finestra nuova).
+        if (editor.open && (key === "n" || key === "k")) return e.preventDefault();
+        // Ctrl+N apre Quick Add (PRD §8, ADR 012); l'editor completo resta su `+`, clic e doppio clic.
+        if (key === "n") ui.setQuickAddOpen(true);
         else if (key === "k") ui.setSearchOpen(true);
         else if (key === "t") ui.setCurrentDate(new Date());
         else return;

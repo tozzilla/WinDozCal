@@ -31,7 +31,7 @@ function errorMessage(err: unknown): string {
 
 /** Editor evento minimo (PRD §7). Esc lo chiude (gestito da useKeyboardShortcuts). */
 export function EventEditor() {
-  const { open, openedAt, event, slot, close } = useEditorStore();
+  const { open, openedAt, event, slot, preset, close } = useEditorStore();
   const { data: calendars = [] } = useCalendars();
   const create = useCreateEvent();
   const update = useUpdateEvent();
@@ -59,12 +59,13 @@ export function EventEditor() {
     if (initialised.current) return;
     if (!event) {
       initialised.current = true;
-      setDraft(emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot));
+      const base = emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot);
+      setDraft(preset ? { ...base, title: preset.title, allDay: preset.allDay } : base);
     } else if (detail.data && !detail.isFetching) {
       initialised.current = true;
       setDraft(eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders));
     }
-  }, [open, event, slot, detail.data, detail.isFetching, writable.length]);
+  }, [open, event, slot, preset, detail.data, detail.isFetching, writable.length]);
 
   // Chiude solo con un clic sul fondo; si ignora quello che arriva subito dopo l'apertura (secondo clic di un doppio clic).
   const onBackdropClick = (e: React.MouseEvent) => {

@@ -171,7 +171,10 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async searchEvents(query) {
       const q = query.trim().toLowerCase();
       if (!q) return [];
-      return structuredClone(events.filter((e) => `${e.title} ${e.location ?? ""} ${e.description ?? ""}`.toLowerCase().includes(q)));
+      const people = (id: string) => (attendeesByEvent.get(id) ?? []).map((a) => `${a.email} ${a.name ?? ""}`).join(" ");
+      return structuredClone(
+        events.filter((e) => `${e.title} ${e.location ?? ""} ${e.description ?? ""} ${people(e.id)}`.toLowerCase().includes(q)),
+      );
     },
     async syncNow() {},
     async openLogFolder() {},

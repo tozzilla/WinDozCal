@@ -8,7 +8,7 @@ Calendario desktop open source (Tauri 2, Rust + React/TS) per Windows 11. Prima 
 - Nessuna credenziale in log, SQLite o payload: token e password solo in Windows Credential Manager (ADR 005). Mai loggare contenuto degli eventi fuori dalla modalità debug esplicita.
 - Gerarchia: CLAUDE.md > `PRD.md` > `docs/CONTRACT.md` > ADR > piani. Un piano non contraddice il PRD in silenzio: la deviazione si dichiara e si approva. Ogni decisione importante è un ADR in `.agent/System/decisions/`.
 - `docs/CONTRACT.md` è la fonte di entità, comandi IPC e costanti condivisi tra `src/` e `src-tauri/`: non duplicarli altrove.
-- Il renderer del calendario (ADR 006) è ancora una decisione aperta.
+- Il renderer del calendario è custom (ADR 006), dietro l'interfaccia `CalendarRenderer`.
 
 ## Comandi
 

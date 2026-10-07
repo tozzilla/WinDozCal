@@ -171,6 +171,20 @@ fn create_list_search_delete_roundtrip() {
 }
 
 #[test]
+fn search_matches_attendees_and_follows_their_changes() {
+    let conn = setup();
+    let ev = insert_event(&conn, &new_event("Call"), &[attendee("giulia.verdi@example.com")], &[])
+        .unwrap()
+        .event;
+    assert_eq!(search_events(&conn, "giulia").unwrap().len(), 1);
+
+    // Gli array sostituiscono i partecipanti: il vecchio non si trova piu', il nuovo si'.
+    update_event(&conn, &ev, &[attendee("luca@example.com")], &[]).unwrap();
+    assert!(search_events(&conn, "giulia").unwrap().is_empty());
+    assert_eq!(search_events(&conn, "luca").unwrap().len(), 1);
+}
+
+#[test]
 fn update_synced_event_becomes_pending_update() {
     let conn = setup();
     let ev = create(&conn, "Uno");

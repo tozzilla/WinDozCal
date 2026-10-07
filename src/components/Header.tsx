@@ -8,7 +8,7 @@ import { formatMonthYear } from "@/utils/date";
 
 /** `<  >  Oggi  Ottobre 2026` + selettore vista (PRD §6). */
 export function Header() {
-  const { view, setView, currentDate, setCurrentDate, toggleSidebar, searchOpen, setSearchOpen } = useUiStore();
+  const { view, setView, currentDate, setCurrentDate, toggleSidebar, setSearchOpen } = useUiStore();
   const openNew = useEditorStore((s) => s.openNew);
   const { navigate } = renderers[view];
 
@@ -29,15 +29,6 @@ export function Header() {
       <h1 className="ml-2 text-lg font-semibold">{formatMonthYear(currentDate)}</h1>
 
       <div className="ml-auto flex items-center gap-2">
-        {searchOpen && (
-          // Stub: la ricerca (PRD §24) userà useSearchEvents; qui solo il campo.
-          <input
-            autoFocus
-            placeholder="Cerca eventi"
-            onBlur={() => setSearchOpen(false)}
-            className="w-56 rounded-md border bg-background px-2 py-1 text-sm outline-none"
-          />
-        )}
         <Button variant="ghost" size="icon" aria-label="Cerca (Ctrl+K)" onClick={() => setSearchOpen(true)}>
           <Search />
         </Button>
@@ -53,7 +44,7 @@ export function Header() {
             </button>
           ))}
         </div>
-        <Button size="icon" aria-label="Nuovo evento (Ctrl+N)" onClick={() => openNew()}>
+        <Button size="icon" aria-label="Nuovo evento" onClick={() => openNew()}>
           <Plus />
         </Button>
       </div>

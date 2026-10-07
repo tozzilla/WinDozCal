@@ -63,7 +63,7 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `create_event` | `event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (sync_status=pending_create, `synced` su calendari local) |
 | `update_event` | `event: Event, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (pending_update, `synced` su local); gli array sostituiscono interamente quelli esistenti |
 | `delete_event` | `eventId` | `void` (pending_delete) |
-| `search_events` | `query` | `Event[]` |
+| `search_events` | `query` | `Event[]`: titolo, descrizione, luogo e partecipanti (email e nome), solo calendari visibili, max 200, dal più recente; le serie compaiono una volta (non espanse) |
 | `sync_now` | `accountId?` | `void` |
 | `open_log_folder` | — | `void` |
 | `create_local_account` | `name` | `Account` (provider=local) + calendario di default "Personale" |

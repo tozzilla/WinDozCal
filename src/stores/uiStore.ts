@@ -9,6 +9,7 @@ interface UiState {
   theme: ThemeMode;
   settingsOpen: boolean;
   searchOpen: boolean;
+  quickAddOpen: boolean;
   /** Messaggio breve non bloccante (errori di drag & drop, azioni non permesse). */
   notice: string | null;
   setView: (view: CalendarView) => void;
@@ -17,6 +18,7 @@ interface UiState {
   setTheme: (theme: ThemeMode) => void;
   setSettingsOpen: (open: boolean) => void;
   setSearchOpen: (open: boolean) => void;
+  setQuickAddOpen: (open: boolean) => void;
   setNotice: (notice: string | null) => void;
 }
 
@@ -29,6 +31,7 @@ export const useUiStore = create<UiState>()(
       theme: "system",
       settingsOpen: false,
       searchOpen: false,
+      quickAddOpen: false,
       notice: null,
       setView: (view) => set({ view }),
       setCurrentDate: (currentDate) => set({ currentDate }),
@@ -36,6 +39,7 @@ export const useUiStore = create<UiState>()(
       setTheme: (theme) => set({ theme }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSearchOpen: (searchOpen) => set({ searchOpen }),
+      setQuickAddOpen: (quickAddOpen) => set({ quickAddOpen }),
       setNotice: (notice) => set({ notice }),
     }),
     {

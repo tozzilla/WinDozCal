@@ -3,8 +3,10 @@ import { WelcomeScreen } from "@/accounts/WelcomeScreen";
 import { CalendarSurface } from "@/components/CalendarSurface";
 import { Header } from "@/components/Header";
 import { NoticeBanner } from "@/components/NoticeBanner";
+import { SearchPanel } from "@/components/SearchPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { EventEditor } from "@/events/EventEditor";
+import { QuickAdd } from "@/events/QuickAdd";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useTheme } from "@/hooks/useTheme";
 import { useTrayEvents } from "@/hooks/useTrayEvents";
@@ -31,6 +33,8 @@ function Shell() {
         <CalendarSurface />
       </div>
       <EventEditor />
+      <QuickAdd />
+      <SearchPanel />
     </div>
   );
 }

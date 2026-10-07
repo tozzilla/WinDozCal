@@ -3,8 +3,8 @@
 //! Uso: `cargo run --release --example perf`
 //!
 //! Crea un DB SQLite temporaneo con 50.000 eventi su 3 anni (2025-2027) e 5 calendari, poi
-//! misura `list_events` su una settimana e su un mese e `search_events` su un termine comune e
-//! uno raro. Il file temporaneo viene cancellato a fine esecuzione.
+//! misura `list_events` su una settimana e su un mese e `search_events` su un termine comune,
+//! uno raro e un partecipante (due per evento). Il file temporaneo viene cancellato a fine esecuzione.
 
 use std::time::{Duration, Instant};
 
@@ -119,10 +119,29 @@ fn seed(db: &Db) -> AppResult<()> {
                 ])?;
             }
         }
+        // Due partecipanti per evento (100.000 righe) per misurare la ricerca sui partecipanti.
+        {
+            let mut stmt = tx.prepare(
+                "INSERT INTO attendees (id, event_id, email, name) VALUES (?1, ?2, ?3, ?4)",
+            )?;
+            for n in 0..EVENTS {
+                for k in 0..2 {
+                    let person = PEOPLE[rng.below(PEOPLE.len() as u64) as usize];
+                    stmt.execute(params![
+                        format!("a{n}-{k}"),
+                        format!("e{n}"),
+                        format!("{}@example.com", person.to_lowercase()),
+                        person
+                    ])?;
+                }
+            }
+        }
         tx.commit()?;
         Ok(())
     })
 }
+
+const PEOPLE: &[&str] = &["Giulia", "Marco", "Luca", "Sara", "Paolo", "Elena", "Andrea", "Chiara"];
 
 fn measure<T>(label: &str, mut f: impl FnMut() -> AppResult<Vec<T>>) {
     let mut times: Vec<Duration> = Vec::new();
@@ -166,6 +185,9 @@ fn main() -> AppResult<()> {
     });
     measure("search_events termine raro", || {
         db.with(|c| repo::search_events(c, RARE))
+    });
+    measure("search_events partecipante", || {
+        db.with(|c| repo::search_events(c, "giulia"))
     });
 
     drop(db);
