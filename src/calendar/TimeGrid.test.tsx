@@ -11,7 +11,7 @@ const ev = (id: string, h: number, rule: string | null = null): Event => ({
   id, calendar_id: "c", remote_id: null, title: id, description: null, location: null, conference_url: null,
   start: toIsoWithOffset(new Date(2026, 9, 6, h)), end: toIsoWithOffset(new Date(2026, 9, 6, h + 2)), timezone: "Europe/Rome",
   all_day: false, recurrence_rule: rule, status: "busy", etag: null, updated_at: null, sync_status: "synced",
-  local_updated_at: null, remote_updated_at: null, occurrence_start: null,
+  local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null,
 });
 
 describe("TimeGrid", () => {
@@ -53,9 +53,10 @@ describe("TimeGrid", () => {
     expect(onChangeEventTime).toHaveBeenCalledTimes(1);
     expect(new Date(onChangeEventTime.mock.calls[0][1]).getHours()).toBe(11);
 
-    // occorrenza ricorrente -> bloccata con messaggio
+    // occorrenza ricorrente -> si sposta anch'essa: la portata (solo questo / successivi / tutta) la chiede il chiamante
     await act(async () => { down(nodes[2], 5, 5); fire("pointermove", 5, 60); fire("pointerup", 5, 60); });
-    expect(onNotice).toHaveBeenCalledWith("Modifica la serie dall'editor");
-    expect(onChangeEventTime).toHaveBeenCalledTimes(1);
+    expect(onNotice).not.toHaveBeenCalled();
+    expect(onChangeEventTime).toHaveBeenCalledTimes(2);
+    expect(onChangeEventTime.mock.calls[1][0].id).toBe("r");
   });
 });

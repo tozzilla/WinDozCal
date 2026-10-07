@@ -19,7 +19,7 @@ Regole: nessun import di provider o di `@tauri-apps/api` in `src/components` o `
 
 - `Account`: id, provider (`"local" | "google" | "microsoft" | "caldav"`), name, email (stringa vuota per `local`), sync_status, last_sync
 - `Calendar`: id, account_id, remote_id, name, color, visible, read_only
-- `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at
+- `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at, series_id, original_start (eccezioni, ADR 013)
 - `Attendee`: id, event_id, email, name (nullable), status (`"needs_action" | "accepted" | "declined" | "tentative"`)
 - `Reminder`: id, event_id, minutes_before, type (`"popup" | "email"`)
 - `SyncState`: account_id, calendar_id, cursor (sync token / delta link / CalDAV sync-token), updated_at
@@ -86,7 +86,12 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 - `list_events` espande le serie nel range richiesto: ogni occorrenza è un `Event` con `id` = id della serie, `start`/`end` dell'occorrenza e il nuovo campo `occurrence_start` (inizio originale dell'occorrenza, ISO con offset). Per gli eventi non ricorrenti `occurrence_start` è `null`. Chiave univoca lato UI: `id` + `occurrence_start`. Massimo 500 occorrenze per serie per richiesta
 - `get_event`, `update_event`, `delete_event` agiscono sulla serie intera. `update_event` va chiamato con i dati della serie (da `get_event`), mai con quelli di un'occorrenza espansa
 - nuovo comando `delete_occurrence(eventId, occurrenceStart) -> void`: aggiunge una `EXDATE`; su eventi remoti synced porta la serie a `pending_update`
-- modifica di una singola occorrenza ("solo questo") e "questo e i successivi": non supportate in Fase 1 (PRD §10 lo consente). Nella UI il drag di un'occorrenza ricorrente è disabilitato con un messaggio; l'editor modifica la serie
+- eccezioni (Fase 2, ADR 013): un'occorrenza modificata è un `Event` non ricorrente con `series_id` (id della serie) e `original_start` (inizio originale dell'occorrenza, ISO); per gli altri eventi entrambi `null`. `list_events` non restituisce l'occorrenza espansa sostituita da un'eccezione, ma l'eccezione nella sua posizione. `NewEvent` non contiene `series_id` né `original_start` (li governa il backend)
+- `update_occurrence(seriesId, occurrenceStart, event: NewEvent, attendees, reminders) -> EventDetail`: "solo questo evento"; crea l'eccezione o aggiorna quella esistente per la stessa occorrenza (confronto sull'istante). L'eccezione resta nel calendario della serie, `recurrence_rule` ignorata. Errore `invalid_input` se `occurrenceStart` non è un'occorrenza della serie
+- `split_series(seriesId, occurrenceStart, event: NewEvent, attendees, reminders) -> EventDetail`: "questo e i successivi"; la serie termina prima dell'occorrenza (`UNTIL` in UTC, oppure `COUNT` ripartito tra le due serie) e ne nasce una nuova con i dati di `event`, che restituisce. EXDATE successive alla nuova serie, eccezioni successive rimosse. Sulla prima occorrenza equivale a `update_event` sulla serie
+- `truncate_series(seriesId, occurrenceStart) -> void`: "questo e i successivi" in cancellazione (dalla prima occorrenza cancella la serie)
+- `delete_occurrence` rimuove anche l'eventuale eccezione dell'occorrenza; `update_event` su un'eccezione la modifica da sola; `update_event` sulla serie rimuove le eccezioni se cambiano `start`, `end`, `timezone`, `all_day` o la RRULE; `delete_event` sulla serie rimuove le sue eccezioni
+- UI: le occorrenze espanse e le eccezioni chiedono la portata (solo questo / questo e i successivi / tutta la serie) al salvataggio, alla cancellazione e, per le occorrenze espanse, al drag & drop; le eccezioni si trascinano come eventi singoli
 - il "Next event" del tray e i promemoria usano le occorrenze espanse
 
 ## Promemoria e notifiche (stage 7, 7 ott 2026)

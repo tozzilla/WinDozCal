@@ -139,7 +139,14 @@ pub struct Event {
     pub remote_updated_at: Option<String>,
     /// Solo nelle occorrenze espanse da `list_events`: inizio originale dell'occorrenza (ISO con
     /// offset). `null` per gli eventi non ricorrenti e per la serie base.
+    #[serde(default)]
     pub occurrence_start: Option<String>,
+    /// Solo per le eccezioni (ADR 013): id della serie di cui sostituiscono un'occorrenza.
+    #[serde(default)]
+    pub series_id: Option<String>,
+    /// Solo per le eccezioni: inizio originale dell'occorrenza sostituita.
+    #[serde(default)]
+    pub original_start: Option<String>,
 }
 
 /// Argomento di `create_event`: il contratto cita `NewEvent` senza elencarne i campi.

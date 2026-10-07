@@ -23,3 +23,17 @@ export function eventsOnDay(events: Event[], day: Date): Event[] {
 export const eventKey = (e: Event) => `${e.id}|${e.occurrence_start ?? ""}`;
 
 export const isRecurring = (e: Event) => !!e.recurrence_rule;
+
+/** Occorrenza di una serie: espansa (`id` della serie + `occurrence_start`) o eccezione (`series_id` + `original_start`). */
+export interface OccurrenceRef {
+  seriesId: string;
+  occurrenceStart: string;
+  /** `true` se l'occorrenza è già un'eccezione (riga a sé, modificabile con `update_event`). */
+  isException: boolean;
+}
+
+export function occurrenceRef(e: Event): OccurrenceRef | null {
+  if (e.series_id && e.original_start) return { seriesId: e.series_id, occurrenceStart: e.original_start, isException: true };
+  if (e.occurrence_start) return { seriesId: e.id, occurrenceStart: e.occurrence_start, isException: false };
+  return null;
+}

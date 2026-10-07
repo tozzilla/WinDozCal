@@ -141,7 +141,9 @@ fn seed(db: &Db) -> AppResult<()> {
     })
 }
 
-const PEOPLE: &[&str] = &["Giulia", "Marco", "Luca", "Sara", "Paolo", "Elena", "Andrea", "Chiara"];
+const PEOPLE: &[&str] = &[
+    "Giulia", "Marco", "Luca", "Sara", "Paolo", "Elena", "Andrea", "Chiara",
+];
 
 fn measure<T>(label: &str, mut f: impl FnMut() -> AppResult<Vec<T>>) {
     let mut times: Vec<Duration> = Vec::new();

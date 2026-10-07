@@ -17,10 +17,9 @@ use chrono::{DateTime, FixedOffset, Local, TimeZone};
 use rusqlite::{params, Connection};
 use tauri::{AppHandle, Manager};
 
-use crate::db::repo::{self, event_from_row, EVENT_COLS};
+use crate::db::repo::{self, event_from_row, EVENT_COLS, EVENT_COL_COUNT};
 use crate::error::AppResult;
 use crate::models::Event;
-use crate::recurrence;
 use crate::state::AppState;
 use crate::timeutil::{now_iso, parse_ts};
 
@@ -80,7 +79,7 @@ pub fn due_reminders(conn: &Connection, now_ts: i64) -> AppResult<Vec<DueReminde
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(
         params![now_ts - GRACE_SECS, now_ts + MAX_LEAD_SECS],
-        |row| Ok((event_from_row(row)?, row.get::<_, i64>(18)?)),
+        |row| Ok((event_from_row(row)?, row.get::<_, i64>(EVENT_COL_COUNT)?)),
     )?;
     for row in rows {
         let (event, minutes) = row?;
@@ -91,6 +90,7 @@ pub fn due_reminders(conn: &Connection, now_ts: i64) -> AppResult<Vec<DueReminde
     let mut reminder_stmt = conn.prepare(
         "SELECT minutes_before FROM reminders WHERE event_id = ?1 AND \"type\" = 'popup'",
     )?;
+    let exceptions = repo::exception_starts(conn)?;
     for series in repo::recurring_events(conn)? {
         let minutes: Vec<i64> = reminder_stmt
             .query_map(params![series.id], |row| row.get(0))?
@@ -98,9 +98,12 @@ pub fn due_reminders(conn: &Connection, now_ts: i64) -> AppResult<Vec<DueReminde
         if minutes.is_empty() {
             continue;
         }
-        for occurrence in
-            recurrence::expand_or_base(&series, now_ts - GRACE_SECS, now_ts + MAX_LEAD_SECS)
-        {
+        for occurrence in repo::expand_series(
+            &series,
+            now_ts - GRACE_SECS,
+            now_ts + MAX_LEAD_SECS,
+            &exceptions,
+        ) {
             for m in &minutes {
                 push(&occurrence, *m);
             }

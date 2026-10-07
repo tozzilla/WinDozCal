@@ -9,7 +9,7 @@ const series = (rule: string, start = at(10, 5), extra: Partial<Event> = {}): Ev
   id: "s1", calendar_id: "c", remote_id: null, title: "Serie", description: null, location: null, conference_url: null,
   start: toIsoWithOffset(start), end: toIsoWithOffset(new Date(start.getTime() + 3_600_000)), timezone: "Europe/Rome",
   all_day: false, recurrence_rule: rule, status: "busy", etag: null, updated_at: null, sync_status: "synced",
-  local_updated_at: null, remote_updated_at: null, occurrence_start: null, ...extra,
+  local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null, ...extra,
 });
 
 const days = (events: Event[]) => events.map((e) => new Date(e.start).getDate());

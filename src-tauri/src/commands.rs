@@ -151,6 +151,81 @@ pub async fn delete_occurrence(
     Ok(())
 }
 
+/// "Solo questo evento": crea o aggiorna l'eccezione dell'occorrenza (ADR 013).
+#[tauri::command]
+pub async fn update_occurrence(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    series_id: String,
+    occurrence_start: String,
+    event: NewEvent,
+    attendees: Vec<NewAttendee>,
+    reminders: Vec<NewReminder>,
+) -> AppResult<EventDetail> {
+    let detail = state.db.with(|conn| {
+        repo::update_occurrence(
+            conn,
+            &series_id,
+            &occurrence_start,
+            &event,
+            &attendees,
+            &reminders,
+        )
+    })?;
+    if detail.event.sync_status != EventSyncStatus::Synced {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(detail)
+}
+
+/// "Questo e i successivi" in modifica: chiude la serie prima dell'occorrenza e ne apre una
+/// nuova con i dati inviati (ADR 013). Restituisce la nuova serie.
+#[tauri::command]
+pub async fn split_series(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    series_id: String,
+    occurrence_start: String,
+    event: NewEvent,
+    attendees: Vec<NewAttendee>,
+    reminders: Vec<NewReminder>,
+) -> AppResult<EventDetail> {
+    let detail = state.db.with(|conn| {
+        repo::split_series(
+            conn,
+            &series_id,
+            &occurrence_start,
+            &event,
+            &attendees,
+            &reminders,
+        )
+    })?;
+    if detail.event.sync_status != EventSyncStatus::Synced {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(detail)
+}
+
+/// "Questo e i successivi" in cancellazione: la serie termina prima dell'occorrenza.
+#[tauri::command]
+pub async fn truncate_series(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    series_id: String,
+    occurrence_start: String,
+) -> AppResult<()> {
+    let needs_sync = state
+        .db
+        .with(|conn| repo::truncate_series(conn, &series_id, &occurrence_start))?;
+    if needs_sync {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn search_events(state: State<'_, AppState>, query: String) -> AppResult<Vec<Event>> {
     state.db.with(|conn| repo::search_events(conn, &query))

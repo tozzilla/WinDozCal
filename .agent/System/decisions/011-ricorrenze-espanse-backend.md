@@ -18,4 +18,4 @@ Fonte tecnica canonica: sezione "Ricorrenze" di `docs/CONTRACT.md`.
 - Il frontend non espande mai RRULE: nessuna duplicazione della logica.
 
 ## Stato
-Accettato (7 ott 2026).
+Accettato (7 ott 2026). Esteso da [ADR 013](013-eccezioni-ricorrenze.md) (eccezioni e "questo e i successivi").

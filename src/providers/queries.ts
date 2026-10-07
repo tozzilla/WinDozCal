@@ -1,5 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { applyToSeries, type SeriesScope } from "@/events/seriesEdit";
 import type { Event, NewAttendee, NewEvent, NewReminder, Settings } from "@/types";
+import type { OccurrenceRef } from "@/utils/events";
 import { calendarService } from "./calendarService";
 
 export const queryClient = new QueryClient({
@@ -107,10 +109,49 @@ export function useDeleteEvent() {
   return useMutation({ mutationFn: (eventId: string) => calendarService.deleteEvent(eventId), onSuccess: () => invalidate() });
 }
 
-export function useDeleteOccurrence() {
+/**
+ * Salva una modifica fatta su un'occorrenza di serie con la portata scelta (PRD §10, ADR 013):
+ * - `this`: eccezione (`update_occurrence`), o `update_event` se l'occorrenza è già un'eccezione (`exception`);
+ * - `following`: `split_series` con i campi e la regola modificati;
+ * - `all`: `update_event` sulla serie, spostata come l'occorrenza (vedi `applyToSeries`).
+ */
+export function useSaveOccurrence() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (v: { eventId: string; occurrenceStart: string }) => calendarService.deleteOccurrence(v.eventId, v.occurrenceStart),
+    mutationFn: async (v: {
+      ref: OccurrenceRef;
+      scope: SeriesScope;
+      fields: NewEvent;
+      attendees: NewAttendee[];
+      reminders: NewReminder[];
+      exception?: Event;
+    }) => {
+      const single = { ...v.fields, recurrence_rule: null };
+      if (v.scope === "this") {
+        return v.exception
+          ? calendarService.updateEvent({ ...v.exception, ...single }, v.attendees, v.reminders)
+          : calendarService.updateOccurrence(v.ref.seriesId, v.ref.occurrenceStart, single, v.attendees, v.reminders);
+      }
+      if (v.scope === "following") {
+        return calendarService.splitSeries(v.ref.seriesId, v.ref.occurrenceStart, v.fields, v.attendees, v.reminders);
+      }
+      const series = await calendarService.getEvent(v.ref.seriesId);
+      return calendarService.updateEvent(applyToSeries(series.event, v.ref.occurrenceStart, v.fields, v.ref.isException), v.attendees, v.reminders);
+    },
+    onSuccess: () => invalidate(),
+  });
+}
+
+/** Cancellazione di un'occorrenza con la portata scelta. */
+export function useDeleteOccurrenceScoped() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ ref, scope }: { ref: OccurrenceRef; scope: SeriesScope }) =>
+      scope === "this"
+        ? calendarService.deleteOccurrence(ref.seriesId, ref.occurrenceStart)
+        : scope === "following"
+          ? calendarService.truncateSeries(ref.seriesId, ref.occurrenceStart)
+          : calendarService.deleteEvent(ref.seriesId),
     onSuccess: () => invalidate(),
   });
 }

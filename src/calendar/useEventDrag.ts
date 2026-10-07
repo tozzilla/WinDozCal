@@ -1,7 +1,7 @@
 import { useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { Calendar, Event } from "@/types";
 import { isSameDay } from "@/utils/date";
-import { eventInterval, eventKey, isRecurring } from "@/utils/events";
+import { eventInterval, eventKey } from "@/utils/events";
 import { moveEvent, resizeEvent } from "./drag";
 
 const DRAG_THRESHOLD_PX = 4;
@@ -26,8 +26,9 @@ interface Options {
 
 /**
  * Drag & drop di un evento con il puntatore: sposta (anche tra giorni) o ridimensiona dal bordo inferiore.
- * Un clic senza movimento seleziona l'evento. Le occorrenze ricorrenti e i calendari in sola lettura
- * non si spostano: si mostra un messaggio. Mentre si trascina, `drag` contiene l'anteprima.
+ * Un clic senza movimento seleziona l'evento. I calendari in sola lettura non si spostano: si mostra un
+ * messaggio. Per le occorrenze di una serie la portata (solo questo / successivi / tutta) la chiede il
+ * chiamante in `onChangeEventTime`. Mentre si trascina, `drag` contiene l'anteprima.
  */
 export function useEventDrag({ days, hourHeight, columnsRef, calendars, onSelectEvent, onChangeEventTime, onNotice }: Options) {
   const [drag, setDrag] = useState<DragPreview | null>(null);
@@ -50,10 +51,6 @@ export function useEventDrag({ days, hourHeight, columnsRef, calendars, onSelect
       const dy = m.clientY - y0;
       if (!moved) {
         if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-        if (isRecurring(event)) {
-          blocked = true;
-          return onNotice("Modifica la serie dall'editor");
-        }
         if (readOnly) {
           blocked = true;
           return onNotice("Questo calendario è in sola lettura");

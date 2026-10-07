@@ -28,7 +28,9 @@ export function SearchPanel() {
     const t = setTimeout(() => setDebounced(query), 120);
     return () => clearTimeout(t);
   }, [query]);
-  useEffect(() => setActive(0), [debounced]);
+  useEffect(() => {
+    setActive(0);
+  }, [debounced]);
   useEffect(() => {
     if (!searchOpen) setQuery("");
   }, [searchOpen]);

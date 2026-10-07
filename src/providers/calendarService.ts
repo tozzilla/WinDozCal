@@ -23,8 +23,14 @@ export interface CalendarService {
   updateEvent(event: Event, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
   /** Elimina la serie intera. */
   deleteEvent(eventId: string): Promise<void>;
-  /** Aggiunge una EXDATE alla serie: elimina solo l'occorrenza che inizia a `occurrenceStart`. */
+  /** Aggiunge una EXDATE alla serie: elimina solo l'occorrenza che inizia a `occurrenceStart` (ed eventuale eccezione). */
   deleteOccurrence(eventId: string, occurrenceStart: string): Promise<void>;
+  /** "Solo questo evento": crea o aggiorna l'eccezione dell'occorrenza (ADR 013). */
+  updateOccurrence(seriesId: string, occurrenceStart: string, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /** "Questo e i successivi": la serie termina prima dell'occorrenza e ne nasce una nuova con `event`; restituisce la nuova. */
+  splitSeries(seriesId: string, occurrenceStart: string, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /** "Questo e i successivi" in cancellazione. */
+  truncateSeries(seriesId: string, occurrenceStart: string): Promise<void>;
   searchEvents(query: string): Promise<Event[]>;
   syncNow(accountId?: string): Promise<void>;
   openLogFolder(): Promise<void>;

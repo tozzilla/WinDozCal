@@ -4,6 +4,8 @@
 //! Regola: la UI scrive solo qui, in stato `pending_*`; e' il Sync Engine (`sync_repo`) a
 //! riconciliare con i provider.
 
+use std::collections::{HashMap, HashSet};
+
 use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use crate::error::{AppError, AppResult};
@@ -19,7 +21,10 @@ use crate::timeutil::{now_iso, parse_ts};
 pub(crate) const EVENT_COLS: &str = "e.id, e.calendar_id, e.remote_id, e.title, e.description, \
      e.location, e.\"start\", e.\"end\", e.timezone, e.all_day, e.recurrence_rule, e.status, \
      e.etag, e.updated_at, e.sync_status, e.local_updated_at, e.remote_updated_at, \
-     e.conference_url";
+     e.conference_url, e.series_id, e.original_start";
+
+/// Numero di colonne di `EVENT_COLS`: le colonne aggiunte dopo `{EVENT_COLS}` partono da qui.
+pub(crate) const EVENT_COL_COUNT: usize = 20;
 
 /// Massimo numero di risultati di `search_events`.
 const SEARCH_LIMIT: i64 = 200;
@@ -45,6 +50,8 @@ pub(crate) fn event_from_row(row: &Row<'_>) -> rusqlite::Result<Event> {
         remote_updated_at: row.get(16)?,
         conference_url: row.get(17)?,
         occurrence_start: None,
+        series_id: row.get(18)?,
+        original_start: row.get(19)?,
     })
 }
 
@@ -244,7 +251,8 @@ pub(crate) const MAX_SPAN_SECS: i64 = 35 * 86_400;
 /// - (b) non ricorrenti "lunghi" (> MAX_SPAN): indice parziale `idx_events_long`, pochissime righe;
 /// - (c) ricorrenti: indice parziale `idx_events_recurring`.
 ///
-/// Le colonne 19 e 20 (`start_ts`, `end_ts`) servono solo all'`ORDER BY` della query composta.
+/// Le due colonne dopo `EVENT_COLS` (`start_ts`, `end_ts`) servono solo all'`ORDER BY` della
+/// query composta.
 pub(crate) fn list_events_sql() -> String {
     let max = MAX_SPAN_SECS;
     // INDEXED BY: senza statistiche il planner sceglierebbe `idx_events_range` anche per i rami
@@ -272,7 +280,9 @@ pub(crate) fn list_events_sql() -> String {
             AND e.start_ts < ?2 AND e.end_ts > ?1
          UNION ALL
          {recurring} AND e.recurrence_rule IS NOT NULL AND e.start_ts < ?2
-         ORDER BY 19, 20"
+         ORDER BY {s}, {e}",
+        s = EVENT_COL_COUNT + 1,
+        e = EVENT_COL_COUNT + 2
     )
 }
 
@@ -288,11 +298,13 @@ pub fn list_events(conn: &Connection, range_start: &str, range_end: &str) -> App
     let rows = stmt.query_map(params![start_ts, end_ts], event_from_row)?;
     let found = rows.collect::<rusqlite::Result<Vec<_>>>()?;
 
-    // Le serie ricorrenti diventano una riga per occorrenza nel range (`recurrence::expand`).
+    // Le serie ricorrenti diventano una riga per occorrenza nel range (`recurrence::expand`),
+    // tranne le occorrenze sostituite da un'eccezione (ADR 013), che compare come evento a se'.
+    let exceptions = exception_starts(conn)?;
     let mut events = Vec::with_capacity(found.len());
     for event in found {
         if event.recurrence_rule.is_some() {
-            events.extend(recurrence::expand_or_base(&event, start_ts, end_ts));
+            events.extend(expand_series(&event, start_ts, end_ts, &exceptions));
         } else {
             events.push(event);
         }
@@ -304,6 +316,46 @@ pub fn list_events(conn: &Connection, range_start: &str, range_end: &str) -> App
         )
     });
     Ok(events)
+}
+
+/// Istanti originali (epoch) delle occorrenze sostituite da un'eccezione, per serie. Una sola
+/// query per tutte le serie: `next_event` e i promemoria la chiamano a ogni tick.
+pub fn exception_starts(conn: &Connection) -> AppResult<HashMap<String, HashSet<i64>>> {
+    let mut stmt = conn.prepare(
+        "SELECT series_id, original_start_ts FROM events INDEXED BY idx_events_series
+         WHERE series_id IS NOT NULL AND original_start_ts IS NOT NULL",
+    )?;
+    let mut map: HashMap<String, HashSet<i64>> = HashMap::new();
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (series_id, ts) = row?;
+        map.entry(series_id).or_default().insert(ts);
+    }
+    Ok(map)
+}
+
+/// Occorrenze della serie nel range, senza quelle sostituite da un'eccezione.
+pub fn expand_series(
+    series: &Event,
+    range_start: i64,
+    range_end: i64,
+    exceptions: &HashMap<String, HashSet<i64>>,
+) -> Vec<Event> {
+    let occurrences = recurrence::expand_or_base(series, range_start, range_end);
+    let Some(skip) = exceptions.get(&series.id) else {
+        return occurrences;
+    };
+    occurrences
+        .into_iter()
+        .filter(|o| {
+            o.occurrence_start
+                .as_deref()
+                .and_then(|s| parse_ts(s).ok())
+                .is_none_or(|ts| !skip.contains(&ts))
+        })
+        .collect()
 }
 
 /// Serie ricorrenti dei calendari visibili (eventi base con `recurrence_rule`).
@@ -349,9 +401,14 @@ pub fn next_event(conn: &Connection, now_ts: i64) -> AppResult<Option<Event>> {
             )
         });
 
+    let exceptions = exception_starts(conn)?;
     for series in recurring_events(conn)? {
-        let occurrences =
-            recurrence::expand_or_base(&series, now_ts, now_ts + NEXT_EVENT_HORIZON_SECS);
+        let occurrences = expand_series(
+            &series,
+            now_ts,
+            now_ts + NEXT_EVENT_HORIZON_SECS,
+            &exceptions,
+        );
         let first = occurrences.into_iter().find_map(|o| {
             let start = parse_ts(&o.start).ok()?;
             let end = parse_ts(&o.end).ok()?;
@@ -388,6 +445,12 @@ pub fn delete_occurrence(
     };
     let line = recurrence::exdate_line(&existing, occurrence_start)
         .map_err(|reason| AppError::InvalidInput(format!("invalid occurrence_start: {reason}")))?;
+    // L'occorrenza cancellata si rappresenta solo con la EXDATE: un'eventuale eccezione sparisce.
+    let original_ts = parse_ts(occurrence_start)?;
+    conn.execute(
+        "DELETE FROM events WHERE series_id = ?1 AND original_start_ts = ?2",
+        params![event_id, original_ts],
+    )?;
     if rule.lines().any(|l| l.trim().eq_ignore_ascii_case(&line)) {
         return Ok(false);
     }
@@ -731,6 +794,19 @@ pub fn insert_event(
     attendees: &[NewAttendee],
     reminders: &[NewReminder],
 ) -> AppResult<EventDetail> {
+    insert_row(conn, new, attendees, reminders, None)
+}
+
+/// Legame di un'eccezione con la sua serie: (id serie, inizio originale, epoch dell'inizio).
+type ExceptionOf<'a> = (&'a str, &'a str, i64);
+
+fn insert_row(
+    conn: &Connection,
+    new: &NewEvent,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+    exception_of: Option<ExceptionOf<'_>>,
+) -> AppResult<EventDetail> {
     let calendar = get_calendar(conn, &new.calendar_id)?;
     ensure_writable(&calendar)?;
     let (start_ts, end_ts) = validate_range(&new.start, &new.end, &new.timezone)?;
@@ -744,35 +820,39 @@ pub fn insert_event(
     };
     let id = uuid::Uuid::new_v4().to_string();
     let now = now_iso();
-    let tx = conn.unchecked_transaction()?;
-    tx.execute(
-        "INSERT INTO events (id, calendar_id, remote_id, title, description, location,
+    atomically(conn, |tx| {
+        tx.execute(
+            "INSERT INTO events (id, calendar_id, remote_id, title, description, location,
                              \"start\", \"end\", start_ts, end_ts, timezone, all_day,
                              recurrence_rule, status, etag, updated_at, sync_status,
-                             local_updated_at, remote_updated_at, conference_url)
+                             local_updated_at, remote_updated_at, conference_url,
+                             series_id, original_start, original_start_ts)
          VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, NULL, ?14,
-                 ?15, ?14, NULL, ?16)",
-        params![
-            id,
-            new.calendar_id,
-            new.title,
-            new.description,
-            new.location,
-            new.start,
-            new.end,
-            start_ts,
-            end_ts,
-            new.timezone,
-            new.all_day,
-            new.recurrence_rule,
-            new.status,
-            now,
-            initial_status,
-            conference_url,
-        ],
-    )?;
-    replace_children(&tx, &id, attendees, reminders)?;
-    tx.commit()?;
+                 ?15, ?14, NULL, ?16, ?17, ?18, ?19)",
+            params![
+                id,
+                new.calendar_id,
+                new.title,
+                new.description,
+                new.location,
+                new.start,
+                new.end,
+                start_ts,
+                end_ts,
+                new.timezone,
+                new.all_day,
+                new.recurrence_rule,
+                new.status,
+                now,
+                initial_status,
+                conference_url,
+                exception_of.map(|e| e.0),
+                exception_of.map(|e| e.1),
+                exception_of.map(|e| e.2),
+            ],
+        )?;
+        replace_children(tx, &id, attendees, reminders)
+    })?;
     get_event_detail(conn, &id)
 }
 
@@ -799,6 +879,23 @@ pub fn update_event(
     let (start_ts, end_ts) = validate_range(&event.start, &event.end, &event.timezone)?;
     validate_children(attendees, reminders)?;
     let conference_url = normalize_conference_url(&event.conference_url)?;
+    // Un'eccezione resta un evento singolo legato alla sua serie (ADR 013).
+    let recurrence_rule = if existing.series_id.is_some() {
+        None
+    } else {
+        event.recurrence_rule.clone()
+    };
+    // "Tutta la serie": se cambiano orari, fuso, all-day o la RRULE le eccezioni non
+    // corrispondono piu' a nessuna occorrenza e vengono rimosse; i campi descrittivi le conservano.
+    let reshapes_series = existing.recurrence_rule.is_some()
+        && (existing.start != event.start
+            || existing.end != event.end
+            || existing.timezone != event.timezone
+            || existing.all_day != event.all_day
+            || !recurrence::same_rrule(
+                existing.recurrence_rule.as_deref(),
+                recurrence_rule.as_deref(),
+            ));
 
     let next_status = if is_local_calendar(conn, &existing.calendar_id)? {
         EventSyncStatus::Synced
@@ -825,7 +922,7 @@ pub fn update_event(
             end_ts,
             event.timezone,
             event.all_day,
-            event.recurrence_rule,
+            recurrence_rule,
             event.status,
             next_status,
             now,
@@ -833,6 +930,9 @@ pub fn update_event(
             event.id,
         ],
     )?;
+    if reshapes_series {
+        remove_exceptions(&tx, &event.id, None)?;
+    }
     replace_children(&tx, &event.id, attendees, reminders)?;
     tx.commit()?;
     get_event_detail(conn, &event.id)
@@ -845,6 +945,8 @@ pub fn delete_event(conn: &Connection, event_id: &str) -> AppResult<bool> {
     let existing = get_event(conn, event_id)?;
     let calendar = get_calendar(conn, &existing.calendar_id)?;
     ensure_writable(&calendar)?;
+    // Le eccezioni spariscono con la serie (sul provider le cancella la delete della serie).
+    remove_exceptions(conn, event_id, None)?;
 
     if is_local_calendar(conn, &existing.calendar_id)? {
         conn.execute("DELETE FROM events WHERE id = ?1", params![event_id])?;
@@ -867,4 +969,218 @@ pub fn delete_event(conn: &Connection, event_id: &str) -> AppResult<bool> {
         }
     }
     Ok(true)
+}
+
+// ---------------------------------------------------------------------------
+// Ricorrenze: eccezioni e divisione delle serie (PRD 10, ADR 013)
+// ---------------------------------------------------------------------------
+
+/// Esegue `f` in un SAVEPOINT: tutto o niente, anche se annidato in un'altra transazione
+/// (a differenza di `unchecked_transaction`).
+fn atomically<T>(conn: &Connection, f: impl FnOnce(&Connection) -> AppResult<T>) -> AppResult<T> {
+    conn.execute_batch("SAVEPOINT atomically")?;
+    match f(conn) {
+        Ok(value) => {
+            conn.execute_batch("RELEASE atomically")?;
+            Ok(value)
+        }
+        Err(err) => {
+            let _ = conn.execute_batch("ROLLBACK TO atomically; RELEASE atomically");
+            Err(err)
+        }
+    }
+}
+
+/// Rimuove le eccezioni della serie (tutte, o quelle con inizio originale da `from_ts` in poi).
+/// La cancellazione e' fisica anche per le eccezioni remote: l'aggiornamento o la cancellazione
+/// della serie sul provider le riallinea.
+fn remove_exceptions(conn: &Connection, series_id: &str, from_ts: Option<i64>) -> AppResult<()> {
+    conn.execute(
+        "DELETE FROM events WHERE series_id = ?1 AND original_start_ts >= ?2",
+        params![series_id, from_ts.unwrap_or(i64::MIN)],
+    )?;
+    Ok(())
+}
+
+/// Serie modificabile: esiste, non e' in cancellazione, e' ricorrente e scrivibile.
+fn writable_series(conn: &Connection, series_id: &str) -> AppResult<Event> {
+    let series = get_event(conn, series_id)?;
+    if series.sync_status == EventSyncStatus::PendingDelete {
+        return Err(AppError::NotFound(format!("event {series_id}")));
+    }
+    if series.recurrence_rule.is_none() {
+        return Err(AppError::InvalidInput("event is not recurring".into()));
+    }
+    ensure_writable(&get_calendar(conn, &series.calendar_id)?)?;
+    Ok(series)
+}
+
+/// Stato di sync dopo una modifica locale della serie (come `update_event`).
+fn series_status_after_change(conn: &Connection, series: &Event) -> AppResult<EventSyncStatus> {
+    Ok(if is_local_calendar(conn, &series.calendar_id)? {
+        EventSyncStatus::Synced
+    } else if series.sync_status == EventSyncStatus::PendingCreate {
+        EventSyncStatus::PendingCreate
+    } else {
+        EventSyncStatus::PendingUpdate
+    })
+}
+
+fn set_series_rule(conn: &Connection, series: &Event, rule: &str) -> AppResult<()> {
+    let status = series_status_after_change(conn, series)?;
+    let now = now_iso();
+    conn.execute(
+        "UPDATE events SET recurrence_rule = ?1, sync_status = ?2, updated_at = ?3,
+                local_updated_at = ?3
+         WHERE id = ?4",
+        params![rule, status, now, series.id],
+    )?;
+    Ok(())
+}
+
+fn existing_exception(
+    conn: &Connection,
+    series_id: &str,
+    original_ts: i64,
+) -> AppResult<Option<Event>> {
+    let sql = format!(
+        "SELECT {EVENT_COLS} FROM events e
+         WHERE e.series_id = ?1 AND e.original_start_ts = ?2
+           AND e.sync_status <> 'pending_delete'"
+    );
+    Ok(conn
+        .query_row(&sql, params![series_id, original_ts], event_from_row)
+        .optional()?)
+}
+
+/// Verifica che `occurrence_start` sia un'occorrenza della serie (non esclusa da EXDATE) e ne
+/// restituisce l'epoch.
+fn checked_occurrence(series: &Event, occurrence_start: &str) -> AppResult<i64> {
+    let ts = parse_ts(occurrence_start)?;
+    let valid = recurrence::has_occurrence(series, occurrence_start)
+        .map_err(|reason| AppError::InvalidInput(format!("invalid recurrence: {reason}")))?;
+    if !valid {
+        return Err(AppError::InvalidInput(
+            "occurrence_start is not an occurrence of the series".into(),
+        ));
+    }
+    Ok(ts)
+}
+
+/// "Solo questo evento": crea (o aggiorna) l'eccezione che sostituisce l'occorrenza della serie
+/// che inizia a `occurrence_start`. L'eccezione resta nel calendario della serie e non e'
+/// ricorrente; parte `pending_create` (`synced` sui calendari local).
+pub fn update_occurrence(
+    conn: &Connection,
+    series_id: &str,
+    occurrence_start: &str,
+    fields: &NewEvent,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<EventDetail> {
+    let series = writable_series(conn, series_id)?;
+    let original_ts = parse_ts(occurrence_start)?;
+    let single = NewEvent {
+        calendar_id: series.calendar_id.clone(),
+        recurrence_rule: None,
+        ..fields.clone()
+    };
+    if let Some(exception) = existing_exception(conn, series_id, original_ts)? {
+        let updated = Event {
+            title: single.title,
+            description: single.description,
+            location: single.location,
+            conference_url: single.conference_url,
+            start: single.start,
+            end: single.end,
+            timezone: single.timezone,
+            all_day: single.all_day,
+            status: single.status,
+            ..exception
+        };
+        return update_event(conn, &updated, attendees, reminders);
+    }
+    checked_occurrence(&series, occurrence_start)?;
+    insert_row(
+        conn,
+        &single,
+        attendees,
+        reminders,
+        Some((series_id, occurrence_start, original_ts)),
+    )
+}
+
+/// "Questo e i successivi": la serie termina prima dell'occorrenza e da li' nasce una nuova serie
+/// con i dati di `fields` (regola inclusa). Le EXDATE successive passano alla nuova serie, le
+/// eccezioni successive vengono rimosse. Sulla prima occorrenza equivale a modificare la serie.
+/// Restituisce la serie nuova (o quella modificata).
+pub fn split_series(
+    conn: &Connection,
+    series_id: &str,
+    occurrence_start: &str,
+    fields: &NewEvent,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<EventDetail> {
+    let series = writable_series(conn, series_id)?;
+    let occurrence_ts = checked_occurrence(&series, occurrence_start)?;
+    if occurrence_ts == parse_ts(&series.start)? {
+        let whole = Event {
+            title: fields.title.clone(),
+            description: fields.description.clone(),
+            location: fields.location.clone(),
+            conference_url: fields.conference_url.clone(),
+            start: fields.start.clone(),
+            end: fields.end.clone(),
+            timezone: fields.timezone.clone(),
+            all_day: fields.all_day,
+            recurrence_rule: fields.recurrence_rule.clone(),
+            status: fields.status,
+            ..series
+        };
+        return update_event(conn, &whole, attendees, reminders);
+    }
+
+    let split = recurrence::split_rule(&series, occurrence_start)
+        .map_err(|reason| AppError::InvalidInput(format!("cannot split series: {reason}")))?;
+    let tail_rule = match fields.recurrence_rule.as_deref() {
+        Some(requested) => Some(
+            recurrence::tail_rule(series.recurrence_rule.as_deref(), requested, &split).map_err(
+                |reason| AppError::InvalidInput(format!("invalid recurrence: {reason}")),
+            )?,
+        ),
+        None => None,
+    };
+    let tail = NewEvent {
+        calendar_id: series.calendar_id.clone(),
+        recurrence_rule: tail_rule,
+        ..fields.clone()
+    };
+
+    atomically(conn, |tx| {
+        remove_exceptions(tx, series_id, Some(occurrence_ts))?;
+        set_series_rule(tx, &series, &split.head)?;
+        insert_row(tx, &tail, attendees, reminders, None)
+    })
+}
+
+/// "Questo e i successivi" in cancellazione: la serie termina prima dell'occorrenza (dalla prima
+/// occorrenza equivale a cancellare la serie). Ritorna `true` se serve un sync.
+pub fn truncate_series(
+    conn: &Connection,
+    series_id: &str,
+    occurrence_start: &str,
+) -> AppResult<bool> {
+    let series = writable_series(conn, series_id)?;
+    let occurrence_ts = checked_occurrence(&series, occurrence_start)?;
+    if occurrence_ts == parse_ts(&series.start)? {
+        return delete_event(conn, series_id);
+    }
+    let split = recurrence::split_rule(&series, occurrence_start)
+        .map_err(|reason| AppError::InvalidInput(format!("cannot split series: {reason}")))?;
+    atomically(conn, |tx| {
+        remove_exceptions(tx, series_id, Some(occurrence_ts))?;
+        set_series_rule(tx, &series, &split.head)
+    })?;
+    Ok(!is_local_calendar(conn, &series.calendar_id)?)
 }

@@ -1,6 +1,7 @@
 import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder, Settings } from "@/types";
 import { validateAttendees, validateReminders } from "@/utils/validation";
-import { expandEvent, exdateValue } from "./memoryRecurrence";
+import { rruleParams, splitLines } from "@/events/recurrence";
+import { expandEvent, exdateValue, utcStamp } from "./memoryRecurrence";
 import { addDays, localTimezone, startOfWeek, toIsoWithOffset } from "@/utils/date";
 import type { CalendarService } from "./calendarService";
 
@@ -40,6 +41,7 @@ function seedEvents(): Event[] {
     const end = new Date(start.getTime() + minutes * 60_000);
     return {
       id, calendar_id, remote_id: null, title, description: null, location: null, conference_url: null, occurrence_start: null,
+      series_id: null, original_start: null,
       start: toIsoWithOffset(start), end: toIsoWithOffset(end), timezone: localTimezone(),
       all_day: false, recurrence_rule: null, status: "busy", etag: null, updated_at: null,
       sync_status: "synced", local_updated_at: null, remote_updated_at: null, ...extra,
@@ -118,10 +120,12 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       const from = new Date(rangeStart).getTime();
       const to = new Date(rangeEnd).getTime();
       const visible = new Set(calendars.filter((c) => c.visible).map((c) => c.id));
+      const replaced = new Set(events.filter((e) => e.series_id && e.original_start).map((e) => `${e.series_id}|${new Date(e.original_start!).getTime()}`));
       return structuredClone(
         events
           .filter((e) => visible.has(e.calendar_id))
           .flatMap((e) => expandEvent(e, new Date(from), new Date(to)))
+          .filter((o) => !o.occurrence_start || !replaced.has(`${o.id}|${new Date(o.occurrence_start).getTime()}`))
           .sort((a, b) => a.start.localeCompare(b.start)),
       );
     },
@@ -134,7 +138,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       validate(attendees, reminders);
       const created: Event = {
         ...input,
-        id: newId("ev"), remote_id: null, etag: null, updated_at: null, occurrence_start: null,
+        id: newId("ev"), remote_id: null, etag: null, updated_at: null, occurrence_start: null, series_id: null, original_start: null,
         // Come il backend: gli eventi locali restano "synced", gli altri entrano in coda.
         sync_status: isLocal(input.calendar_id) ? "synced" : "pending_create",
         local_updated_at: toIsoWithOffset(new Date()), remote_updated_at: null,
@@ -156,17 +160,60 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       return detailOf(updated);
     },
     async deleteEvent(eventId) {
-      events = events.filter((e) => e.id !== eventId);
+      events = events.filter((e) => e.id !== eventId && e.series_id !== eventId);
       attendeesByEvent.delete(eventId);
       remindersByEvent.delete(eventId);
     },
     async deleteOccurrence(eventId, occurrenceStart) {
       const event = events.find((e) => e.id === eventId);
       if (!event?.recurrence_rule) throw new Error("L'evento non è una serie ricorrente");
+      const at = new Date(occurrenceStart).getTime();
+      events = events.filter((e) => !(e.series_id === eventId && e.original_start && new Date(e.original_start).getTime() === at));
       const line = `EXDATE:${exdateValue(occurrenceStart, event.all_day)}`;
       event.recurrence_rule = `${event.recurrence_rule}\n${line}`;
       event.local_updated_at = toIsoWithOffset(new Date());
       if (!isLocal(event.calendar_id)) event.sync_status = "pending_update";
+    },
+    // Eccezioni e split (ADR 013) in versione semplice: lo split chiude la serie con UNTIL senza ripartire COUNT.
+    async updateOccurrence(seriesId, occurrenceStart, input, attendees, reminders) {
+      validate(attendees, reminders);
+      const series = events.find((e) => e.id === seriesId);
+      if (!series?.recurrence_rule) throw new Error("L'evento non è una serie ricorrente");
+      const at = new Date(occurrenceStart).getTime();
+      const existing = events.find((e) => e.series_id === seriesId && e.original_start && new Date(e.original_start).getTime() === at);
+      const exception: Event = {
+        ...(existing ?? { id: newId("ev"), remote_id: null, etag: null, updated_at: null, remote_updated_at: null }),
+        ...input,
+        calendar_id: series.calendar_id,
+        recurrence_rule: null,
+        occurrence_start: null,
+        series_id: seriesId,
+        original_start: occurrenceStart,
+        sync_status: isLocal(series.calendar_id) ? "synced" : existing ? "pending_update" : "pending_create",
+        local_updated_at: toIsoWithOffset(new Date()),
+      };
+      events = existing ? events.map((e) => (e.id === existing.id ? exception : e)) : [...events, exception];
+      storeExtras(exception.id, attendees, reminders);
+      return detailOf(exception);
+    },
+    async splitSeries(seriesId, occurrenceStart, input, attendees, reminders) {
+      const series = events.find((e) => e.id === seriesId);
+      if (!series?.recurrence_rule) throw new Error("L'evento non è una serie ricorrente");
+      const at = new Date(occurrenceStart);
+      if (at.getTime() === new Date(series.start).getTime()) return this.updateEvent({ ...series, ...input }, attendees, reminders);
+      await this.truncateSeries(seriesId, occurrenceStart);
+      return this.createEvent({ ...input, calendar_id: series.calendar_id }, attendees, reminders);
+    },
+    async truncateSeries(seriesId, occurrenceStart) {
+      const series = events.find((e) => e.id === seriesId);
+      if (!series?.recurrence_rule) throw new Error("L'evento non è una serie ricorrente");
+      const at = new Date(occurrenceStart);
+      if (at.getTime() === new Date(series.start).getTime()) return this.deleteEvent(seriesId);
+      const params = [...rruleParams(series.recurrence_rule)].filter(([k]) => k !== "UNTIL" && k !== "COUNT");
+      params.push(["UNTIL", utcStamp(new Date(at.getTime() - 1000))]);
+      const others = splitLines(series.recurrence_rule).filter((l) => !/^(RRULE:|FREQ=)/i.test(l));
+      series.recurrence_rule = ["RRULE:" + params.map(([k, v]) => `${k}=${v}`).join(";"), ...others].join("\n");
+      events = events.filter((e) => !(e.series_id === seriesId && e.original_start && new Date(e.original_start) >= at));
     },
     async searchEvents(query) {
       const q = query.trim().toLowerCase();

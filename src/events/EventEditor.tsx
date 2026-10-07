@@ -1,13 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { openExternal } from "@/providers/externalLinks";
-import { useCalendars, useCreateEvent, useDeleteEvent, useDeleteOccurrence, useEventDetail, useUpdateEvent } from "@/providers/queries";
+import {
+  useCalendars,
+  useCreateEvent,
+  useDeleteEvent,
+  useDeleteOccurrenceScoped,
+  useEventDetail,
+  useSaveOccurrence,
+  useUpdateEvent,
+} from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
+import { occurrenceRef } from "@/utils/events";
 import { isValidConferenceUrl } from "@/utils/validation";
 import { AttendeesField } from "./AttendeesField";
-import { draftToFields, emptyDraft, eventToDraft, validateDraft, type EventDraft } from "./draft";
+import { draftToFields, emptyDraft, eventToDraft, toDateInput, toTimeInput, validateDraft, type EventDraft } from "./draft";
 import { weekdayOf, WEEKDAYS, type RecurrenceFreq, type Weekday } from "./recurrence";
 import { RemindersField } from "./RemindersField";
+import { ScopeChoice } from "./ScopeChoice";
+import type { SeriesScope } from "./seriesEdit";
 
 const WEEKDAY_LABEL: Record<Weekday, string> = { MO: "Lun", TU: "Mar", WE: "Mer", TH: "Gio", FR: "Ven", SA: "Sab", SU: "Dom" };
 
@@ -36,10 +47,17 @@ export function EventEditor() {
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const remove = useDeleteEvent();
-  const removeOccurrence = useDeleteOccurrence();
+  const removeScoped = useDeleteOccurrenceScoped();
+  const saveOccurrence = useSaveOccurrence();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Salvataggio di un'occorrenza in attesa della scelta della portata. */
+  const [choosingScope, setChoosingScope] = useState(false);
   const initialised = useRef(false);
+  // Occorrenza di una serie (espansa o eccezione): il dettaglio è quello della serie o dell'eccezione;
+  // per un'eccezione serve anche la serie, da cui vengono la regola e "tutta la serie".
+  const ref = event ? occurrenceRef(event) : null;
   const detail = useEventDetail(open && event ? event.id : null);
+  const seriesDetail = useEventDetail(open && ref?.isException ? ref.seriesId : null);
   const [draft, setDraft] = useState<EventDraft | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -54,6 +72,7 @@ export function EventEditor() {
       setDraft(null);
       setErrors([]);
       setConfirmDelete(false);
+      setChoosingScope(false);
       return;
     }
     if (initialised.current) return;
@@ -61,11 +80,20 @@ export function EventEditor() {
       initialised.current = true;
       const base = emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot);
       setDraft(preset ? { ...base, title: preset.title, allDay: preset.allDay } : base);
-    } else if (detail.data && !detail.isFetching) {
+    } else if (detail.data && !detail.isFetching && (!ref?.isException || (seriesDetail.data && !seriesDetail.isFetching))) {
       initialised.current = true;
-      setDraft(eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders));
+      let d = eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders);
+      if (ref && !ref.isException) {
+        // Occorrenza espansa: data e orari sono quelli dell'occorrenza cliccata, il resto della serie.
+        const start = new Date(event.start);
+        d = { ...d, date: toDateInput(start), startTime: toTimeInput(start), endTime: toTimeInput(new Date(event.end)) };
+      } else if (ref?.isException && seriesDetail.data) {
+        const rule = eventToDraft(seriesDetail.data.event);
+        d = { ...d, recurrence: rule.recurrence, recurrenceDays: rule.recurrenceDays, existingRule: rule.existingRule };
+      }
+      setDraft(d);
     }
-  }, [open, event, slot, preset, detail.data, detail.isFetching, writable.length]);
+  }, [open, event, slot, preset, detail.data, detail.isFetching, seriesDetail.data, seriesDetail.isFetching, writable.length]);
 
   // Chiude solo con un clic sul fondo; si ignora quello che arriva subito dopo l'apertura (secondo clic di un doppio clic).
   const onBackdropClick = (e: React.MouseEvent) => {
@@ -100,6 +128,7 @@ export function EventEditor() {
     const problems = validateDraft(draft);
     setErrors(problems);
     if (problems.length > 0) return;
+    if (ref) return setChoosingScope(true);
     const fields = draftToFields(draft);
     try {
       if (event && detail.data) {
@@ -109,6 +138,35 @@ export function EventEditor() {
       }
       close();
     } catch (err) {
+      setErrors([errorMessage(err)]);
+    }
+  };
+
+  const saveWithScope = async (scope: SeriesScope) => {
+    if (!ref || !detail.data) return;
+    try {
+      await saveOccurrence.mutateAsync({
+        ref,
+        scope,
+        fields: draftToFields(draft),
+        attendees: draft.attendees,
+        reminders: draft.reminders,
+        exception: ref.isException ? detail.data.event : undefined,
+      });
+      close();
+    } catch (err) {
+      setChoosingScope(false);
+      setErrors([errorMessage(err)]);
+    }
+  };
+
+  const deleteWithScope = async (scope: SeriesScope) => {
+    if (!ref) return;
+    try {
+      await removeScoped.mutateAsync({ ref, scope });
+      close();
+    } catch (err) {
+      setConfirmDelete(false);
       setErrors([errorMessage(err)]);
     }
   };
@@ -206,7 +264,12 @@ export function EventEditor() {
             })}
           </div>
         )}
-        {event && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
+        {ref && (
+          <p className="text-xs text-muted-foreground">
+            Occorrenza di una serie: al salvataggio scegli se modificare solo questo evento, anche i successivi o tutta la serie.
+          </p>
+        )}
+        {event && !ref && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
 
         <Field label="Videoconferenza (link)">
           <div className="flex gap-2">
@@ -235,59 +298,69 @@ export function EventEditor() {
           </ul>
         )}
 
-        <div className="flex items-center justify-between pt-1">
-          {event && !confirmDelete && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={async () => {
-                if (draft.existingRule) return setConfirmDelete(true);
-                await remove.mutateAsync(event.id);
-                close();
-              }}
-            >
-              Elimina
-            </Button>
-          )}
-          {event && confirmDelete && (
-            <div className="flex flex-wrap items-center gap-2">
-              {event.occurrence_start && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={async () => {
-                    await removeOccurrence.mutateAsync({ eventId: event.id, occurrenceStart: event.occurrence_start as string });
-                    close();
-                  }}
-                >
-                  Solo questa occorrenza
-                </Button>
-              )}
+        {choosingScope && (
+          <ScopeChoice
+            question="Applicare la modifica a"
+            note="Se cambi data, orari o ricorrenza di tutta la serie o dei successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."
+            disabled={saveOccurrence.isPending}
+            onChoose={(scope) => void saveWithScope(scope)}
+            onCancel={() => setChoosingScope(false)}
+          />
+        )}
+        {confirmDelete && ref && (
+          <ScopeChoice
+            question="Eliminare"
+            destructive
+            disabled={removeScoped.isPending}
+            onChoose={(scope) => void deleteWithScope(scope)}
+            onCancel={() => setConfirmDelete(false)}
+          />
+        )}
+
+        {!choosingScope && !confirmDelete && (
+          <div className="flex items-center justify-between pt-1">
+            {event ? (
               <Button
                 type="button"
                 variant="destructive"
                 onClick={async () => {
+                  if (ref || draft.existingRule) return setConfirmDelete(true);
                   await remove.mutateAsync(event.id);
                   close();
                 }}
               >
-                Tutta la serie
+                Elimina
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>
-                Indietro
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={close}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={create.isPending || update.isPending}>
+                Salva
               </Button>
             </div>
-          )}
-          {!event && <span />}
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={close}>
-              Annulla
+          </div>
+        )}
+        {confirmDelete && !ref && event && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={async () => {
+                await remove.mutateAsync(event.id);
+                close();
+              }}
+            >
+              Elimina tutta la serie
             </Button>
-            <Button type="submit" disabled={create.isPending || update.isPending}>
-              Salva
+            <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>
+              Indietro
             </Button>
           </div>
-        </div>
+        )}
       </form>
     </div>
   );

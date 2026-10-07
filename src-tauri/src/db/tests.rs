@@ -6,6 +6,7 @@ use rusqlite::Connection;
 use super::repo::*;
 use super::sync_repo::*;
 use crate::db::migrations;
+use crate::error::AppError;
 use crate::models::{
     Event, EventStatus, EventSyncStatus, NewAttendee, NewEvent, NewReminder, ProviderKind,
     RemoteEvent, RemoteEventRef, Settings, SyncResult,
@@ -173,9 +174,14 @@ fn create_list_search_delete_roundtrip() {
 #[test]
 fn search_matches_attendees_and_follows_their_changes() {
     let conn = setup();
-    let ev = insert_event(&conn, &new_event("Call"), &[attendee("giulia.verdi@example.com")], &[])
-        .unwrap()
-        .event;
+    let ev = insert_event(
+        &conn,
+        &new_event("Call"),
+        &[attendee("giulia.verdi@example.com")],
+        &[],
+    )
+    .unwrap()
+    .event;
     assert_eq!(search_events(&conn, "giulia").unwrap().len(), 1);
 
     // Gli array sostituiscono i partecipanti: il vecchio non si trova piu', il nuovo si'.
@@ -1422,4 +1428,303 @@ fn notification_text_and_service_detection() {
         conference_service("https://notmeet.google.com.evil.io/x"),
         None
     );
+}
+
+// ---------------------------------------------------------------------------
+// Eccezioni e divisione delle serie (ADR 013)
+// ---------------------------------------------------------------------------
+
+/// Serie settimanale del lunedi' alle 10:00 dal 5 ottobre 2026.
+fn monday_series(conn: &Connection, rule: &str) -> Event {
+    series(
+        conn,
+        "Settimanale",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        rule,
+    )
+}
+
+fn fields(title: &str, start: &str, end: &str, rule: Option<&str>) -> NewEvent {
+    let mut ev = new_event(title);
+    ev.start = start.into();
+    ev.end = end.into();
+    ev.recurrence_rule = rule.map(Into::into);
+    ev
+}
+
+fn october(conn: &Connection) -> Vec<(String, String)> {
+    range(
+        conn,
+        "2026-10-01T00:00:00+02:00",
+        "2026-11-01T00:00:00+01:00",
+    )
+    .into_iter()
+    .map(|e| (e.start, e.title))
+    .collect()
+}
+
+#[test]
+fn exception_replaces_its_occurrence_and_is_updated_in_place() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY;COUNT=3");
+    let moved = fields(
+        "Spostata",
+        "2026-10-13T11:00:00+02:00",
+        "2026-10-13T12:00:00+02:00",
+        None,
+    );
+    let ex = update_occurrence(
+        &conn,
+        &s.id,
+        "2026-10-12T10:00:00+02:00",
+        &moved,
+        &[attendee("a@b.it")],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(ex.event.series_id.as_deref(), Some(s.id.as_str()));
+    assert_eq!(
+        ex.event.original_start.as_deref(),
+        Some("2026-10-12T10:00:00+02:00")
+    );
+    assert_eq!(ex.event.sync_status, EventSyncStatus::PendingCreate);
+    assert_eq!(ex.attendees.len(), 1);
+    assert_eq!(
+        october(&conn),
+        vec![
+            ("2026-10-05T10:00:00+02:00".into(), "Settimanale".into()),
+            ("2026-10-13T11:00:00+02:00".into(), "Spostata".into()),
+            ("2026-10-19T10:00:00+02:00".into(), "Settimanale".into()),
+        ]
+    );
+
+    // Stessa occorrenza (anche con un altro offset): si aggiorna l'eccezione, non se ne crea un'altra.
+    let again = fields(
+        "Ancora",
+        "2026-10-13T15:00:00+02:00",
+        "2026-10-13T16:00:00+02:00",
+        None,
+    );
+    let ex2 = update_occurrence(&conn, &s.id, "2026-10-12T08:00:00Z", &again, &[], &[]).unwrap();
+    assert_eq!(ex2.event.id, ex.event.id);
+    assert_eq!(
+        october(&conn)[1],
+        ("2026-10-13T15:00:00+02:00".into(), "Ancora".into())
+    );
+
+    // L'eccezione sostituisce l'occorrenza anche per il prossimo evento del tray.
+    let next = next_event(&conn, at("2026-10-12T00:00:00Z"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(next.title, "Ancora");
+}
+
+#[test]
+fn update_occurrence_rejects_instants_that_are_not_occurrences() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY\nEXDATE:20261012T080000Z");
+    let f = fields(
+        "X",
+        "2026-10-13T10:00:00+02:00",
+        "2026-10-13T11:00:00+02:00",
+        None,
+    );
+    for not_occurrence in ["2026-10-13T10:00:00+02:00", "2026-10-12T10:00:00+02:00"] {
+        assert!(matches!(
+            update_occurrence(&conn, &s.id, not_occurrence, &f, &[], &[]),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+}
+
+#[test]
+fn delete_occurrence_drops_the_exception_and_adds_exdate() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY;COUNT=3");
+    let f = fields(
+        "Spostata",
+        "2026-10-13T11:00:00+02:00",
+        "2026-10-13T12:00:00+02:00",
+        None,
+    );
+    update_occurrence(&conn, &s.id, "2026-10-12T10:00:00+02:00", &f, &[], &[]).unwrap();
+    delete_occurrence(&conn, &s.id, "2026-10-12T10:00:00+02:00").unwrap();
+    let left: Vec<_> = october(&conn).into_iter().map(|(start, _)| start).collect();
+    assert_eq!(
+        left,
+        vec!["2026-10-05T10:00:00+02:00", "2026-10-19T10:00:00+02:00"]
+    );
+    assert!(get_event(&conn, &s.id)
+        .unwrap()
+        .recurrence_rule
+        .unwrap()
+        .contains("EXDATE:20261012T080000Z"));
+}
+
+#[test]
+fn split_with_until_moves_later_exdates_and_drops_later_exceptions() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY\nEXDATE:20261026T090000Z");
+    let late = fields(
+        "Eccezione",
+        "2026-11-03T10:00:00+01:00",
+        "2026-11-03T11:00:00+01:00",
+        None,
+    );
+    update_occurrence(&conn, &s.id, "2026-11-02T10:00:00+01:00", &late, &[], &[]).unwrap();
+
+    let tail = fields(
+        "Nuova",
+        "2026-10-19T09:00:00+02:00",
+        "2026-10-19T10:00:00+02:00",
+        Some("RRULE:FREQ=WEEKLY\nEXDATE:20261026T090000Z"),
+    );
+    let created = split_series(&conn, &s.id, "2026-10-19T10:00:00+02:00", &tail, &[], &[]).unwrap();
+    let head = get_event(&conn, &s.id).unwrap().recurrence_rule.unwrap();
+    assert_eq!(head, "RRULE:FREQ=WEEKLY;UNTIL=20261019T075959Z");
+    assert_eq!(
+        created.event.recurrence_rule.as_deref(),
+        Some("RRULE:FREQ=WEEKLY\nEXDATE:20261026T090000Z")
+    );
+    let events = range(
+        &conn,
+        "2026-10-01T00:00:00+02:00",
+        "2026-11-10T00:00:00+01:00",
+    );
+    let got: Vec<_> = events
+        .iter()
+        .map(|e| (e.start.as_str(), e.title.as_str()))
+        .collect();
+    // La EXDATE del 26 (10:00+01:00 = 09:00Z) non tocca la nuova serie alle 09:00+01:00: resta.
+    assert_eq!(
+        got,
+        vec![
+            ("2026-10-05T10:00:00+02:00", "Settimanale"),
+            ("2026-10-12T10:00:00+02:00", "Settimanale"),
+            ("2026-10-19T09:00:00+02:00", "Nuova"),
+            ("2026-10-26T09:00:00+01:00", "Nuova"),
+            ("2026-11-02T09:00:00+01:00", "Nuova"),
+            ("2026-11-09T09:00:00+01:00", "Nuova"),
+        ]
+    );
+}
+
+#[test]
+fn split_with_count_divides_the_count() {
+    let conn = setup();
+    let s = series(
+        &conn,
+        "Corso",
+        "2026-10-05T18:00:00+02:00",
+        "2026-10-05T19:00:00+02:00",
+        "RRULE:FREQ=DAILY;COUNT=5\nEXDATE:20261006T160000Z",
+    );
+    let tail = fields(
+        "Corso B",
+        "2026-10-07T18:30:00+02:00",
+        "2026-10-07T19:30:00+02:00",
+        Some("RRULE:FREQ=DAILY;COUNT=5\nEXDATE:20261006T160000Z"),
+    );
+    let created = split_series(&conn, &s.id, "2026-10-07T18:00:00+02:00", &tail, &[], &[]).unwrap();
+    // Il 6 e' escluso ma conta comunque per COUNT (RFC 5545): 2 istanze generate prima, 3 dopo.
+    assert_eq!(
+        get_event(&conn, &s.id).unwrap().recurrence_rule.as_deref(),
+        Some("RRULE:FREQ=DAILY;COUNT=2\nEXDATE:20261006T160000Z")
+    );
+    assert_eq!(
+        created.event.recurrence_rule.as_deref(),
+        Some("RRULE:FREQ=DAILY;COUNT=3")
+    );
+    let got: Vec<_> = october(&conn).into_iter().map(|(start, _)| start).collect();
+    assert_eq!(
+        got,
+        vec![
+            "2026-10-05T18:00:00+02:00",
+            "2026-10-07T18:30:00+02:00",
+            "2026-10-08T18:30:00+02:00",
+            "2026-10-09T18:30:00+02:00",
+        ]
+    );
+}
+
+#[test]
+fn split_on_first_occurrence_edits_the_whole_series() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY;COUNT=2");
+    let f = fields(
+        "Rinominata",
+        "2026-10-05T10:00:00+02:00",
+        "2026-10-05T11:00:00+02:00",
+        Some("RRULE:FREQ=WEEKLY;COUNT=2"),
+    );
+    let out = split_series(&conn, &s.id, "2026-10-05T10:00:00+02:00", &f, &[], &[]).unwrap();
+    assert_eq!(out.event.id, s.id);
+    let all = october(&conn);
+    assert_eq!(all.len(), 2);
+    assert!(all.iter().all(|(_, t)| t == "Rinominata"));
+}
+
+#[test]
+fn truncate_series_ends_it_before_the_occurrence() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY");
+    assert!(truncate_series(&conn, &s.id, "2026-10-19T10:00:00+02:00").unwrap());
+    assert_eq!(october(&conn).len(), 2);
+    assert_eq!(
+        get_event(&conn, &s.id).unwrap().sync_status,
+        EventSyncStatus::PendingCreate
+    );
+    // Dalla prima occorrenza equivale a cancellare la serie (mai sincronizzata: sparisce).
+    truncate_series(&conn, &s.id, "2026-10-05T10:00:00+02:00").unwrap();
+    assert!(october(&conn).is_empty());
+}
+
+#[test]
+fn deleting_a_synced_series_removes_its_exceptions() {
+    let conn = setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY");
+    make_synced(&conn, &s.id, "remote-s", "e1");
+    let f = fields(
+        "Spostata",
+        "2026-10-13T11:00:00+02:00",
+        "2026-10-13T12:00:00+02:00",
+        None,
+    );
+    let ex = update_occurrence(&conn, &s.id, "2026-10-12T10:00:00+02:00", &f, &[], &[]).unwrap();
+    assert!(delete_event(&conn, &s.id).unwrap());
+    assert_eq!(
+        get_event(&conn, &s.id).unwrap().sync_status,
+        EventSyncStatus::PendingDelete
+    );
+    assert!(get_event(&conn, &ex.event.id).is_err());
+    assert!(october(&conn).is_empty());
+}
+
+#[test]
+fn whole_series_edit_keeps_exceptions_unless_times_or_rule_change() {
+    let conn = setup();
+    // Serie legacy (0.1-0.2): la UI la riscrive con il prefisso RRULE: senza cambiarla.
+    let s = monday_series(&conn, "FREQ=WEEKLY");
+    let f = fields(
+        "Spostata",
+        "2026-10-13T11:00:00+02:00",
+        "2026-10-13T12:00:00+02:00",
+        None,
+    );
+    update_occurrence(&conn, &s.id, "2026-10-12T10:00:00+02:00", &f, &[], &[]).unwrap();
+
+    let mut renamed = get_event(&conn, &s.id).unwrap();
+    renamed.title = "Rinominata".into();
+    renamed.recurrence_rule = Some("RRULE:FREQ=WEEKLY".into());
+    update_event(&conn, &renamed, &[], &[]).unwrap();
+    assert!(october(&conn).iter().any(|(_, t)| t == "Spostata"));
+
+    let mut moved = get_event(&conn, &s.id).unwrap();
+    moved.start = "2026-10-05T09:00:00+02:00".into();
+    moved.end = "2026-10-05T10:00:00+02:00".into();
+    update_event(&conn, &moved, &[], &[]).unwrap();
+    let all = october(&conn);
+    assert!(all.iter().all(|(_, t)| t == "Rinominata"));
+    assert!(all.iter().any(|(s, _)| s == "2026-10-12T09:00:00+02:00"));
 }
