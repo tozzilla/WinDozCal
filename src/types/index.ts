@@ -114,5 +114,12 @@ export interface Settings {
   close_to_tray: boolean;
 }
 
+/** Aggiornamento disponibile (PRD §36). */
+export interface UpdateInfo {
+  version: string;
+  current_version: string;
+  notes: string | null;
+}
+
 export type CalendarView = "day" | "week" | "month" | "agenda";
 export type ThemeMode = "light" | "dark" | "system";

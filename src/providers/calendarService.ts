@@ -1,4 +1,4 @@
-import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Settings } from "@/types";
+import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Settings, UpdateInfo } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 import { tauriCalendarService } from "./tauriCalendarService";
 
@@ -43,6 +43,12 @@ export interface CalendarService {
   getSettings(): Promise<Settings>;
   /** Applica subito (il backend registra o rimuove l'avvio automatico) e restituisce lo stato salvato. */
   updateSettings(settings: Settings): Promise<Settings>;
+  /** Versione installata dell'app. */
+  appVersion(): Promise<string>;
+  /** Controlla gli aggiornamenti firmati (PRD §36); `null` se si è già all'ultima versione. */
+  checkUpdate(): Promise<UpdateInfo | null>;
+  /** Scarica, verifica e installa l'aggiornamento; l'app si chiude e riparte aggiornata. */
+  installUpdate(): Promise<void>;
 }
 
 export const insideTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

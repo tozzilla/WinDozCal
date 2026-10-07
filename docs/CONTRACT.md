@@ -92,6 +92,15 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 - evento backend -> frontend `sync-finished` (nessun payload) a fine di ogni ciclo del Sync Engine: il frontend rilegge da SQLite (invalida le query)
 - calendari remoti: nome e `read_only` vengono dal server, colore e visibilità scelti dall'utente non vengono sovrascritti
 
+## Aggiornamenti (Fase 2, stage 4, ADR 015)
+
+| Comando | Argomenti | Ritorno |
+|---|---|---|
+| `check_update` | — | `UpdateInfo \| null` = `{ version, current_version, notes }`; `null` se l'app è già aggiornata |
+| `install_update` | — | `void`: scarica, verifica la firma e installa (`passive`); l'app si chiude e riparte |
+
+La versione installata si legge con `getVersion()` di `@tauri-apps/api/app`, solo in `tauriCalendarService`.
+
 ## Ricorrenze (stage 5, 7 ott 2026)
 
 - `recurrence_rule` contiene righe RFC 5545 separate da `

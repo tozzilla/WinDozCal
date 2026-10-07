@@ -39,6 +39,8 @@ pub fn run() {
         tray::show_main_window(app);
     }));
     #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_autostart::init(
         tauri_plugin_autostart::MacosLauncher::LaunchAgent,
         Some(vec![AUTOSTART_ARG]),
@@ -47,7 +49,6 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
-        // TODO: tauri-plugin-updater (PRD 36): aggiungere solo quando serve davvero.
         .setup(|app| {
             let log_guard = logging::init(app.handle())?;
             app.manage(log_guard);
@@ -107,6 +108,8 @@ pub fn run() {
             commands::open_log_folder,
             commands::get_settings,
             commands::update_settings,
+            commands::check_update,
+            commands::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -215,3 +215,19 @@ export function useSyncNow() {
 }
 
 export const openLogFolder = () => calendarService.openLogFolder();
+
+export const useAppVersion = () => useQuery({ queryKey: ["app-version"], queryFn: () => calendarService.appVersion(), staleTime: Infinity });
+
+/** Controllo aggiornamenti: all'avvio (con un attimo di ritardo, PRD §36) e poi ogni 6 ore; mai in errore bloccante. */
+export const useUpdateCheck = () =>
+  useQuery({
+    queryKey: ["update"],
+    queryFn: () => calendarService.checkUpdate(),
+    staleTime: 6 * 60 * 60_000,
+    refetchInterval: 6 * 60 * 60_000,
+    retry: false,
+  });
+
+export function useInstallUpdate() {
+  return useMutation({ mutationFn: () => calendarService.installUpdate() });
+}

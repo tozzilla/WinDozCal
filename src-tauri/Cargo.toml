@@ -1,6 +1,6 @@
 [package]
 name = "windozcal"
-version = "0.3.0"
+version = "0.4.0"
 description = "WinDozCal: calendario desktop local-first con sincronizzazione Google, Microsoft e CalDAV"
 authors = ["Andrea Tozzi"]
 license = "MIT OR Apache-2.0"
@@ -51,6 +51,8 @@ sha2 = "0.11"
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2.7"
 tauri-plugin-single-instance = "2.5"
+# Aggiornamenti automatici firmati (PRD 36, ADR 015). Versione verificata su crates.io il 7 ott 2026.
+tauri-plugin-updater = "2.13"
 
 # Notifiche toast con pulsanti e clic (il plugin ufficiale non li espone); stessa versione del plugin.
 [target.'cfg(windows)'.dependencies]

@@ -242,6 +242,13 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async getSettings() {
       return { ...settings };
     },
+    async appVersion() {
+      return "dev";
+    },
+    async checkUpdate() {
+      return null;
+    },
+    async installUpdate() {},
     async updateSettings(next) {
       settings = { ...next };
       return { ...settings };

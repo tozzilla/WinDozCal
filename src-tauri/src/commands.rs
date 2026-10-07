@@ -9,6 +9,7 @@
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::auth::microsoft as oauth_ms;
 use crate::credentials::{self, SecretKind};
@@ -379,4 +380,57 @@ pub async fn update_settings(
 
     state.db.with(|conn| repo::set_settings(conn, &settings))?;
     state.db.with(|conn| repo::get_settings(conn))
+}
+
+/// Aggiornamento disponibile (PRD 36, ADR 015).
+#[derive(Debug, serde::Serialize)]
+pub struct UpdateInfo {
+    pub version: String,
+    pub current_version: String,
+    pub notes: Option<String>,
+}
+
+fn updater_error(err: tauri_plugin_updater::Error) -> AppError {
+    match err {
+        tauri_plugin_updater::Error::Reqwest(e) => AppError::Network(e.without_url().to_string()),
+        other => AppError::Provider(format!("updater: {other}")),
+    }
+}
+
+/// Controlla l'endpoint degli aggiornamenti (GitHub Releases, `latest.json` firmato).
+/// `None` se la versione installata e' gia' la piu' recente.
+#[tauri::command]
+pub async fn check_update(app: AppHandle) -> AppResult<Option<UpdateInfo>> {
+    let update = app
+        .updater()
+        .map_err(updater_error)?
+        .check()
+        .await
+        .map_err(updater_error)?;
+    Ok(update.map(|u| UpdateInfo {
+        version: u.version,
+        current_version: u.current_version,
+        notes: u.body,
+    }))
+}
+
+/// Scarica, verifica la firma e installa l'aggiornamento. Su Windows l'installer (modalita'
+/// `passive`) chiude l'app e la riapre aggiornata; altrove si riavvia da qui.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> AppResult<()> {
+    let Some(update) = app
+        .updater()
+        .map_err(updater_error)?
+        .check()
+        .await
+        .map_err(updater_error)?
+    else {
+        return Ok(());
+    };
+    tracing::info!(version = %update.version, "installing update");
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(updater_error)?;
+    app.restart();
 }

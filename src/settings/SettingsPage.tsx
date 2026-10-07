@@ -2,13 +2,13 @@ import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { openLogFolder } from "@/providers/queries";
+import { openLogFolder, useAppVersion, useUpdateCheck } from "@/providers/queries";
 import { useUiStore } from "@/stores/uiStore";
 import type { ThemeMode } from "@/types";
 import { AccountsSettings } from "./AccountsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Appearance (tema), link ai log in Advanced.
+// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Appearance (tema), link ai log in Advanced, About.
 const SECTIONS = ["General", "Accounts", "Calendars", "Notifications", "Appearance", "Advanced", "About"] as const;
 type Section = (typeof SECTIONS)[number];
 
@@ -57,10 +57,38 @@ export function SettingsPage() {
             Apri cartella dei log
           </Button>
         )}
-        {section !== "General" && section !== "Accounts" && section !== "Appearance" && section !== "Advanced" && (
+        {section === "About" && <About />}
+        {section !== "General" && section !== "Accounts" && section !== "Appearance" && section !== "Advanced" && section !== "About" && (
           <p className="text-sm text-muted-foreground">Sezione non ancora implementata.</p>
         )}
       </main>
+    </div>
+  );
+}
+
+/** Versione installata e controllo manuale degli aggiornamenti (PRD §34, §36). */
+function About() {
+  const { data: version } = useAppVersion();
+  const update = useUpdateCheck();
+  return (
+    <div className="space-y-3 text-sm">
+      <p>WinDozCal {version}</p>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" disabled={update.isFetching} onClick={() => void update.refetch()}>
+          Controlla aggiornamenti
+        </Button>
+        <span className="text-muted-foreground">
+          {update.isFetching
+            ? "Controllo in corso…"
+            : update.isError
+              ? "Controllo non riuscito."
+              : update.data
+                ? `Disponibile la versione ${update.data.version}.`
+                : update.isFetched
+                  ? "Hai l'ultima versione."
+                  : ""}
+        </span>
+      </div>
     </div>
   );
 }

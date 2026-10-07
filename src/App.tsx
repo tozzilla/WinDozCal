@@ -4,6 +4,7 @@ import { CalendarSurface } from "@/components/CalendarSurface";
 import { Header } from "@/components/Header";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { SearchPanel } from "@/components/SearchPanel";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { Sidebar } from "@/components/Sidebar";
 import { EventEditor } from "@/events/EventEditor";
 import { QuickAdd } from "@/events/QuickAdd";
@@ -29,6 +30,7 @@ function Shell() {
     <div className="flex h-full">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
+        <UpdateBanner />
         <Header />
         <CalendarSurface />
       </div>
