@@ -1,6 +1,8 @@
 import { addDays, formatTime, isSameDay, startOfDay } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
+import { cn } from "@/lib/utils";
 import { calendarColor } from "./colors";
+import { broadcastMarks, MARK_LABEL } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 
 export const AGENDA_DAYS = 30;
@@ -26,26 +28,40 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
     .filter((g) => g.items.length > 0);
 
   if (groups.length === 0) {
-    return <div className="p-6 text-sm text-muted-foreground">Nessun evento nei prossimi {AGENDA_DAYS} giorni.</div>;
+    return <div className="h-full bg-grid p-8 text-[15px] text-muted-foreground">Nessun evento nei prossimi {AGENDA_DAYS} giorni.</div>;
   }
 
+  const marks = broadcastMarks(events, calendars, now);
+
   return (
-    <div className="h-full overflow-y-auto px-6 py-4">
+    <div className="h-full overflow-y-auto bg-grid px-8 py-5">
       {groups.map(({ day, items }) => (
-        <section key={day.toISOString()} className="mb-5">
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{dayLabel(day, now)}</h3>
+        <section key={day.toISOString()} className="mb-6 max-w-3xl">
+          <h3 className={cn("mb-1 border-b pb-1.5 text-[12px] font-bold tracking-[0.14em] uppercase", isSameDay(day, now) ? "text-onair" : "text-muted-foreground")}>
+            {dayLabel(day, now)}
+          </h3>
           {items.map((e) => (
             <button
               key={eventKey(e)}
               type="button"
               onClick={() => onSelectEvent(e)}
-              className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+              className="flex w-full items-center gap-4 border-b border-grid-line px-1 py-2.5 text-left outline-none hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }} />
-              <span className="w-24 shrink-0 tabular-nums text-muted-foreground">
+              <span className={cn("w-28 shrink-0 font-bold", e.all_day ? "text-[13px] text-muted-foreground" : "text-[17px]")}>
                 {e.all_day ? "Tutto il giorno" : formatTime(eventInterval(e).start)}
               </span>
-              <span className="truncate">{e.title}</span>
+              <span aria-hidden className="h-5 w-1.5 shrink-0 rounded-[1px]" style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }} />
+              <span className="truncate text-[15px] font-semibold">{e.title}</span>
+              {marks.get(eventKey(e)) && (
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 rounded-[3px] px-1.5 py-px text-[10px] font-bold tracking-[0.08em]",
+                    marks.get(eventKey(e)) === "onair" ? "bg-onair text-onair-foreground" : marks.get(eventKey(e)) === "next" ? "bg-primary text-primary-foreground" : "bg-onair/12 text-onair",
+                  )}
+                >
+                  {MARK_LABEL[marks.get(eventKey(e))!]}
+                </span>
+              )}
             </button>
           ))}
         </section>

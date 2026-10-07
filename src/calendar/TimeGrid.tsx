@@ -160,7 +160,7 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
               return (
                 <div
                   key={day.toISOString()}
-                  className={cn("relative border-l border-grid-line", isSameDay(day, now) && "bg-today")}
+                  className={cn("tg-col relative border-l border-grid-line", isSameDay(day, now) && "bg-today")}
                   onDoubleClick={(e) => {
                     if (!isInteractive(e.target)) slotFromClick(day, e);
                   }}
@@ -189,20 +189,24 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                         onPointerDown={(down) => begin(e, "move", down)}
                         onKeyDown={(k) => k.key === "Enter" && onSelectEvent(e)}
                         className={cn(
-                          "absolute cursor-grab touch-none overflow-hidden rounded-[4px] px-2 pt-[5px] pb-1 text-left text-[12.5px] leading-[1.3] text-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "@container absolute cursor-grab touch-none overflow-hidden rounded-[4px] px-2 pt-[5px] pb-1 text-left text-[12.5px] leading-[1.3] text-foreground outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
                           mark === "onair" && "ring-2 ring-onair",
                           dragging && "z-20 cursor-grabbing opacity-90 shadow-[0_8px_22px_rgb(16_20_42/0.22)]",
                         )}
-                        style={{
-                          top: top + 1,
-                          height,
-                          left: `calc(${(column / columns) * 100}% + 4px)`,
-                          width: `calc(${100 / columns}% - 8px)`,
-                          ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"),
-                        }}
+                        style={
+                          {
+                            top: top + 1,
+                            height,
+                            // Affiancati nelle colonne larghe, a cascata in quelle strette (vedi .tg-col in index.css).
+                            "--side-left": `${(column / columns) * 100}%`,
+                            "--side-width": `${100 / columns}%`,
+                            "--cascade-left": columns > 1 ? `${(column * 40) / (columns - 1)}%` : "0%",
+                            ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"),
+                          } as React.CSSProperties
+                        }
                       >
                         {mark && !oneLine && (
-                          <span className={cn("mb-1 inline-block max-w-full truncate rounded-[3px] px-1 py-px align-top text-[10px] font-bold tracking-[0.05em]", MARK_CLASS[mark])}>
+                          <span className={cn("mb-1 inline-block max-w-full truncate rounded-[3px] px-1 py-px align-top text-[10px] font-bold tracking-[0.05em] @max-[96px]:hidden", MARK_CLASS[mark])}>
                             {MARK_LABEL[mark]}
                           </span>
                         )}
@@ -212,10 +216,14 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                           </div>
                         ) : (
                           <>
-                            <div className="text-[13px] font-bold break-words text-foreground/75">
-                              {formatTime(start)}–{formatTime(end)}
+                            <div className="flex items-center gap-1 text-[13px] font-bold text-foreground/75">
+                              {mark && <span aria-hidden className={cn("hidden size-2 shrink-0 rounded-full @max-[96px]:inline-block", mark === "next" ? "bg-primary" : "bg-onair")} />}
+                              <span>
+                                {formatTime(start)}
+                                <span className="@max-[96px]:hidden">–{formatTime(end)}</span>
+                              </span>
                             </div>
-                            <div className="line-clamp-2 font-semibold">{e.title}</div>
+                            <div className="line-clamp-3 font-semibold break-words @max-[96px]:text-[11px]">{e.title}</div>
                           </>
                         )}
                         <div
@@ -236,7 +244,8 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
           {todayVisible && (
             <div aria-hidden className="pointer-events-none absolute inset-x-0 z-10" style={{ top: nowTop }}>
               <div className="absolute right-0 left-16 h-[3px] -translate-y-1/2 bg-onair" />
-              <span className="absolute left-0.5 -translate-y-1/2 rounded-[3px] bg-onair px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em] whitespace-nowrap text-onair-foreground">
+              <span className="absolute left-0.5 flex -translate-y-1/2 items-center gap-1 rounded-[3px] bg-onair px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em] whitespace-nowrap text-onair-foreground">
+                <span className="onair-tally size-1.5 rounded-full bg-onair-foreground" />
                 IN ONDA {formatTime(now)}
               </span>
             </div>

@@ -1,0 +1,161 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-10-07T20:57:43.798635+00:00",
+ "title": "Design System: WinDozCal",
+ "extensions": {
+  "colorMeta": {
+   "rail": {
+    "role": "primary",
+    "displayName": "Rail navy"
+   },
+   "onair": {
+    "role": "accent",
+    "displayName": "Rosso IN ONDA",
+    "purpose": "Solo il presente e i conflitti."
+   },
+   "channel-blue": {
+    "role": "data",
+    "displayName": "Canale blu"
+   },
+   "channel-green": {
+    "role": "data",
+    "displayName": "Canale verde"
+   },
+   "channel-amber": {
+    "role": "data",
+    "displayName": "Canale ambra"
+   },
+   "ground": {
+    "role": "neutral",
+    "displayName": "Fondo"
+   },
+   "grid": {
+    "role": "neutral",
+    "displayName": "Griglia"
+   }
+  },
+  "typographyMeta": {
+   "title": {
+    "displayName": "Titolo del periodo",
+    "purpose": "Mese/settimana nell'header."
+   },
+   "hour": {
+    "displayName": "Ore",
+    "purpose": "Asse orario a cifre tabulari."
+   },
+   "tag": {
+    "displayName": "Tag palinsesto",
+    "purpose": "IN ONDA, A SEGUIRE, CONFLITTO."
+   }
+  },
+  "shadows": [
+   {
+    "name": "lift",
+    "value": "0 8px 22px rgb(16 20 42 / 0.22)",
+    "purpose": "Evento sollevato (hover, focus, drag)."
+   },
+   {
+    "name": "dialog",
+    "value": "0 18px 48px rgb(16 20 42 / 0.28)",
+    "purpose": "Dialoghi sopra il velo navy."
+   }
+  ],
+  "motion": [
+   {
+    "name": "onair-tally",
+    "value": "2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite",
+    "purpose": "Spia IN ONDA che respira; nessuna con prefers-reduced-motion."
+   },
+   {
+    "name": "state",
+    "value": "160ms cubic-bezier(0.16, 1, 0.3, 1)",
+    "purpose": "Opacità e ombra degli eventi."
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "compact",
+    "value": "<1280px",
+    "purpose": "Rail 208px, ricerca solo icona, titolo 20px."
+   },
+   {
+    "name": "cascade",
+    "value": "colonna <140px",
+    "purpose": "Eventi sovrapposti a cascata (container query tgcol)."
+   },
+   {
+    "name": "minimum",
+    "value": "900x600",
+    "purpose": "Finestra minima dell'app."
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Evento",
+   "kind": "custom",
+   "refersTo": "event",
+   "description": "Evento nella griglia: banda-canale, orario, titolo, segno del palinsesto.",
+   "html": "<div class=\"ds-event\"><span class=\"ds-tag\">IN ONDA</span><div class=\"ds-time\">13:45–15:15</div><div class=\"ds-title\">Revisione progetto</div></div>",
+   "css": ".ds-event{font-family:'National Park Variable',Bahnschrift,sans-serif;width:180px;padding:5px 8px 4px;border-radius:4px;border-left:5px solid #2F6BFF;background:color-mix(in srgb,#2F6BFF 10%,#fff);color:#10142A;box-shadow:0 0 0 2px #E4262B}.ds-tag{display:inline-block;background:#E4262B;color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;margin-bottom:4px}.ds-time{font-size:13px;font-weight:700;opacity:.75}.ds-title{font-size:12.5px;font-weight:600}"
+  },
+  {
+   "name": "Pulsante primario",
+   "kind": "button",
+   "refersTo": "button-primary",
+   "description": "Azione principale (nuovo evento, salva).",
+   "html": "<button class=\"ds-btn\">Salva</button>",
+   "css": ".ds-btn{font-family:'National Park Variable',Bahnschrift,sans-serif;height:32px;padding:0 14px;border:0;border-radius:6px;background:#10142A;color:#fff;font-weight:600}.ds-btn:hover{opacity:.9}"
+  },
+  {
+   "name": "Rail dei canali",
+   "kind": "nav",
+   "refersTo": "rail-calendar",
+   "description": "Account come canali con barretta d'identità e calendari.",
+   "html": "<nav class=\"ds-rail\"><div class=\"ds-ch\"><i></i>GOOGLE · LAVORO</div><div class=\"ds-cal\"><b></b>Riunioni</div></nav>",
+   "css": ".ds-rail{font-family:'National Park Variable',Bahnschrift,sans-serif;background:#10142A;color:#F5F6F8;padding:14px 12px;width:248px}.ds-ch{font-size:11px;font-weight:700;letter-spacing:.12em;opacity:.7;display:flex;gap:8px;align-items:center;margin-bottom:8px}.ds-ch i{width:20px;height:6px;background:#2F6BFF;border-radius:1px}.ds-cal{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600}.ds-cal b{width:14px;height:14px;background:#2F6BFF;border-radius:2px}"
+  }
+ ],
+ "narrative": {
+  "northStar": "Palinsesto",
+  "overview": "Ogni account è un canale e la giornata si legge come una griglia di programmazione: rail navy dei canali, griglia bianca densa, una sola banda rossa per ciò che è in onda adesso.",
+  "keyCharacteristics": [
+   "Rail navy dei canali",
+   "Banda IN ONDA rossa solo per il presente",
+   "Banda-canale piena sugli eventi",
+   "Stato dal riempimento",
+   "Un solo grottesco a cifre tabulari"
+  ],
+  "rules": [
+   {
+    "name": "Il rosso è il presente",
+    "body": "onair solo per adesso, oggi e conflitti.",
+    "section": "colors"
+   },
+   {
+    "name": "Il colore è del canale",
+    "body": "Lo stato si esprime con pieno o tratteggio, mai con un colore.",
+    "section": "colors"
+   },
+   {
+    "name": "Un solo grottesco",
+    "body": "Gerarchia con corpo e peso.",
+    "section": "typography"
+   },
+   {
+    "name": "Sollevare è selezionare",
+    "body": "Hover e focus allargano l'evento e attenuano i vicini.",
+    "section": "elevation"
+   }
+  ],
+  "dos": [
+   "Riservare il rosso al presente",
+   "Tenere la scala oraria identica tra le viste"
+  ],
+  "donts": [
+   "Card pastello e sidebar chiare",
+   "Eyebrow sopra i titoli",
+   "Glifi Unicode al posto delle icone"
+  ]
+ }
+}

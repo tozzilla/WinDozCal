@@ -27,7 +27,7 @@ const inputClass = "w-full rounded-md border bg-background px-2 py-1.5 text-sm o
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">{label}</span>
       {children}
     </label>
   );
@@ -102,8 +102,8 @@ export function EventEditor() {
 
   if (open && event && !draft) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onBackdropClick}>
-        <div className="rounded-xl border bg-popover p-5 text-sm shadow-xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-rail/45 p-4" onClick={onBackdropClick}>
+        <div className="rounded-lg border bg-popover p-5 text-sm shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
           {detail.isError ? (
             <>
               <p className="mb-3 text-destructive">Impossibile caricare l&apos;evento: {errorMessage(detail.error)}</p>
@@ -172,17 +172,18 @@ export function EventEditor() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onBackdropClick}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-rail/45 p-4" onClick={onBackdropClick}>
       <form
         onSubmit={submit}
-        className="max-h-full w-full max-w-lg space-y-3 overflow-y-auto rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl"
+        className="max-h-full w-full max-w-lg space-y-3 overflow-y-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]"
+        style={{ borderTop: `5px solid ${calendars.find((c) => c.id === draft.calendarId)?.color ?? "var(--border)"}` }}
       >
         <input
           autoFocus
           placeholder="Titolo"
           value={draft.title}
           onChange={(e) => set("title", e.target.value)}
-          className="w-full border-b bg-transparent pb-1 text-lg outline-none"
+          className="w-full border-b bg-transparent pb-1.5 text-[22px] font-bold tracking-[-0.01em] outline-none placeholder:font-semibold placeholder:text-muted-foreground/70"
         />
 
         <div className="grid grid-cols-3 gap-2">

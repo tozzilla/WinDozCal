@@ -406,6 +406,12 @@
       "forced": null
     }
   },
-  "finish": null,
+  "finish": {
+    "disposition": "fix",
+    "at": "2026-10-07T20:58:13.730Z",
+    "phaseAtFinish": "hero",
+    "artifactInputsSha256": "78efa9d44d06c4b70b56d40086982a870263f1a05321dc863c7639c64c30c792",
+    "artifactSha256": "6a68ce3a5a80f24a3caafd13574af3c1bf041aabff3d047d56a3fd0d20e7632c"
+  },
   "plates": {}
 }

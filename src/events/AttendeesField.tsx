@@ -30,7 +30,7 @@ export function AttendeesField({ value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <span className="text-xs text-muted-foreground">Partecipanti</span>
+      <span className="text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">Partecipanti</span>
       {value.length > 0 && (
         <ul className="space-y-1">
           {value.map((a) => (

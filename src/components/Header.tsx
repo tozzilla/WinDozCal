@@ -15,7 +15,7 @@ export function Header() {
   const { navigate } = renderers[view];
 
   return (
-    <header className="flex h-15 shrink-0 items-center gap-2 border-b bg-card px-5">
+    <header className="flex h-15 shrink-0 items-center gap-2 border-b bg-card px-3 xl:px-5">
       <button type="button" className={cn(iconButton, "mr-1 border-transparent")} aria-label="Mostra o nascondi la barra laterale" onClick={toggleSidebar}>
         <PanelLeft className="size-4" />
       </button>
@@ -32,17 +32,18 @@ export function Header() {
       >
         Oggi
       </button>
-      <h1 className="ml-3 text-[25px] leading-none font-bold tracking-[-0.01em]">{formatMonthYear(currentDate)}</h1>
+      <h1 className="ml-3 text-[20px] leading-none font-bold tracking-[-0.01em] whitespace-nowrap xl:text-[25px]">{formatMonthYear(currentDate)}</h1>
 
-      <div className="ml-auto flex items-center gap-2.5">
+      <div className="ml-auto flex items-center gap-2 xl:gap-2.5">
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="flex h-8 w-58 items-center gap-2 rounded-md border bg-card px-2.5 text-[13px] text-muted-foreground outline-none hover:border-muted-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Cerca eventi (Ctrl+K)"
+          className="flex h-8 items-center gap-2 rounded-md border bg-card px-2.5 text-[13px] xl:w-58 text-muted-foreground outline-none hover:border-muted-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Search className="size-3.5" />
-          <span className="flex-1 text-left">Cerca eventi</span>
-          <kbd className="font-sans text-[12px]">Ctrl+K</kbd>
+          <span className="hidden flex-1 text-left xl:inline">Cerca eventi</span>
+          <kbd className="hidden font-sans text-[12px] xl:inline">Ctrl+K</kbd>
         </button>
         <div role="tablist" aria-label="Vista" className="flex h-8 overflow-hidden rounded-md border bg-card">
           {viewOrder.map((v) => (
@@ -53,7 +54,7 @@ export function Header() {
               aria-selected={v === view}
               onClick={() => setView(v)}
               className={cn(
-                "px-3.5 text-[13px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                "px-2.5 text-[13px] font-semibold outline-none xl:px-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 v === view ? "bg-primary text-primary-foreground" : "hover:bg-secondary",
               )}
             >

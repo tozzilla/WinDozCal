@@ -4,7 +4,7 @@ Richiesta del proprietario, 7 ott 2026: "ipotizziamo qualcosa di graficamente ac
 
 Fonti: `PRODUCT.md` (verità di prodotto), PRD §5-§9, §31, §34; skill impeccable, modalità Operate.
 
-Stato: giro delle direzioni in corso.
+Stato: costruito e documentato il 7 ott 2026; revisione finale con disposizione `fix` (vedi Aperto). Non rilasciato.
 
 ## Stage 1: direzione
 
@@ -26,3 +26,10 @@ Finish reviewer, DESIGN.md e `.impeccable/design.json`, release successiva (solo
 ## Registro sessioni
 
 - 7 ott 2026: PRODUCT.md scritto e committato; `.impeccable/config.json` con `buildPath: comp`. Giro delle direzioni avviato. La chiave OpenAI configurata viene rifiutata ("Incorrect API key"): i cinque comp di decisione sono pagine HTML reali (`.impeccable/comps/mock.html?dir=...`) catturate con Edge headless a 1536x1024, con sidecar di provenienza. Pagina di decisione su http://127.0.0.1:51663/ (key 8fa91a03, riavviata staccata dopo la chiusura del primo server), in attesa della scelta del proprietario.
+- 7 ott 2026 (2): direzione scelta dal proprietario: Palinsesto (assegnata). Comp round: tre composizioni HTML (rail e settimana; barra canali e scaletta; giornata per canali), approvata la 1 (pagina andata in timeout, scelta raccolta con domanda strutturata). Spec misurata (31 regioni, nessuna plate), font scelto dal ranker: National Park. Build: token chiaro/scuro in `index.css`, rail, header, griglia (72px/ora, banda IN ONDA, segni IN ONDA / CONFLITTO / A SEGUIRE da `broadcastMarks`, stato libero tratteggiato, all-day a barra unica, espansione al passaggio e al focus, cascata sotto 140px), mese, agenda, editor, Quick Add, ricerca, impostazioni, primo avvio; dati demo del browser allineati al comp. Prima vista: tre tentativi del gate (fino a 95,5%), poi accettata dal proprietario. Verifica nell'app Tauri (devtest): font, rail e griglia renderizzati con i dati reali. Detector: resta solo la banda-canale (scelta del contratto). Test frontend 44 verdi. Documentazione: `DESIGN.md`, `.impeccable/design.json`, ADR 016.
+
+## Aperto
+
+- Revisione finale `fix` (`.impeccable/review/finish-review.md`): fasi `hero`..`responsive` dello stato della build non chiudibili con lo strumento attuale (SPA); a 900px parole lunghe a capo a metà negli eventi stretti.
+- La chiave OpenAI configurata viene rifiutata: i comp sono pagine HTML catturate, non immagini generate.
+- Non rilasciato: serve una release 0.5.0 (con autorizzazione) per portarlo agli utenti tramite l'auto-update.

@@ -69,8 +69,8 @@ export function QuickAdd() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center bg-black/30 p-4 pt-[18vh]" onClick={(e) => e.target === e.currentTarget && close()}>
-      <form role="dialog" aria-label="Quick Add" onSubmit={submit} className="h-fit w-full max-w-lg space-y-3 rounded-xl border bg-popover p-4 text-popover-foreground shadow-xl">
+    <div className="fixed inset-0 z-50 flex justify-center bg-rail/35 p-4 pt-[18vh]" onClick={(e) => e.target === e.currentTarget && close()}>
+      <form role="dialog" aria-label="Quick Add" onSubmit={submit} className="h-fit w-full max-w-lg space-y-3 rounded-lg border bg-popover p-4 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
         <input
           autoFocus
           value={text}
@@ -79,14 +79,14 @@ export function QuickAdd() {
             setError(null);
           }}
           placeholder="Es. Riunione con il team domani alle 15"
-          className="w-full border-b bg-transparent pb-2 text-base outline-none"
+          className="w-full border-b bg-transparent pb-2 text-[20px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground/70"
         />
         <div aria-live="polite" className="min-h-10 text-sm">
           {parsed && calendar ? (
             <div className="flex items-start gap-2">
-              <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: calendarColor(calendars, calendar.id) }} />
+              <span className="mt-0.5 h-9 w-1.5 shrink-0 rounded-[1px]" style={{ background: calendarColor(calendars, calendar.id) }} />
               <div>
-                <p className="font-medium">{parsed.title || "(senza titolo)"}</p>
+                <p className="text-[15px] font-bold">{parsed.title || "(senza titolo)"}</p>
                 <p className="text-muted-foreground">
                   {dayFormat.format(parsed.start)}
                   {parsed.allDay ? " · tutto il giorno" : ` · ${formatTime(parsed.start)}–${formatTime(parsed.end)}`} · {calendar.name}

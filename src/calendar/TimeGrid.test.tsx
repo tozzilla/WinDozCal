@@ -36,7 +36,7 @@ describe("TimeGrid", () => {
       );
     });
     const nodes = [...host.querySelectorAll<HTMLElement>("[data-event]")];
-    expect(nodes.map((n) => n.style.width)).toEqual(["calc(50% - 8px)", "calc(50% - 8px)", "calc(100% - 8px)"]);
+    expect(nodes.map((n) => n.style.getPropertyValue("--side-width"))).toEqual(["50%", "50%", "100%"]);
 
     const fire = (type: string, x: number, y: number) =>
       window.dispatchEvent(Object.assign(new Event(type), { clientX: x, clientY: y, button: 0 }));

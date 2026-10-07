@@ -36,7 +36,7 @@ export function Sidebar() {
   if (!open) return null;
 
   return (
-    <aside className="flex w-62 shrink-0 flex-col bg-rail text-rail-foreground">
+    <aside className="flex w-52 shrink-0 flex-col bg-rail text-rail-foreground xl:w-62">
       <div className="px-3.5 pt-3.5 pb-3 text-[17px] font-bold tracking-[0.02em]">WinDozCal</div>
       <div className="flex-1 space-y-[18px] overflow-y-auto px-3 pb-4">
         {accounts.map((account) => {
@@ -71,7 +71,7 @@ export function Sidebar() {
                     type="button"
                     aria-label="Aggiungi calendario locale"
                     onClick={() => setAddingTo(account.id)}
-                    className="grid size-6 place-items-center rounded-sm text-rail-muted opacity-0 outline-none group-hover:opacity-100 hover:bg-rail-accent hover:text-rail-foreground focus-visible:opacity-100"
+                    className="-my-1.5 grid size-6 place-items-center rounded-sm text-rail-muted opacity-0 outline-none group-hover:opacity-100 hover:bg-rail-accent hover:text-rail-foreground focus-visible:opacity-100"
                   >
                     <Plus className="size-3.5" />
                   </button>
@@ -107,7 +107,7 @@ export function Sidebar() {
                       role="checkbox"
                       aria-checked={c.visible}
                       onClick={() => setVisibility.mutate({ calendarId: c.id, visible: !c.visible })}
-                      className="flex w-full items-center gap-2.5 rounded-sm px-1 py-[3px] text-left text-[14px] font-semibold outline-none hover:bg-rail-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                      className="flex w-full items-center gap-2.5 rounded-sm px-1 py-[3px] text-left text-[14px] leading-[21px] font-semibold outline-none hover:bg-rail-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                     >
                       <span
                         aria-hidden

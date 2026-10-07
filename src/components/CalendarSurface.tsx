@@ -72,8 +72,8 @@ export function CalendarSurface() {
         }}
       />
       {pendingMove && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={(e) => e.target === e.currentTarget && setPendingMove(null)}>
-          <div className="w-full max-w-lg rounded-xl border bg-popover p-5 text-popover-foreground shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-rail/45 p-4" onClick={(e) => e.target === e.currentTarget && setPendingMove(null)}>
+          <div className="w-full max-w-lg rounded-lg border bg-popover p-5 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
             <ScopeChoice
               question={`Spostare "${pendingMove.event.title}" alle ${formatTime(pendingMove.start)}–${formatTime(pendingMove.end)}: applicare a`}
               note="Spostando tutta la serie o i successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."

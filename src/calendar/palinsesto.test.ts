@@ -5,7 +5,7 @@ import { broadcastMarks } from "./palinsesto";
 
 const at = (h: number, m = 0) => new Date(2026, 9, 7, h, m);
 const cal = (id: string, account: string): Calendar => ({
-  id, account_id: account, remote_id: id, name: id, color: "#000", visible: true, read_only: false,
+  id, account_id: account, remote_id: id, name: id, color: "#2F6BFF", visible: true, read_only: false,
 });
 const ev = (id: string, calendar: string, s: Date, e: Date): Event => ({
   id, calendar_id: calendar, remote_id: null, title: id, description: null, location: null, conference_url: null,

@@ -58,6 +58,7 @@
 }
 
 :root {
+    color-scheme: light;
     /* Palinsesto (ADR 016, surface brief src/App.tsx): rail navy, griglia bianca, rosso IN ONDA solo per il presente. */
     --background: #F5F6F8;
     --foreground: #10142A;
@@ -106,6 +107,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     /* Regia di notte: stessa rail, griglia blu notte, testo chiaro. */
     --background: #0D1022;
     --foreground: #E8EAF3;
@@ -148,7 +150,7 @@
     --grid-line: #20264A;
     --today: #161B36;
     --event-mix: #12162B;
-    --event-tint: 30%;
+    --event-tint: 22%;
     --hatch: rgb(232 234 243 / 14%);
 }
 
@@ -167,7 +169,7 @@
     background: color-mix(in srgb, var(--ring) 28%, transparent);
     }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
   ::-webkit-scrollbar-thumb:hover { background-color: var(--muted-foreground); }
   ::-webkit-scrollbar-track { background: transparent; }
 }
@@ -179,15 +181,43 @@ body,
 }
 
 /* Palinsesto: al passaggio su un evento i vicini si attenuano; un evento affiancato a un altro si apre a tutta colonna. */
-.tg-cols:has([data-event]:hover) [data-event]:not(:hover) {
+.tg-cols:has([data-event]:hover) [data-event]:not(:hover),
+.tg-cols:has([data-event]:focus-visible) [data-event]:not(:focus-visible) {
   opacity: 0.78;
+}
+.tg-col {
+  container: tgcol / inline-size;
+}
+.tg-col > [data-event] {
+  left: calc(var(--side-left) + 4px);
+  width: calc(var(--side-width) - 8px);
+}
+@container tgcol (max-width: 140px) {
+  .tg-col > [data-event] {
+    left: calc(var(--cascade-left) + 4px);
+    width: calc(100% - var(--cascade-left) - 8px);
+  }
 }
 .tg-cols [data-event] {
   transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.tg-cols [data-event]:hover {
+.tg-cols [data-event]:hover,
+.tg-cols [data-event]:focus-visible {
   left: -4px !important;
   width: calc(100% + 6px) !important;
   z-index: 15;
   box-shadow: 0 8px 22px rgb(16 20 42 / 0.22);
+}
+
+/* L'unico movimento d'autore: la spia IN ONDA respira come una tally light. */
+@keyframes onair-tally {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.onair-tally {
+  animation: onair-tally 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onair-tally { animation: none; }
+  .tg-cols [data-event] { transition: none; }
 }

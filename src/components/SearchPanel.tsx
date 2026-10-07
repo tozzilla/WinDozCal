@@ -52,8 +52,8 @@ export function SearchPanel() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center bg-black/30 p-4 pt-[12vh]" onClick={(e) => e.target === e.currentTarget && setSearchOpen(false)}>
-      <div role="dialog" aria-label="Cerca eventi" className="h-fit w-full max-w-xl overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-xl">
+    <div className="fixed inset-0 z-50 flex justify-center bg-rail/35 p-4 pt-[12vh]" onClick={(e) => e.target === e.currentTarget && setSearchOpen(false)}>
+      <div role="dialog" aria-label="Cerca eventi" className="h-fit w-full max-w-xl overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
         <div className="flex items-center gap-2 border-b px-3">
           <Search className="size-4 text-muted-foreground" />
           <input
@@ -62,7 +62,7 @@ export function SearchPanel() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Cerca per titolo, luogo, descrizione o partecipante"
-            className="w-full bg-transparent py-3 text-sm outline-none"
+            className="w-full bg-transparent py-3.5 text-[16px] outline-none placeholder:text-muted-foreground/80"
           />
         </div>
         {debounced.trim() && (
@@ -75,12 +75,12 @@ export function SearchPanel() {
                   onClick={() => choose(e)}
                   className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm ${i === active ? "bg-accent" : ""}`}
                 >
-                  <span className="size-2.5 shrink-0 rounded-full" style={{ background: calendarColor(calendars, e.calendar_id) }} />
+                  <span className="h-8 w-1.5 shrink-0 rounded-[1px]" style={{ background: calendarColor(calendars, e.calendar_id) }} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{e.title || "(senza titolo)"}</span>
+                    <span className="block truncate font-semibold">{e.title || "(senza titolo)"}</span>
                     {e.location && <span className="block truncate text-xs text-muted-foreground">{e.location}</span>}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{when(e)}</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-muted-foreground">{when(e)}</span>
                 </button>
               </li>
             ))}

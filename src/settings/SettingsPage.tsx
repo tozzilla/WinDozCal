@@ -24,23 +24,33 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full">
-      <nav className="w-52 shrink-0 space-y-1 border-r p-3">
-        <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(false)}>
-          <ArrowLeft /> Calendario
-        </Button>
+      <nav className="flex w-62 shrink-0 flex-col gap-0.5 bg-rail p-3 text-rail-foreground">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(false)}
+          className="mb-4 flex items-center gap-2 rounded-sm px-1 py-1.5 text-[14px] font-semibold text-rail-muted outline-none hover:text-rail-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+        >
+          <ArrowLeft className="size-4" /> Calendario
+        </button>
+        <span className="mb-1 px-1 text-[11px] font-bold tracking-[0.12em] text-rail-foreground/70 uppercase">Impostazioni</span>
         {SECTIONS.map((s) => (
           <button
             key={s}
             type="button"
+            aria-current={s === section ? "page" : undefined}
             onClick={() => setSection(s)}
-            className={cn("block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-accent", s === section && "bg-accent font-medium")}
+            className={cn(
+              "flex items-center gap-2 rounded-sm px-2 py-1.5 text-left text-[14px] font-semibold outline-none hover:bg-rail-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+              s === section ? "bg-rail-accent text-rail-foreground" : "text-rail-foreground/80",
+            )}
           >
+            <span aria-hidden className={cn("h-4 w-1 rounded-[1px]", s === section ? "bg-onair" : "bg-transparent")} />
             {s}
           </button>
         ))}
       </nav>
-      <main className="flex-1 p-6">
-        <h2 className="mb-4 text-xl font-semibold">{section}</h2>
+      <main className="flex-1 overflow-y-auto bg-background p-8">
+        <h2 className="mb-6 text-[26px] font-bold tracking-[-0.01em]">{section}</h2>
         {section === "General" && <GeneralSettings />}
         {section === "Accounts" && <AccountsSettings />}
         {section === "Appearance" && (

@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { formatWeekday, getMonthGrid, getWeekDays, isSameDay } from "@/utils/date";
 import { eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
+import { eventSurface } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 
 const MAX_CHIPS = 3;
@@ -12,10 +13,10 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
   const grid = getMonthGrid(date);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="grid grid-cols-7 border-b">
+    <div className="flex h-full flex-col bg-grid">
+      <div className="grid grid-cols-7 border-b bg-card">
         {getWeekDays(date).map((d) => (
-          <div key={d.getDay()} className="px-2 py-1.5 text-xs text-muted-foreground">
+          <div key={d.getDay()} className="px-2.5 py-2 text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {formatWeekday(d)}
           </div>
         ))}
@@ -27,7 +28,7 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
           return (
             <div
               key={day.toISOString()}
-              className="min-h-0 overflow-hidden border-b border-l p-1"
+              className={cn("min-h-0 overflow-hidden border-b border-l border-grid-line p-1.5", isSameDay(day, today) && "bg-today")}
               onDoubleClick={(e) => {
                 if ((e.target as HTMLElement).closest("button")) return;
                 const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
@@ -36,9 +37,9 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
             >
               <div
                 className={cn(
-                  "mb-0.5 flex size-6 items-center justify-center rounded-full text-xs",
-                  day.getMonth() !== date.getMonth() && "text-muted-foreground",
-                  isSameDay(day, today) && "bg-primary text-primary-foreground",
+                  "mb-1 px-0.5 text-[15px] leading-none font-bold",
+                  day.getMonth() !== date.getMonth() && "font-semibold text-muted-foreground/70",
+                  isSameDay(day, today) && "text-onair",
                 )}
               >
                 {day.getDate()}
@@ -48,14 +49,14 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
                   key={eventKey(e)}
                   type="button"
                   onClick={() => onSelectEvent(e)}
-                  className="mb-0.5 flex w-full items-center gap-1 truncate text-left text-xs"
+                  className="mb-0.5 flex w-full items-center truncate rounded-[3px] px-1.5 py-px text-left text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  style={{ ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"), borderLeftWidth: 3 }}
                 >
-                  <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }} />
                   <span className="truncate">{e.title}</span>
                 </button>
               ))}
               {hidden > 0 && (
-                <button type="button" onClick={() => onShowDay(day)} className="text-xs text-muted-foreground hover:underline">
+                <button type="button" onClick={() => onShowDay(day)} className="px-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
                   +{hidden} altri
                 </button>
               )}
