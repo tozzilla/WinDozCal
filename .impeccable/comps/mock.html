@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>WinDozCal comp</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1536px; height: 1024px; overflow: hidden; }
+  body { font-family: var(--font); background: var(--ground); color: var(--ink); font-size: 14px; }
+  .app { display: grid; grid-template-columns: 248px 1fr; height: 100%; }
+  aside { background: var(--rail); color: var(--rail-ink); padding: 18px 14px; display: flex; flex-direction: column; gap: 18px; border-right: var(--rail-border); }
+  .brand { font-weight: 700; font-size: 17px; letter-spacing: var(--brand-track); display: flex; align-items: center; gap: 8px; }
+  .acc h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; opacity: .7; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .cal { display: flex; align-items: center; gap: 10px; padding: 5px 4px; font-size: 14px; }
+  .chk { width: 14px; height: 14px; border-radius: var(--chk-r); background: var(--c); flex: none; }
+  .foot { margin-top: auto; font-size: 13px; opacity: .8; }
+  main { display: grid; grid-template-rows: auto auto 1fr; min-width: 0; }
+  header { display: flex; align-items: center; gap: 10px; padding: 14px 22px; border-bottom: 1px solid var(--rule); background: var(--head-bg); }
+  .ib { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--rule); border-radius: var(--r); background: var(--btn-bg); font-size: 15px; }
+  .btn { height: 32px; padding: 0 12px; display: inline-flex; align-items: center; border: 1px solid var(--rule); border-radius: var(--r); background: var(--btn-bg); font-weight: 600; font-size: 13px; }
+  .title { font-size: var(--title-size); font-weight: var(--title-weight); margin-left: 8px; letter-spacing: var(--title-track); }
+  .search { margin-left: auto; width: 230px; height: 32px; border: 1px solid var(--rule); border-radius: var(--r); display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 13px; justify-content: space-between; background: var(--btn-bg); }
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; }
+  .seg span { padding: 7px 13px; font-size: 13px; font-weight: 600; }
+  .seg .on { background: var(--accent-fill); color: var(--accent-ink); }
+  .plus { width: 34px; height: 32px; border-radius: var(--r); background: var(--accent-fill); color: var(--accent-ink); display: grid; place-items: center; font-size: 18px; font-weight: 700; }
+  .days { display: grid; grid-template-columns: 64px repeat(7, 1fr); border-bottom: 1px solid var(--rule); background: var(--head-bg); }
+  .days div { padding: 8px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; align-items: baseline; gap: 6px; }
+  .days b { font-size: var(--daynum); color: var(--ink); font-weight: var(--daynum-w); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .days .today b { color: var(--today); }
+  .allday { display: grid; grid-template-columns: 64px repeat(7, 1fr); border-bottom: 1px solid var(--rule); min-height: 28px; }
+  .allday i { grid-column: 7 / span 2; margin: 3px; padding: 3px 8px; font-style: normal; font-size: 12px; font-weight: 600; border-radius: var(--ev-r); background: var(--allday-bg); color: var(--allday-ink); }
+  .grid { position: relative; display: grid; grid-template-columns: 64px repeat(7, 1fr); overflow: hidden; background: var(--grid-bg); }
+  .hours div { height: var(--h); font-size: var(--hour-size); font-weight: var(--hour-w); color: var(--hour-ink); text-align: right; padding: 2px 8px 0 0; font-variant-numeric: tabular-nums; }
+  .col { position: relative; border-left: 1px solid var(--rule); background-image: var(--grid-lines); background-size: 100% var(--h); }
+  .col.today { background-color: var(--today-col); }
+  .ev { position: absolute; left: 4px; right: 4px; padding: 5px 8px; border-radius: var(--ev-r); font-size: 12.5px; line-height: 1.3; overflow: hidden; background: var(--ev-bg); color: var(--ev-ink); border-left: var(--ev-band) solid var(--c); box-shadow: var(--ev-shadow); }
+  .ev .t { font-size: var(--ev-time); font-weight: 700; font-variant-numeric: tabular-nums; opacity: .85; display: block; }
+  .ev .n { font-weight: 600; }
+  .ev.free { background-image: repeating-linear-gradient(135deg, transparent 0 5px, var(--hatch) 5px 6px); }
+  .now { position: absolute; left: 64px; right: 0; height: 2px; background: var(--now); z-index: 5; }
+  .nowlab { position: absolute; left: 0; width: 64px; text-align: right; padding-right: 6px; font-size: 11px; font-weight: 800; color: var(--now); z-index: 6; transform: translateY(-50%); }
+  .tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 1px 5px; border-radius: 3px; margin-bottom: 3px; }
+  /* ---------- Palinsesto ---------- */
+  .assigned { --font: "Bahnschrift", "Segoe UI Variable Display", "Arial Narrow", sans-serif; --ground:#F5F6F8; --ink:#10142A; --muted:#5B6075; --rail:#10142A; --rail-ink:#F5F6F8; --rail-border:0; --rule:#DDE0E8; --head-bg:#FFFFFF; --btn-bg:#FFFFFF; --r:6px; --chk-r:2px; --accent-fill:#10142A; --accent-ink:#fff; --title-size:26px; --title-weight:700; --title-track:-.01em; --daynum:24px; --daynum-w:700; --today:#E4262B; --allday-bg:#FFF4D6; --allday-ink:#6B4E00; --grid-bg:#FFFFFF; --h:72px; --hour-size:15px; --hour-w:700; --hour-ink:#10142A; --grid-lines:linear-gradient(#E9EBF1 1px, transparent 1px); --today-col:#FAFAFC; --ev-r:4px; --ev-bg:#F2F5FF; --ev-ink:#10142A; --ev-band:5px; --ev-shadow:none; --ev-time:13px; --hatch:rgba(16,20,42,.12); --now:#E4262B; --brand-track:.02em; }
+  .assigned .ev.g { --c:#2F6BFF; background-color:#EAF0FF; } .assigned .ev.m { --c:#1BA672; background-color:#E6F6EF; } .assigned .ev.l { --c:#F2A900; background-color:#FFF5DB; }
+  .assigned .ev.onair { box-shadow: 0 0 0 2px #E4262B; }
+  .assigned .tag.on { background:#E4262B; color:#fff; } .assigned .tag.next { background:#10142A; color:#fff; }
+  .assigned .ev.sel { left: -4px; right: -10px; z-index: 4; box-shadow: 0 8px 22px rgba(16,20,42,.22); }
+  .assigned .dim .ev:not(.sel):not(.onair) { opacity: .78; }
+  .assigned aside .acc h4 i { width: 22px; height: 6px; background: var(--c); display: inline-block; border-radius: 1px; }
+  .assigned .now { height: 3px; } .assigned .nowlab { background:#E4262B; color:#fff; width:auto; left:2px; padding:2px 5px; border-radius:3px; font-size:10px; letter-spacing:.06em; }
+  /* ---------- Orario ferroviario ---------- */
+  .model-pick { --font: "Segoe UI Variable Text", "Helvetica Neue", Arial, sans-serif; --ground:#FFFFFF; --ink:#111111; --muted:#555; --rail:#FFFFFF; --rail-ink:#111; --rail-border:2px solid #111; --rule:#111111; --head-bg:#FFFFFF; --btn-bg:#FFFFFF; --r:0; --chk-r:0; --accent-fill:#111111; --accent-ink:#fff; --title-size:30px; --title-weight:700; --title-track:-.02em; --daynum:26px; --daynum-w:800; --today:#EB0000; --allday-bg:#111; --allday-ink:#fff; --grid-bg:#fff; --h:72px; --hour-size:20px; --hour-w:800; --hour-ink:#111; --grid-lines:linear-gradient(#D9D9D9 1px, transparent 1px); --today-col:#fff; --ev-r:0; --ev-bg:#fff; --ev-ink:#111; --ev-band:6px; --ev-shadow:inset 0 0 0 1px #111; --ev-time:14px; --hatch:rgba(0,0,0,.15); --now:#EB0000; --brand-track:-.01em; }
+  .model-pick .ev.g { --c:#3A62B8; } .model-pick .ev.m { --c:#2E8B57; } .model-pick .ev.l { --c:#C88A00; }
+  .model-pick .now::after { content:""; position:absolute; left:-9px; top:-8px; width:18px; height:18px; border-radius:50%; background:#EB0000; }
+  .model-pick .days { border-bottom: 2px solid #111; } .model-pick header { border-bottom: 2px solid #111; }
+  .model-pick .col { border-left-color: #111; }
+  .model-pick .tag { display:none; }
+  /* ---------- Griglia Crouwel ---------- */
+  .challenger-crouwel { --font: "Segoe UI Variable Text", Arial, sans-serif; --ground:#FFFFFF; --ink:#111; --muted:#555; --rail:#FFFFFF; --rail-ink:#111; --rail-border:1px solid #C9D8F2; --rule:#C9D8F2; --head-bg:#FFFFFF; --btn-bg:#FFFFFF; --r:0; --chk-r:0; --accent-fill:#0047FF; --accent-ink:#fff; --title-size:26px; --title-weight:600; --title-track:0; --daynum:22px; --daynum-w:500; --today:#0047FF; --allday-bg:#0047FF; --allday-ink:#fff; --grid-bg:#fff; --h:72px; --hour-size:13px; --hour-w:500; --hour-ink:#0047FF; --grid-lines:linear-gradient(#C9D8F2 1px, transparent 1px), linear-gradient(#E6EEFB 1px, transparent 1px); --today-col:#fff; --ev-r:0; --ev-bg:#fff; --ev-ink:#111; --ev-band:0; --ev-shadow:none; --ev-time:12px; --hatch:rgba(0,71,255,.18); --now:#0047FF; --brand-track:0; }
+  .challenger-crouwel .col { background-size: 100% var(--h), 100% calc(var(--h) / 4); }
+  .challenger-crouwel .ev.g { background:#DCE6FF; } .challenger-crouwel .ev.m { background:#DDF2E6; } .challenger-crouwel .ev.l { background:#FCEFC7; }
+  .challenger-crouwel .days .today { background:#0047FF; color:#fff; } .challenger-crouwel .days .today b { color:#fff; font-size:44px; font-weight:800; font-family: "OCR A Extended", "Consolas", monospace; line-height:1; }
+  .challenger-crouwel .now { height: 18px; background: rgba(0,71,255,.12); border-top: 2px solid #0047FF; }
+  .challenger-crouwel .tag { display:none; }
+  /* ---------- Fogli di esposizione ---------- */
+  .challenger-darkroom { --font: "Bahnschrift", "Segoe UI", sans-serif; --ground:#F2F2F0; --ink:#1C1C1B; --muted:#5A5A57; --rail:#E6E6E3; --rail-ink:#1C1C1B; --rail-border:1px solid #BDBDB8; --rule:#BDBDB8; --head-bg:#F2F2F0; --btn-bg:#F7F7F5; --r:2px; --chk-r:0; --accent-fill:#1C1C1B; --accent-ink:#F2F2F0; --title-size:24px; --title-weight:600; --title-track:.04em; --daynum:22px; --daynum-w:600; --today:#1C1C1B; --allday-bg:#BDBDB8; --allday-ink:#1C1C1B; --grid-bg:#F7F7F5; --h:72px; --hour-size:13px; --hour-w:600; --hour-ink:#5A5A57; --grid-lines:linear-gradient(#DEDED9 1px, transparent 1px); --today-col:#EFEFEC; --ev-r:2px; --ev-bg:rgba(90,90,87,.10); --ev-ink:#1C1C1B; --ev-band:0; --ev-shadow:inset 0 0 0 1px #5A5A57; --ev-time:12px; --hatch:rgba(28,28,27,.25); --now:#1C1C1B; --brand-track:.08em; }
+  .challenger-darkroom .ev.g { background-image: repeating-linear-gradient(45deg, transparent 0 6px, rgba(28,28,27,.2) 6px 7px); }
+  .challenger-darkroom .ev.m { background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(28,28,27,.2) 6px 7px); }
+  .challenger-darkroom .ev.l { background: rgba(28,28,27,.16); }
+  .challenger-darkroom .ev.conflict { box-shadow: 0 0 0 2px #D6267A; }
+  .challenger-darkroom .tag.cf { background:#D6267A; color:#fff; } .challenger-darkroom .tag.on, .challenger-darkroom .tag.next { display:none; }
+  .challenger-darkroom aside .chk { background-image: repeating-linear-gradient(45deg, transparent 0 3px, #1C1C1B 3px 4px); background-color: transparent; border: 1px solid #1C1C1B; }
+  .challenger-darkroom .seg span, .challenger-darkroom .acc h4, .challenger-darkroom .days div { letter-spacing: .14em; }
+  /* ---------- Canon ---------- */
+  .canon { --font: "Segoe UI Variable Text", "Segoe UI", sans-serif; --ground:#F3F4F6; --ink:#111827; --muted:#6B7280; --rail:#FFFFFF; --rail-ink:#111827; --rail-border:1px solid #E5E7EB; --rule:#E5E7EB; --head-bg:#FFFFFF; --btn-bg:#FFFFFF; --r:10px; --chk-r:4px; --accent-fill:#111827; --accent-ink:#fff; --title-size:24px; --title-weight:600; --title-track:-.01em; --daynum:16px; --daynum-w:600; --today:#4F46E5; --allday-bg:#E9E3FF; --allday-ink:#4C1D95; --grid-bg:#fff; --h:72px; --hour-size:12px; --hour-w:500; --hour-ink:#6B7280; --grid-lines:linear-gradient(#F0F1F4 1px, transparent 1px); --today-col:#FAFAFF; --ev-r:8px; --ev-bg:#DCEBFF; --ev-ink:#1E3A8A; --ev-band:0; --ev-shadow:none; --ev-time:11px; --hatch:rgba(0,0,0,.06); --now:#4F46E5; --brand-track:0; }
+  .canon .ev.g { background:#DCEBFF; color:#1E3A8A; } .canon .ev.m { background:#DDF5E6; color:#14532D; } .canon .ev.l { background:#E9E3FF; color:#4C1D95; }
+  .canon .ev .t { border-bottom: 1px dashed currentColor; padding-bottom: 3px; margin-bottom: 3px; opacity: .7; }
+  .canon .tag { display:none; } .canon .app { padding: 14px; gap: 14px; } .canon aside, .canon main { border-radius: 14px; border: 1px solid #E5E7EB; overflow:hidden; }
+  .canon .nowlab { color:#fff; background:#4F46E5; border-radius: 6px; width:auto; left: 6px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside>
+    <div class="brand">WinDozCal</div>
+    <div class="acc" style="--c:#F2A900"><h4><i style="--c:#F2A900"></i>Questo computer</h4><div class="cal"><span class="chk" style="--c:#F2A900"></span>Personale</div></div>
+    <div class="acc"><h4><i style="--c:#2F6BFF"></i>Google · Lavoro</h4><div class="cal"><span class="chk" style="--c:#2F6BFF"></span>Riunioni</div><div class="cal"><span class="chk" style="--c:#5B8CFF"></span>Commerciale</div></div>
+    <div class="acc"><h4><i style="--c:#1BA672"></i>Microsoft · Studio Rossi</h4><div class="cal"><span class="chk" style="--c:#1BA672"></span>Cliente</div></div>
+    <div class="foot">⚙ Impostazioni</div>
+  </aside>
+  <main>
+    <header>
+      <span class="ib">‹</span><span class="ib">›</span><span class="btn">Oggi</span>
+      <span class="title">Ottobre 2026</span>
+      <span class="search">Cerca eventi <span>Ctrl+K</span></span>
+      <span class="seg"><span>Giorno</span><span class="on">Settimana</span><span>Mese</span><span>Agenda</span></span>
+      <span class="plus">+</span>
+    </header>
+    <div>
+      <div class="days" id="days"></div>
+      <div class="allday"><span></span><span></span><span></span><span></span><span></span><span></span><i>Weekend fuori porta</i></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+<script>
+  const dir = new URLSearchParams(location.search).get("dir") || "assigned";
+  document.body.className = dir;
+  const H = 72, START = 8;
+  const days = [["Lun",5],["Mar",6],["Mer",7],["Gio",8],["Ven",9],["Sab",10],["Dom",11]];
+  document.getElementById("days").innerHTML = "<div></div>" + days.map(([d,n],i) => `<div class="${i===2?"today":""}">${d} <b>${n}</b></div>`).join("");
+  // giorno, inizio, fine (ore decimali), titolo, account, extra
+  const ev = [
+    [0, 9.5, 10.5, "Riunione commerciale", "g"],
+    [0, 11, 11.5, "Standup", "l"],
+    [2, 11, 11.5, "Standup", "l"],
+    [1, 11, 11.75, "Call cliente · Teams", "m", "sel"],
+    [2, 13.75, 15.25, "Revisione progetto", "g", "onair conflict left"],
+    [2, 14.5, 16, "Call Studio Rossi", "m", "conflict right"],
+    [2, 16.25, 17.25, "Sintesi con Marta", "g", "next"],
+    [3, 15.5, 17, "Revisione progetto", "g"],
+    [4, 9.5, 10.5, "Dentista", "l"],
+    [4, 12.5, 13.5, "Pranzo con Giulia", "l", "free"],
+    [1, 15, 16, "Preparazione offerta", "g", "free"],
+    [5, 10, 12, "Mercato", "l", "free"],
+  ];
+  const fmt = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+  let html = `<div class="hours">${Array.from({length:12},(_,i)=>`<div>${fmt(START+i)}</div>`).join("")}</div>`;
+  html += days.map((_, di) => {
+    const items = ev.filter(e => e[0] === di).map(([, s, e, t, a, x = ""]) => {
+      const top = (s - START) * H + 1, h = (e - s) * H - 3;
+      let side = "";
+      if (x.includes("left")) side = "right:50%;"; else if (x.includes("right")) side = "left:50%;"; else if (x.includes("half")) side = "left:50%;";
+      const tag = x.includes("onair") ? '<span class="tag on">IN ONDA</span>' : x.includes("next") ? '<span class="tag next">A SEGUIRE</span>' : "";
+      const cf = x.includes("conflict") && x.includes("right") ? '<span class="tag cf">CONFLITTO</span>' : "";
+      return `<div class="ev ${a} ${x}" style="top:${top}px;height:${h}px;${side}">${tag}${cf}<span class="t">${fmt(s)}–${fmt(e)}</span><span class="n">${t}</span></div>`;
+    }).join("");
+    return `<div class="col ${di===2?"today":""} ${dir==="assigned"?"dim":""}">${items}</div>`;
+  }).join("");
+  const now = 14 + 20/60, y = (now - START) * H;
+  html += `<div class="now" style="top:${y}px"></div><div class="nowlab" style="top:${y}px">${dir==="assigned"?"IN ONDA 14:20":"14:20"}</div>`;
+  document.getElementById("grid").innerHTML = html;
+</script>
+</body>
+</html>
