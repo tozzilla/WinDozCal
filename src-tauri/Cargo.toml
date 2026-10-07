@@ -1,6 +1,6 @@
 [package]
 name = "windozcal"
-version = "0.5.1"
+version = "0.5.2"
 description = "WinDozCal: calendario desktop local-first con sincronizzazione Google, Microsoft e CalDAV"
 authors = ["Andrea Tozzi"]
 license = "MIT OR Apache-2.0"
