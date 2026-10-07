@@ -11,7 +11,7 @@ const ev = (id: string, calendar: string, s: Date, e: Date): Event => ({
   id, calendar_id: calendar, remote_id: null, title: id, description: null, location: null, conference_url: null,
   start: toIsoWithOffset(s), end: toIsoWithOffset(e), timezone: "Europe/Rome", all_day: false, recurrence_rule: null,
   status: "busy", etag: null, updated_at: null, sync_status: "synced", local_updated_at: null, remote_updated_at: null,
-  occurrence_start: null, series_id: null, original_start: null,
+  occurrence_start: null, series_id: null, original_start: null, color: null, icon: null, pattern: null,
 });
 
 describe("broadcastMarks", () => {

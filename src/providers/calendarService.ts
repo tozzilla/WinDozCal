@@ -21,6 +21,8 @@ export interface CalendarService {
   createCalendar(accountId: string, name: string, color: string): Promise<Calendar>;
   listCalendars(): Promise<Calendar[]>;
   setCalendarVisibility(calendarId: string, visible: boolean): Promise<void>;
+  /** Colore `#RRGGBB` del calendario (PRD §34); locale anche per i calendari remoti. */
+  setCalendarColor(calendarId: string, color: string): Promise<void>;
   listEvents(rangeStart: string, rangeEnd: string): Promise<Event[]>;
   getEvent(eventId: string): Promise<EventDetail>;
   /** Rifiuta con un Error leggibile se email o minuti non sono validi (vedi utils/validation). */

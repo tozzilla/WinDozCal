@@ -19,7 +19,7 @@ Regole: nessun import di provider o di `@tauri-apps/api` in `src/components` o `
 
 - `Account`: id, provider (`"local" | "google" | "microsoft" | "caldav"`), name, email (stringa vuota per `local`), sync_status, last_sync
 - `Calendar`: id, account_id, remote_id, name, color, visible, read_only
-- `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at, series_id, original_start (eccezioni, ADR 013)
+- `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at, series_id, original_start (eccezioni, ADR 013), color, icon, pattern (aspetto, ADR 017)
 - `Attendee`: id, event_id, email, name (nullable), status (`"needs_action" | "accepted" | "declined" | "tentative"`)
 - `Reminder`: id, event_id, minutes_before, type (`"popup" | "email"`)
 - `SyncState`: account_id, calendar_id, cursor (sync token / delta link / CalDAV sync-token), updated_at
@@ -58,6 +58,7 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `list_accounts` | — | `Account[]` |
 | `list_calendars` | — | `Calendar[]` |
 | `set_calendar_visibility` | `calendarId, visible` | `void` |
+| `set_calendar_color` | `calendarId, color` (`#RRGGBB`) | `void`: colore locale, anche per i calendari remoti (ADR 017) |
 | `list_events` | `rangeStart, rangeEnd` (ISO) | `Event[]` (solo calendari visibili) |
 | `get_event` | `eventId` | `EventDetail` |
 | `create_event` | `event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (sync_status=pending_create, `synced` su calendari local) |
@@ -100,6 +101,11 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 | `install_update` | — | `void`: scarica, verifica la firma e installa (`passive`); l'app si chiude e riparte |
 
 La versione installata si legge con `getVersion()` di `@tauri-apps/api/app`, solo in `tauriCalendarService`.
+
+## Aspetto degli eventi (ADR 017)
+
+- `Event.color` (`#RRGGBB` o `null` = colore del calendario), `Event.icon` (`video`, `phone`, `users`, `briefcase`, `plane`, `car`, `utensils`, `coffee`, `dumbbell`, `heart-pulse`, `cake`, `graduation-cap`, `flag`, `home`, `shopping-cart`, `music` o `null`), `Event.pattern` (`dots`, `grid`, `lines` o `null`); presenti anche in `NewEvent`. Valori fuori da questi insiemi: errore `invalid_input`
+- metadati locali: il pull dal provider non li sovrascrive, il push non li invia
 
 ## Ricorrenze (stage 5, 7 ott 2026)
 

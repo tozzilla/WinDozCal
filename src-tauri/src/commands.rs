@@ -170,6 +170,18 @@ pub async fn set_calendar_visibility(
     Ok(())
 }
 
+/// Colore di un calendario (PRD 34); colori `#RRGGBB`.
+#[tauri::command]
+pub async fn set_calendar_color(
+    state: State<'_, AppState>,
+    calendar_id: String,
+    color: String,
+) -> AppResult<()> {
+    state
+        .db
+        .with(|conn| repo::set_calendar_color(conn, &calendar_id, &color))
+}
+
 /// Eventi dei calendari visibili nel range `[rangeStart, rangeEnd)` (ISO 8601).
 #[tauri::command]
 pub async fn list_events(

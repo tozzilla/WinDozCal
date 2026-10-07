@@ -6,7 +6,8 @@ import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
 import { clickRange, slotRange } from "./drag";
 import { layoutOverlaps } from "./layout";
-import { broadcastMarks, eventSurface, MARK_LABEL, type BroadcastMark } from "./palinsesto";
+import { EventIcon, eventSurface } from "./appearance";
+import { broadcastMarks, MARK_LABEL, type BroadcastMark } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 import { useEventDrag } from "./useEventDrag";
 
@@ -171,8 +172,9 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                   type="button"
                   onClick={() => onSelectEvent(e)}
                   className="truncate rounded-sm px-2 py-0.5 text-left text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  style={{ gridColumn: `${from + 1} / span ${span}`, gridRow: row + 1, ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free") }}
+                  style={{ gridColumn: `${from + 1} / span ${span}`, gridRow: row + 1, ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free", e) }}
                 >
+                  <EventIcon name={e.icon} className="mr-1 inline size-3.5 align-[-2px]" />
                   {e.title}
                 </button>
               ))}
@@ -259,7 +261,7 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                             "--side-left": `${(column / columns) * 100}%`,
                             "--side-width": `${100 / columns}%`,
                             "--cascade-left": columns > 1 ? `${(column * 40) / (columns - 1)}%` : "0%",
-                            ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"),
+                            ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free", e),
                           } as React.CSSProperties
                         }
                       >
@@ -270,7 +272,8 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                         )}
                         {oneLine ? (
                           <div className="truncate">
-                            <span className="font-bold">{formatTime(start)}</span> <span className="font-semibold">{e.title}</span>
+                            <span className="font-bold">{formatTime(start)}</span>{" "}
+                            <EventIcon name={e.icon} className="inline size-3.5 align-[-2px]" /> <span className="font-semibold">{e.title}</span>
                           </div>
                         ) : (
                           <>
@@ -281,7 +284,10 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                                 <span className="@max-[96px]:hidden">–{formatTime(end)}</span>
                               </span>
                             </div>
-                            <div className="line-clamp-3 font-semibold break-words @max-[96px]:text-[11px]">{e.title}</div>
+                            <div className="line-clamp-3 font-semibold break-words @max-[96px]:text-[11px]">
+                              <EventIcon name={e.icon} className="mr-1 inline size-3.5 align-[-2px]" />
+                              {e.title}
+                            </div>
                           </>
                         )}
                         <div

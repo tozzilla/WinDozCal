@@ -147,6 +147,15 @@ pub struct Event {
     /// Solo per le eccezioni: inizio originale dell'occorrenza sostituita.
     #[serde(default)]
     pub original_start: Option<String>,
+    /// Aspetto del singolo evento (ADR 017): colore `#RRGGBB` al posto della tinta del calendario.
+    #[serde(default)]
+    pub color: Option<String>,
+    /// Icona dall'insieme `EVENT_ICONS`.
+    #[serde(default)]
+    pub icon: Option<String>,
+    /// Pattern di riempimento dall'insieme `EVENT_PATTERNS`.
+    #[serde(default)]
+    pub pattern: Option<String>,
 }
 
 /// Argomento di `create_event`: il contratto cita `NewEvent` senza elencarne i campi.
@@ -167,7 +176,36 @@ pub struct NewEvent {
     pub recurrence_rule: Option<String>,
     #[serde(default = "default_event_status")]
     pub status: EventStatus,
+    #[serde(default)]
+    pub color: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub pattern: Option<String>,
 }
+
+/// Icone ammesse per un evento (ADR 017): chiavi stabili, disegnate dal frontend.
+pub const EVENT_ICONS: &[&str] = &[
+    "video",
+    "phone",
+    "users",
+    "briefcase",
+    "plane",
+    "car",
+    "utensils",
+    "coffee",
+    "dumbbell",
+    "heart-pulse",
+    "cake",
+    "graduation-cap",
+    "flag",
+    "home",
+    "shopping-cart",
+    "music",
+];
+
+/// Pattern di riempimento ammessi (ADR 017).
+pub const EVENT_PATTERNS: &[&str] = &["dots", "grid", "lines"];
 
 /// Partecipante inviato dal frontend: lo stato iniziale e' sempre `needs_action`.
 #[derive(Debug, Clone, Deserialize)]

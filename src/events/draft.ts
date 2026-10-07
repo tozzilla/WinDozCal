@@ -25,6 +25,10 @@ export interface EventDraft {
   existingRule: string | null;
   reminders: NewReminder[];
   status: EventStatus;
+  /** Aspetto (ADR 017): `null` = colore del calendario, nessuna icona, nessun pattern. */
+  color: string | null;
+  icon: string | null;
+  pattern: string | null;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -58,6 +62,9 @@ export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date }
     existingRule: null,
     reminders: [],
     status: "busy",
+    color: null,
+    icon: null,
+    pattern: null,
   };
 }
 
@@ -79,6 +86,9 @@ export function eventToDraft(e: Event, attendees: Attendee[] = [], reminders: Re
     recurrenceDays: spec.byDay,
     existingRule: e.recurrence_rule,
     status: e.status,
+    color: e.color,
+    icon: e.icon,
+    pattern: e.pattern,
   };
 }
 
@@ -102,6 +112,9 @@ export function draftToFields(d: EventDraft): NewEvent {
     all_day: d.allDay,
     recurrence_rule: buildRecurrenceRule({ freq: d.recurrence, byDay: d.recurrenceDays }, d.existingRule),
     status: d.status,
+    color: d.color,
+    icon: d.icon,
+    pattern: d.pattern,
   };
 }
 

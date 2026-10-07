@@ -345,6 +345,9 @@ fn local_event() -> Event {
         occurrence_start: None,
         series_id: None,
         original_start: None,
+        color: None,
+        icon: None,
+        pattern: None,
     }
 }
 

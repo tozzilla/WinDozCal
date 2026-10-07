@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Calendar, Event } from "@/types";
 import { isSameDay } from "@/utils/date";
 import { eventInterval, eventKey } from "@/utils/events";
@@ -43,14 +42,4 @@ export function broadcastMarks(events: Event[], calendars: Calendar[], now: Date
   const next = timed.find(({ e, start }) => start > now && isSameDay(start, now) && !marks.has(eventKey(e)));
   if (next) marks.set(eventKey(next.e), "next");
   return marks;
-}
-
-/** Fondo e banda-canale di un evento: tinta del colore del calendario, tratteggio se libero (stato dal riempimento). */
-export function eventSurface(color: string, free: boolean): CSSProperties {
-  const tint = `color-mix(in srgb, ${color} var(--event-tint), var(--event-mix))`;
-  return {
-    backgroundColor: tint,
-    backgroundImage: free ? "repeating-linear-gradient(135deg, transparent 0 5px, var(--hatch) 5px 6px)" : undefined,
-    borderLeft: `5px solid ${color}`,
-  };
 }

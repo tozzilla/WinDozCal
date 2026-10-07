@@ -211,6 +211,9 @@ Rail dei canali: brand, per ogni account barretta d'identità e nome maiuscolo s
 ### Inputs / Fields
 Campi a 6px con filetto `rule`, focus con anello `focus` blu. Etichette 11px maiuscole spaziate. Dialoghi con fascia superiore del colore del calendario scelto (editor) o barretta di canale accanto al contenuto (Quick Add, ricerca).
 
+### Aspetto degli eventi
+Colore dell'evento dalla palette dei colori evento di Google (11 colori, `EVENT_COLORS` in `src/calendar/appearance.tsx`), icona lucide a 14px prima del titolo, pattern `dots` / `grid` / `lines` con l'inchiostro tenue `--hatch`. La banda resta del calendario; il pattern si somma al tratteggio del libero (ADR 017).
+
 ### Banda IN ONDA (componente firma)
 Linea rossa da 3px attraverso tutte le colonne all'ora attuale, con etichetta "IN ONDA hh:mm" sull'asse delle ore e una spia che respira (2.4s, disattivata con `prefers-reduced-motion`). L'evento in corso è cerchiato di rosso con il tag IN ONDA; un evento che inizia mentre è in corso un evento di un altro account riceve CONFLITTO; il primo evento successivo di oggi senza altri segni riceve A SEGUIRE (`broadcastMarks` in `src/calendar/palinsesto.ts`).
 

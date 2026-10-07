@@ -13,6 +13,7 @@ import {
 import { useEditorStore } from "@/stores/editorStore";
 import { occurrenceRef } from "@/utils/events";
 import { isValidConferenceUrl } from "@/utils/validation";
+import { AppearanceField } from "./AppearanceField";
 import { AttendeesField } from "./AttendeesField";
 import { draftToFields, emptyDraft, eventToDraft, toDateInput, toTimeInput, validateDraft, type EventDraft } from "./draft";
 import { weekdayOf, WEEKDAYS, type RecurrenceFreq, type Weekday } from "./recurrence";
@@ -176,7 +177,7 @@ export function EventEditor() {
       <form
         onSubmit={submit}
         className="max-h-full w-full max-w-lg space-y-3 overflow-y-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]"
-        style={{ borderTop: `5px solid ${calendars.find((c) => c.id === draft.calendarId)?.color ?? "var(--border)"}` }}
+        style={{ borderTop: `5px solid ${draft.color ?? calendars.find((c) => c.id === draft.calendarId)?.color ?? "var(--border)"}` }}
       >
         <input
           autoFocus
@@ -288,6 +289,11 @@ export function EventEditor() {
             )}
           </div>
         </Field>
+        <AppearanceField
+          value={{ color: draft.color, icon: draft.icon, pattern: draft.pattern }}
+          calendarColor={calendars.find((c) => c.id === draft.calendarId)?.color ?? "#9AA1BD"}
+          onChange={(v) => setDraft({ ...draft, ...v })}
+        />
         <AttendeesField value={draft.attendees} onChange={(v) => set("attendees", v)} />
         <RemindersField value={draft.reminders} onChange={(v) => set("reminders", v)} />
 

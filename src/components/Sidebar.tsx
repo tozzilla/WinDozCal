@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Settings } from "lucide-react";
-import { useAccounts, useCalendars, useCreateCalendar, useSetCalendarVisibility } from "@/providers/queries";
+import { useAccounts, useCalendars, useCreateCalendar, useSetCalendarColor, useSetCalendarVisibility } from "@/providers/queries";
+import { CalendarColorPicker } from "./CalendarColorPicker";
 import { useUiStore } from "@/stores/uiStore";
 import type { Account } from "@/types";
 
@@ -30,7 +31,11 @@ export function Sidebar() {
   const { data: calendars = [] } = useCalendars();
   const setVisibility = useSetCalendarVisibility();
   const createCalendar = useCreateCalendar();
+  const setColor = useSetCalendarColor();
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  /** Menu contestuale del calendario (clic destro): colore. */
+  const [menu, setMenu] = useState<{ calendarId: string; x: number; y: number } | null>(null);
+  const menuCalendar = calendars.find((c) => c.id === menu?.calendarId);
   const [name, setName] = useState("");
 
   if (!open) return null;
@@ -106,7 +111,12 @@ export function Sidebar() {
                       type="button"
                       role="checkbox"
                       aria-checked={c.visible}
+                      title="Clic: mostra o nascondi · Clic destro: colore"
                       onClick={() => setVisibility.mutate({ calendarId: c.id, visible: !c.visible })}
+                      onContextMenu={(ev) => {
+                        ev.preventDefault();
+                        setMenu({ calendarId: c.id, x: ev.clientX, y: ev.clientY });
+                      }}
                       className="flex w-full items-center gap-2.5 rounded-sm px-1 py-[3px] text-left text-[14px] leading-[21px] font-semibold outline-none hover:bg-rail-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                     >
                       <span
@@ -124,6 +134,28 @@ export function Sidebar() {
           );
         })}
       </div>
+      {menu && menuCalendar && (
+        <div className="fixed inset-0 z-50" onClick={() => setMenu(null)} onContextMenu={(ev) => { ev.preventDefault(); setMenu(null); }}>
+          <div
+            role="dialog"
+            aria-label={`Colore di ${menuCalendar.name}`}
+            onClick={(ev) => ev.stopPropagation()}
+            onKeyDown={(ev) => ev.key === "Escape" && setMenu(null)}
+            className="absolute w-60 rounded-lg border bg-popover p-3 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]"
+            style={{ left: Math.min(menu.x, window.innerWidth - 256), top: Math.min(menu.y, window.innerHeight - 170) }}
+          >
+            <p className="mb-2 truncate text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">Colore · {menuCalendar.name}</p>
+            <CalendarColorPicker
+              key={menuCalendar.id}
+              value={menuCalendar.color}
+              onPick={(color) => {
+                setColor.mutate({ calendarId: menuCalendar.id, color });
+                setMenu(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
       <div className="px-3 pb-3">
         <button
           type="button"

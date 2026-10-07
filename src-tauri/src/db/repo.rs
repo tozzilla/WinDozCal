@@ -21,10 +21,10 @@ use crate::timeutil::{now_iso, parse_ts};
 pub(crate) const EVENT_COLS: &str = "e.id, e.calendar_id, e.remote_id, e.title, e.description, \
      e.location, e.\"start\", e.\"end\", e.timezone, e.all_day, e.recurrence_rule, e.status, \
      e.etag, e.updated_at, e.sync_status, e.local_updated_at, e.remote_updated_at, \
-     e.conference_url, e.series_id, e.original_start";
+     e.conference_url, e.series_id, e.original_start, e.color, e.icon, e.pattern";
 
 /// Numero di colonne di `EVENT_COLS`: le colonne aggiunte dopo `{EVENT_COLS}` partono da qui.
-pub(crate) const EVENT_COL_COUNT: usize = 20;
+pub(crate) const EVENT_COL_COUNT: usize = 23;
 
 /// Massimo numero di risultati di `search_events`.
 const SEARCH_LIMIT: i64 = 200;
@@ -52,6 +52,9 @@ pub(crate) fn event_from_row(row: &Row<'_>) -> rusqlite::Result<Event> {
         occurrence_start: None,
         series_id: row.get(18)?,
         original_start: row.get(19)?,
+        color: row.get(20)?,
+        icon: row.get(21)?,
+        pattern: row.get(22)?,
     })
 }
 
@@ -675,6 +678,47 @@ fn ensure_writable(calendar: &Calendar) -> AppResult<()> {
     Ok(())
 }
 
+/// Colore `#RRGGBB`, icona e pattern dagli insiemi ammessi (ADR 017).
+fn validate_appearance(
+    color: &Option<String>,
+    icon: &Option<String>,
+    pattern: &Option<String>,
+) -> AppResult<()> {
+    if let Some(c) = color {
+        let hex = c.strip_prefix('#').unwrap_or("");
+        if hex.len() != 6 || !hex.chars().all(|ch| ch.is_ascii_hexdigit()) {
+            return Err(AppError::InvalidInput("event color must be #RRGGBB".into()));
+        }
+    }
+    if icon
+        .as_deref()
+        .is_some_and(|i| !crate::models::EVENT_ICONS.contains(&i))
+    {
+        return Err(AppError::InvalidInput("unknown event icon".into()));
+    }
+    if pattern
+        .as_deref()
+        .is_some_and(|p| !crate::models::EVENT_PATTERNS.contains(&p))
+    {
+        return Err(AppError::InvalidInput("unknown event pattern".into()));
+    }
+    Ok(())
+}
+
+/// Colore di un calendario scelto dall'utente (PRD 34). Vale anche per i calendari remoti: il
+/// sync non sovrascrive il colore locale (`upsert_calendars`).
+pub fn set_calendar_color(conn: &Connection, calendar_id: &str, color: &str) -> AppResult<()> {
+    validate_appearance(&Some(color.to_string()), &None, &None)?;
+    let changed = conn.execute(
+        "UPDATE calendars SET color = ?1 WHERE id = ?2",
+        params![color, calendar_id],
+    )?;
+    if changed == 0 {
+        return Err(AppError::NotFound(format!("calendar {calendar_id}")));
+    }
+    Ok(())
+}
+
 /// Massimo ragionevole per `minutes_before` (4 settimane, come Google Calendar).
 const MAX_REMINDER_MINUTES: i64 = 40_320;
 
@@ -870,6 +914,7 @@ fn insert_row(
     let (start_ts, end_ts) = validate_range(&new.start, &new.end, &new.timezone)?;
     validate_children(attendees, reminders)?;
     let conference_url = normalize_conference_url(&new.conference_url)?;
+    validate_appearance(&new.color, &new.icon, &new.pattern)?;
 
     let initial_status = if is_local_calendar(conn, &new.calendar_id)? {
         EventSyncStatus::Synced
@@ -884,9 +929,9 @@ fn insert_row(
                              \"start\", \"end\", start_ts, end_ts, timezone, all_day,
                              recurrence_rule, status, etag, updated_at, sync_status,
                              local_updated_at, remote_updated_at, conference_url,
-                             series_id, original_start, original_start_ts)
+                             series_id, original_start, original_start_ts, color, icon, pattern)
          VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, NULL, ?14,
-                 ?15, ?14, NULL, ?16, ?17, ?18, ?19)",
+                 ?15, ?14, NULL, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
             params![
                 id,
                 new.calendar_id,
@@ -907,6 +952,9 @@ fn insert_row(
                 exception_of.map(|e| e.0),
                 exception_of.map(|e| e.1),
                 exception_of.map(|e| e.2),
+                new.color,
+                new.icon,
+                new.pattern,
             ],
         )?;
         replace_children(tx, &id, attendees, reminders)
@@ -937,6 +985,7 @@ pub fn update_event(
     let (start_ts, end_ts) = validate_range(&event.start, &event.end, &event.timezone)?;
     validate_children(attendees, reminders)?;
     let conference_url = normalize_conference_url(&event.conference_url)?;
+    validate_appearance(&event.color, &event.icon, &event.pattern)?;
     // Un'eccezione resta un evento singolo legato alla sua serie (ADR 013).
     let recurrence_rule = if existing.series_id.is_some() {
         None
@@ -968,7 +1017,8 @@ pub fn update_event(
         "UPDATE events SET title = ?1, description = ?2, location = ?3, \"start\" = ?4,
                 \"end\" = ?5, start_ts = ?6, end_ts = ?7, timezone = ?8, all_day = ?9,
                 recurrence_rule = ?10, status = ?11, sync_status = ?12,
-                updated_at = ?13, local_updated_at = ?13, conference_url = ?14
+                updated_at = ?13, local_updated_at = ?13, conference_url = ?14,
+                color = ?16, icon = ?17, pattern = ?18
          WHERE id = ?15",
         params![
             event.title,
@@ -986,6 +1036,9 @@ pub fn update_event(
             now,
             conference_url,
             event.id,
+            event.color,
+            event.icon,
+            event.pattern,
         ],
     )?;
     if reshapes_series {
@@ -1154,6 +1207,9 @@ pub fn update_occurrence(
             timezone: single.timezone,
             all_day: single.all_day,
             status: single.status,
+            color: single.color,
+            icon: single.icon,
+            pattern: single.pattern,
             ..exception
         };
         return update_event(conn, &updated, attendees, reminders);

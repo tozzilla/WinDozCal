@@ -38,6 +38,9 @@ fn new_event(title: &str) -> NewEvent {
         all_day: false,
         recurrence_rule: None,
         status: EventStatus::Busy,
+        color: None,
+        icon: None,
+        pattern: None,
     }
 }
 
@@ -1731,4 +1734,63 @@ fn whole_series_edit_keeps_exceptions_unless_times_or_rule_change() {
     let all = october(&conn);
     assert!(all.iter().all(|(_, t)| t == "Rinominata"));
     assert!(all.iter().any(|(s, _)| s == "2026-10-12T09:00:00+02:00"));
+}
+
+#[test]
+fn event_appearance_is_validated_saved_and_kept_by_sync() {
+    let mut conn = setup();
+    let mut ev = new_event("Palestra");
+    ev.color = Some("#33B679".into());
+    ev.icon = Some("dumbbell".into());
+    ev.pattern = Some("dots".into());
+    let saved = insert_event(&conn, &ev, &[], &[]).unwrap().event;
+    assert_eq!(
+        (
+            saved.color.as_deref(),
+            saved.icon.as_deref(),
+            saved.pattern.as_deref()
+        ),
+        (Some("#33B679"), Some("dumbbell"), Some("dots"))
+    );
+
+    for (color, icon, pattern) in [
+        ("rosso", None, None),
+        ("#33B679", Some("razzo"), None),
+        ("#33B679", None, Some("onde")),
+    ] {
+        let mut bad = new_event("X");
+        bad.color = Some(color.into());
+        bad.icon = icon.map(Into::into);
+        bad.pattern = pattern.map(Into::into);
+        assert!(matches!(
+            insert_event(&conn, &bad, &[], &[]),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+
+    // Il pull dal server aggiorna l'evento ma non tocca l'aspetto scelto in locale.
+    make_synced(&conn, &saved.id, "r-palestra", "e1");
+    let cal = get_calendar(&conn, "c1").unwrap();
+    let remote = remote_event("r-palestra", "Palestra (spostata)", "e2");
+    apply_sync_result(
+        &mut conn,
+        &cal,
+        &SyncResult {
+            upserts: vec![remote],
+            deletions: vec![],
+            next_cursor: None,
+            reconciled_series: vec![],
+        },
+    )
+    .unwrap();
+    let after = get_event(&conn, &saved.id).unwrap();
+    assert_eq!(after.title, "Palestra (spostata)");
+    assert_eq!(
+        (after.color.as_deref(), after.icon.as_deref()),
+        (Some("#33B679"), Some("dumbbell"))
+    );
+
+    set_calendar_color(&conn, "c1", "#8E24AA").unwrap();
+    assert_eq!(get_calendar(&conn, "c1").unwrap().color, "#8E24AA");
+    assert!(set_calendar_color(&conn, "c1", "viola").is_err());
 }

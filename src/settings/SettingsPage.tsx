@@ -6,9 +6,10 @@ import { openLogFolder, useAppVersion, useUpdateCheck } from "@/providers/querie
 import { useUiStore } from "@/stores/uiStore";
 import type { ThemeMode } from "@/types";
 import { AccountsSettings } from "./AccountsSettings";
+import { CalendarsSettings } from "./CalendarsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Appearance (tema), link ai log in Advanced, About.
+// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Calendars, Appearance (tema), link ai log in Advanced, About.
 const SECTIONS = ["General", "Accounts", "Calendars", "Notifications", "Appearance", "Advanced", "About"] as const;
 type Section = (typeof SECTIONS)[number];
 
@@ -53,6 +54,7 @@ export function SettingsPage() {
         <h2 className="mb-6 text-[26px] font-bold tracking-[-0.01em]">{section}</h2>
         {section === "General" && <GeneralSettings />}
         {section === "Accounts" && <AccountsSettings />}
+        {section === "Calendars" && <CalendarsSettings />}
         {section === "Appearance" && (
           <div className="flex gap-2">
             {THEMES.map((t) => (
@@ -68,7 +70,7 @@ export function SettingsPage() {
           </Button>
         )}
         {section === "About" && <About />}
-        {section !== "General" && section !== "Accounts" && section !== "Appearance" && section !== "Advanced" && section !== "About" && (
+        {section !== "General" && section !== "Accounts" && section !== "Calendars" && section !== "Appearance" && section !== "Advanced" && section !== "About" && (
           <p className="text-sm text-muted-foreground">Sezione non ancora implementata.</p>
         )}
       </main>

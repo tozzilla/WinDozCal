@@ -26,6 +26,9 @@ export function toNewEvent(e: Event): NewEvent {
     all_day: e.all_day,
     recurrence_rule: e.recurrence_rule,
     status: e.status,
+    color: e.color,
+    icon: e.icon,
+    pattern: e.pattern,
   };
 }
 
@@ -43,6 +46,9 @@ export function applyToSeries(series: Event, occurrenceStart: string, edited: Ne
     conference_url: edited.conference_url,
     status: edited.status,
     recurrence_rule: edited.recurrence_rule,
+    color: edited.color,
+    icon: edited.icon,
+    pattern: edited.pattern,
   };
   if (fromException) return base;
 

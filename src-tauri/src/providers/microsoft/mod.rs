@@ -273,6 +273,9 @@ impl MicrosoftProvider {
             occurrence_start: None,
             series_id: None,
             original_start: None,
+            color: None,
+            icon: None,
+            pattern: None,
         };
         let (from, to) = (parse_ts(window.0)?, parse_ts(window.1)?);
         let expected = recurrence::expand(&probe, from, to).unwrap_or_default();

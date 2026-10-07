@@ -5,7 +5,7 @@ import { createMemoryCalendarService } from "./memoryCalendarService";
 const event = (calendar_id: string): NewEvent => ({
   calendar_id, title: "Prova", description: null, location: null, conference_url: null,
   start: "2026-10-06T09:00:00+02:00", end: "2026-10-06T10:00:00+02:00", timezone: "Europe/Rome",
-  all_day: false, recurrence_rule: null, status: "busy",
+  all_day: false, recurrence_rule: null, status: "busy", color: null, icon: null, pattern: null,
 });
 
 describe("memoryCalendarService", () => {

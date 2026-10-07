@@ -108,6 +108,14 @@ export function useSetCalendarVisibility() {
   });
 }
 
+export function useSetCalendarColor() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ calendarId, color }: { calendarId: string; color: string }) => calendarService.setCalendarColor(calendarId, color),
+    onSuccess: () => invalidate(true),
+  });
+}
+
 export function useCreateEvent() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: (v: { event: NewEvent; attendees: NewAttendee[]; reminders: NewReminder[] }) =>

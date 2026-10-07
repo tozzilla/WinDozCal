@@ -94,6 +94,7 @@ pub fn run() {
             commands::create_calendar,
             commands::list_calendars,
             commands::set_calendar_visibility,
+            commands::set_calendar_color,
             commands::list_events,
             commands::get_event,
             commands::create_event,

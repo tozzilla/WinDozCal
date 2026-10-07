@@ -13,6 +13,7 @@ export const tauriCalendarService: CalendarService = {
   createCalendar: (accountId, name, color) => invoke<Calendar>("create_calendar", { accountId, name, color }),
   listCalendars: () => invoke<Calendar[]>("list_calendars"),
   setCalendarVisibility: (calendarId, visible) => invoke<void>("set_calendar_visibility", { calendarId, visible }),
+  setCalendarColor: (calendarId, color) => invoke<void>("set_calendar_color", { calendarId, color }),
   listEvents: (rangeStart, rangeEnd) => invoke<Event[]>("list_events", { rangeStart, rangeEnd }),
   getEvent: (eventId) => invoke<EventDetail>("get_event", { eventId }),
   createEvent: (event, attendees, reminders) => invoke<EventDetail>("create_event", { event, attendees, reminders }),

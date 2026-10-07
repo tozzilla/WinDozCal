@@ -21,7 +21,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-016 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-017 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/completed/fase-2.md](Tasks/completed/fase-2.md) | Fase 2 (PRD §43), completata con v0.4.0 (aperta la verifica Microsoft con account reale) |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
@@ -48,6 +48,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 014 | Sincronizzazione Microsoft Graph | Accettato |
 | 015 | Aggiornamenti automatici firmati | Accettato |
 | 016 | Redesign del frontend: Palinsesto | Accettato |
+| 017 | Aspetto degli eventi e colore dei calendari | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 

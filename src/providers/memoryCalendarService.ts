@@ -32,7 +32,7 @@ function seedEvents(): Event[] {
     const end = new Date(start.getTime() + minutes * 60_000);
     return {
       id, calendar_id, remote_id: null, title, description: null, location: null, conference_url: null, occurrence_start: null,
-      series_id: null, original_start: null,
+      series_id: null, original_start: null, color: null, icon: null, pattern: null,
       start: toIsoWithOffset(start), end: toIsoWithOffset(end), timezone: localTimezone(),
       all_day: false, recurrence_rule: null, status: "busy", etag: null, updated_at: null,
       sync_status: "synced", local_updated_at: null, remote_updated_at: null, ...extra,
@@ -45,16 +45,16 @@ function seedEvents(): Event[] {
   return [
     make("ev-1", "cal-riunioni", "Riunione commerciale", 0, 9, 30, 60),
     make("ev-2", "cal-personale", "Standup", 0, 11, 0, 30),
-    make("ev-3", "cal-cliente", "Call cliente · Teams", 1, 11, 0, 45, { conference_url: "https://teams.microsoft.com/l/meetup-join/demo" }),
+    make("ev-3", "cal-cliente", "Call cliente · Teams", 1, 11, 0, 45, { conference_url: "https://teams.microsoft.com/l/meetup-join/demo", icon: "video" }),
     make("ev-4", "cal-personale", "Standup", 2, 11, 0, 30),
     make("ev-5", "cal-riunioni", "Revisione progetto", 2, 13, 45, 90),
     make("ev-6", "cal-cliente", "Call Studio Rossi", 2, 14, 30, 90),
     make("ev-7", "cal-riunioni", "Sintesi con Marta", 2, 16, 15, 60),
     make("ev-8", "cal-commerciale", "Preparazione offerta", 1, 15, 0, 60, { status: "free" }),
-    make("ev-9", "cal-riunioni", "Revisione progetto", 3, 15, 30, 90),
-    make("ev-10", "cal-personale", "Dentista", 4, 9, 30, 60),
-    make("ev-11", "cal-personale", "Pranzo con Giulia", 4, 12, 30, 60, { status: "free" }),
-    make("ev-12", "cal-personale", "Mercato", 5, 10, 0, 120, { status: "free" }),
+    make("ev-9", "cal-riunioni", "Revisione progetto", 3, 15, 30, 90, { pattern: "lines", icon: "users" }),
+    make("ev-10", "cal-personale", "Dentista", 4, 9, 30, 60, { icon: "heart-pulse", color: "#E67C73" }),
+    make("ev-11", "cal-personale", "Pranzo con Giulia", 4, 12, 30, 60, { status: "free", icon: "utensils" }),
+    make("ev-12", "cal-personale", "Mercato", 5, 10, 0, 120, { icon: "shopping-cart", color: "#33B679", pattern: "dots" }),
     allDay("ev-13", "cal-personale", "Weekend fuori porta", 5, 2),
   ];
 }
@@ -129,6 +129,11 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async setCalendarVisibility(calendarId, visible) {
       const cal = calendars.find((c) => c.id === calendarId);
       if (cal) cal.visible = visible;
+    },
+    async setCalendarColor(calendarId, color) {
+      const cal = calendars.find((c) => c.id === calendarId);
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error("Colore non valido");
+      if (cal) cal.color = color;
     },
     async listEvents(rangeStart, rangeEnd) {
       const from = new Date(rangeStart).getTime();

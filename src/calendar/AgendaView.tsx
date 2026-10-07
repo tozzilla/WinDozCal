@@ -2,6 +2,7 @@ import { addDays, formatTime, isSameDay, startOfDay } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { cn } from "@/lib/utils";
 import { calendarColor } from "./colors";
+import { EventIcon } from "./appearance";
 import { broadcastMarks, MARK_LABEL } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 
@@ -50,7 +51,8 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
               <span className={cn("w-28 shrink-0 font-bold", e.all_day ? "text-[13px] text-muted-foreground" : "text-[17px]")}>
                 {e.all_day ? "Tutto il giorno" : formatTime(eventInterval(e).start)}
               </span>
-              <span aria-hidden className="h-5 w-1.5 shrink-0 rounded-[1px]" style={{ backgroundColor: calendarColor(calendars, e.calendar_id) }} />
+              <span aria-hidden className="h-5 w-1.5 shrink-0 rounded-[1px]" style={{ backgroundColor: e.color ?? calendarColor(calendars, e.calendar_id) }} />
+              <EventIcon name={e.icon} className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate text-[15px] font-semibold">{e.title}</span>
               {marks.get(eventKey(e)) && (
                 <span

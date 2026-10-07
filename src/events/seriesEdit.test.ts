@@ -9,7 +9,7 @@ const series: Event = {
   id: "s", calendar_id: "c", remote_id: null, title: "Standup", description: null, location: null, conference_url: null,
   start: at(10, 5, 10), end: at(10, 5, 11), timezone: "Europe/Rome", all_day: false, recurrence_rule: "RRULE:FREQ=WEEKLY",
   status: "busy", etag: null, updated_at: null, sync_status: "synced", local_updated_at: null, remote_updated_at: null,
-  occurrence_start: null, series_id: null, original_start: null,
+  occurrence_start: null, series_id: null, original_start: null, color: null, icon: null, pattern: null,
 };
 
 describe("applyToSeries", () => {

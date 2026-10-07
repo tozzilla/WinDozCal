@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { formatWeekday, getMonthGrid, getWeekDays, isSameDay } from "@/utils/date";
 import { eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
-import { eventSurface } from "./palinsesto";
+import { EventIcon, eventSurface } from "./appearance";
 import type { CalendarRendererProps } from "./types";
 
 const MAX_CHIPS = 3;
@@ -50,8 +50,9 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
                   type="button"
                   onClick={() => onSelectEvent(e)}
                   className="mb-0.5 flex w-full items-center truncate rounded-[3px] px-1.5 py-px text-left text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  style={{ ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free"), borderLeftWidth: 3 }}
+                  style={{ ...eventSurface(calendarColor(calendars, e.calendar_id), e.status === "free", e), borderLeftWidth: 3 }}
                 >
+                  <EventIcon name={e.icon} className="mr-1 size-3 shrink-0" />
                   <span className="truncate">{e.title}</span>
                 </button>
               ))}

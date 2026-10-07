@@ -55,6 +55,12 @@ export interface Event {
   series_id: string | null;
   /** Solo per le eccezioni: inizio originale dell'occorrenza sostituita. */
   original_start: string | null;
+  /** Aspetto del singolo evento (ADR 017): colore `#RRGGBB` al posto della tinta del calendario. */
+  color: string | null;
+  /** Icona (chiave di `EVENT_ICONS` in `calendar/appearance.tsx`). */
+  icon: string | null;
+  /** Pattern di riempimento: `dots`, `grid`, `lines`. */
+  pattern: string | null;
 }
 
 /** Payload di `create_event`: i campi che assegna il backend (id, etag, stato di sync, timestamp) sono esclusi. */

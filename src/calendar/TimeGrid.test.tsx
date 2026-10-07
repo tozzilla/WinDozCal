@@ -11,7 +11,7 @@ const ev = (id: string, h: number, rule: string | null = null): Event => ({
   id, calendar_id: "c", remote_id: null, title: id, description: null, location: null, conference_url: null,
   start: toIsoWithOffset(new Date(2026, 9, 6, h)), end: toIsoWithOffset(new Date(2026, 9, 6, h + 2)), timezone: "Europe/Rome",
   all_day: false, recurrence_rule: rule, status: "busy", etag: null, updated_at: null, sync_status: "synced",
-  local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null,
+  local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null, color: null, icon: null, pattern: null,
 });
 
 describe("TimeGrid", () => {
