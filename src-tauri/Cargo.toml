@@ -41,6 +41,11 @@ keyring = "4.2"
 # Espansione RRULE con supporto ai fusi IANA (PRD 10, 30).
 rrule = "0.14"
 chrono-tz = "0.10"
+# Client HTTP per Microsoft Graph (PRD 14): TLS nativo di Windows (schannel), niente toolchain C extra.
+# Versioni verificate su crates.io il 7 ott 2026.
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "form", "query", "charset", "http2", "system-proxy"] }
+# SHA-256 per il code_challenge PKCE (RFC 7636).
+sha2 = "0.11"
 
 # Plugin solo desktop (come nel template ufficiale Tauri).
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
@@ -58,3 +63,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+# Runtime per i test async del provider Graph (server simulato).
+tokio = { version = "1.53", features = ["rt", "macros"] }

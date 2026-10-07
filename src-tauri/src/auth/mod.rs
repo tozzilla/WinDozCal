@@ -1,4 +1,4 @@
-//! Autenticazione OAuth (PRD 13-14, 19). Solo firme e TODO.
+//! Autenticazione OAuth (PRD 13-14, 19). Microsoft implementato (ADR 014), Google ancora stub.
 //!
 //! - Google: OAuth 2.0 per app desktop, loopback redirect (RFC 8252) su 127.0.0.1 con porta
 //!   effimera, PKCE (`auth::google`).
@@ -9,6 +9,7 @@
 //! vengono mai scritti in SQLite, nei log o inviati a servizi WinDozCal.
 
 pub mod google;
+pub mod loopback;
 pub mod microsoft;
 
 use std::fmt;

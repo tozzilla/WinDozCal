@@ -75,6 +75,22 @@ export function useCreateLocalAccount() {
   });
 }
 
+/** Collegamento, riconnessione e scollegamento degli account: ricaricano tutto (account, calendari, eventi). */
+export function useConnectMicrosoft() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => calendarService.connectMicrosoft(), onSuccess: () => void qc.invalidateQueries() });
+}
+
+export function useReconnectAccount() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (accountId: string) => calendarService.reconnectAccount(accountId), onSuccess: () => void qc.invalidateQueries() });
+}
+
+export function useDisconnectAccount() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (accountId: string) => calendarService.disconnectAccount(accountId), onSuccess: () => void qc.invalidateQueries() });
+}
+
 export function useCreateCalendar() {
   const qc = useQueryClient();
   return useMutation({

@@ -13,6 +13,11 @@ pub fn now_iso() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
+/// Istante corrente in epoch UTC (secondi).
+pub fn now_ts() -> i64 {
+    Utc::now().timestamp()
+}
+
 /// Converte una stringa ISO 8601 in epoch UTC (secondi).
 ///
 /// Accetta RFC 3339 con offset oppure una data pura `YYYY-MM-DD` (eventi all-day), interpretata

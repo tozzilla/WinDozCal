@@ -6,6 +6,9 @@ import type { CalendarService } from "./calendarService";
 export const tauriCalendarService: CalendarService = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
   createLocalAccount: (name) => invoke<Account>("create_local_account", { name }),
+  connectMicrosoft: () => invoke<Account>("connect_microsoft"),
+  reconnectAccount: (accountId) => invoke<Account>("reconnect_account", { accountId }),
+  disconnectAccount: (accountId) => invoke<void>("disconnect_account", { accountId }),
   createCalendar: (accountId, name, color) => invoke<Calendar>("create_calendar", { accountId, name, color }),
   listCalendars: () => invoke<Calendar[]>("list_calendars"),
   setCalendarVisibility: (calendarId, visible) => invoke<void>("set_calendar_visibility", { calendarId, visible }),

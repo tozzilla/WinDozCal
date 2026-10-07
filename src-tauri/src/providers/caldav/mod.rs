@@ -9,7 +9,8 @@ use async_trait::async_trait;
 use super::{not_implemented, CalendarProvider};
 use crate::error::AppResult;
 use crate::models::{
-    Calendar, Event, ProviderKind, RemoteCalendar, RemoteEventRef, SyncResult, SyncState,
+    Calendar, Event, EventDetail, ProviderKind, RemoteCalendar, RemoteEventRef, SyncResult,
+    SyncState,
 };
 
 pub struct CalDavProvider {
@@ -52,7 +53,7 @@ impl CalendarProvider for CalDavProvider {
     async fn create_event(
         &self,
         _calendar: &Calendar,
-        _event: &Event,
+        _detail: &EventDetail,
     ) -> AppResult<RemoteEventRef> {
         not_implemented("caldav create_event")
     }
@@ -60,7 +61,7 @@ impl CalendarProvider for CalDavProvider {
     async fn update_event(
         &self,
         _calendar: &Calendar,
-        _event: &Event,
+        _detail: &EventDetail,
     ) -> AppResult<RemoteEventRef> {
         not_implemented("caldav update_event")
     }

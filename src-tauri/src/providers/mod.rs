@@ -16,7 +16,8 @@ use async_trait::async_trait;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    Account, Calendar, Event, ProviderKind, RemoteCalendar, RemoteEventRef, SyncResult, SyncState,
+    Account, Calendar, Event, EventDetail, ProviderKind, RemoteCalendar, RemoteEventRef,
+    SyncResult, SyncState,
 };
 
 /// Contratto di un provider calendario (CONTRACT.md, "CalendarProvider").
@@ -43,9 +44,20 @@ pub trait CalendarProvider: Send + Sync {
         cursor: Option<String>,
     ) -> AppResult<SyncResult>;
 
-    async fn create_event(&self, calendar: &Calendar, event: &Event) -> AppResult<RemoteEventRef>;
+    /// Crea l'evento sul server con partecipanti e promemoria. Per un'eccezione (ADR 013)
+    /// `detail.event.series_id` contiene il `remote_id` della serie (lo sostituisce il Sync
+    /// Engine) e il provider modifica l'istanza corrispondente invece di creare un evento.
+    async fn create_event(
+        &self,
+        calendar: &Calendar,
+        detail: &EventDetail,
+    ) -> AppResult<RemoteEventRef>;
 
-    async fn update_event(&self, calendar: &Calendar, event: &Event) -> AppResult<RemoteEventRef>;
+    async fn update_event(
+        &self,
+        calendar: &Calendar,
+        detail: &EventDetail,
+    ) -> AppResult<RemoteEventRef>;
 
     async fn delete_event(&self, calendar: &Calendar, event: &Event) -> AppResult<()>;
 

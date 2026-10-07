@@ -8,7 +8,8 @@ use async_trait::async_trait;
 use super::CalendarProvider;
 use crate::error::AppResult;
 use crate::models::{
-    Calendar, Event, ProviderKind, RemoteCalendar, RemoteEventRef, SyncResult, SyncState,
+    Calendar, Event, EventDetail, ProviderKind, RemoteCalendar, RemoteEventRef, SyncResult,
+    SyncState,
 };
 
 pub struct LocalProvider;
@@ -39,17 +40,25 @@ impl CalendarProvider for LocalProvider {
         Ok(SyncResult::default())
     }
 
-    async fn create_event(&self, _calendar: &Calendar, event: &Event) -> AppResult<RemoteEventRef> {
+    async fn create_event(
+        &self,
+        _calendar: &Calendar,
+        detail: &EventDetail,
+    ) -> AppResult<RemoteEventRef> {
         Ok(RemoteEventRef {
-            remote_id: event.id.clone(),
+            remote_id: detail.event.id.clone(),
             etag: None,
             remote_updated_at: None,
         })
     }
 
-    async fn update_event(&self, _calendar: &Calendar, event: &Event) -> AppResult<RemoteEventRef> {
+    async fn update_event(
+        &self,
+        _calendar: &Calendar,
+        detail: &EventDetail,
+    ) -> AppResult<RemoteEventRef> {
         Ok(RemoteEventRef {
-            remote_id: event.id.clone(),
+            remote_id: detail.event.id.clone(),
             etag: None,
             remote_updated_at: None,
         })

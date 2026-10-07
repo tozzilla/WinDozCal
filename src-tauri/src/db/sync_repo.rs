@@ -87,14 +87,14 @@ pub fn upsert_calendars(
 // Coda di push (pending_create / pending_update / pending_delete)
 // ---------------------------------------------------------------------------
 
-/// Eventi del calendario in attesa di push, dal piu' vecchio. Gli eventi in stato `error` non
-/// vengono ritentati automaticamente. TODO: politica di retry/backoff per gli eventi in errore.
+/// Eventi del calendario in attesa di push, dal piu' vecchio, con le serie prima delle loro
+/// eccezioni (ADR 013). Gli eventi in stato `error` non vengono ritentati automaticamente. TODO: politica di retry/backoff per gli eventi in errore.
 pub fn pending_events(conn: &Connection, calendar_id: &str) -> AppResult<Vec<Event>> {
     let sql = format!(
         "SELECT {EVENT_COLS} FROM events e
          WHERE e.calendar_id = ?1
            AND e.sync_status IN ('pending_create', 'pending_update', 'pending_delete')
-         ORDER BY e.local_updated_at"
+         ORDER BY e.series_id IS NOT NULL, e.local_updated_at"
     );
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map(params![calendar_id], event_from_row)?;
@@ -206,6 +206,33 @@ pub fn apply_sync_result(
     for remote in &result.upserts {
         apply_remote_event(&tx, &calendar.id, remote, &mut stats)?;
     }
+    for series_remote_id in &result.reconciled_series {
+        let kept: Vec<&str> = result
+            .upserts
+            .iter()
+            .filter(|r| r.series_remote_id.as_deref() == Some(series_remote_id.as_str()))
+            .map(|r| r.remote_id.as_str())
+            .collect();
+        let Some(series_id) = local_id_of(&tx, &calendar.id, series_remote_id)? else {
+            continue;
+        };
+        let mut stmt = tx.prepare(
+            "SELECT id, remote_id FROM events
+             WHERE series_id = ?1 AND sync_status = 'synced' AND remote_id IS NOT NULL",
+        )?;
+        let stale: Vec<String> = stmt
+            .query_map(params![series_id], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|(_, remote_id)| !kept.contains(&remote_id.as_str()))
+            .map(|(id, _)| id)
+            .collect();
+        for id in stale {
+            stats.deleted += tx.execute("DELETE FROM events WHERE id = ?1", params![id])?;
+        }
+    }
     for remote_id in &result.deletions {
         // Server wins: la cancellazione remota prevale anche su una modifica locale pending,
         // che pero' viene salvata in `event_conflicts` prima di perdere la riga.
@@ -237,12 +264,40 @@ pub fn apply_sync_result(
     Ok(stats)
 }
 
+/// Id locale dell'evento con quel `remote_id` nel calendario.
+fn local_id_of(conn: &Connection, calendar_id: &str, remote_id: &str) -> AppResult<Option<String>> {
+    Ok(conn
+        .query_row(
+            "SELECT id FROM events WHERE calendar_id = ?1 AND remote_id = ?2",
+            params![calendar_id, remote_id],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
 fn apply_remote_event(
     conn: &Connection,
     calendar_id: &str,
     remote: &RemoteEvent,
     stats: &mut ApplyStats,
 ) -> AppResult<()> {
+    // Eccezione (ADR 013): si lega alla serie locale; senza serie nota non si puo' collocare.
+    let exception_of = match (&remote.series_remote_id, &remote.original_start) {
+        (Some(series_remote_id), Some(original)) => {
+            match (
+                local_id_of(conn, calendar_id, series_remote_id)?,
+                parse_ts(original),
+            ) {
+                (Some(series_id), Ok(ts)) => Some((series_id, original.clone(), ts)),
+                _ => {
+                    tracing::warn!(calendar_id, remote_id = %remote.remote_id, "exception without known series skipped");
+                    stats.skipped_invalid += 1;
+                    return Ok(());
+                }
+            }
+        }
+        _ => None,
+    };
     let (start_ts, end_ts) = match (parse_ts(&remote.start), parse_ts(&remote.end)) {
         (Ok(s), Ok(e)) => (s, e),
         _ => {
@@ -273,9 +328,10 @@ fn apply_remote_event(
                 "INSERT INTO events (id, calendar_id, remote_id, title, description, location,
                                      \"start\", \"end\", start_ts, end_ts, timezone, all_day,
                                      recurrence_rule, status, etag, updated_at, sync_status,
-                                     local_updated_at, remote_updated_at, conference_url)
+                                     local_updated_at, remote_updated_at, conference_url,
+                                     series_id, original_start, original_start_ts)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-                         'synced', ?17, ?18, ?19)",
+                         'synced', ?17, ?18, ?19, ?20, ?21, ?22)",
                 params![
                     id,
                     calendar_id,
@@ -296,6 +352,9 @@ fn apply_remote_event(
                     now,
                     remote.remote_updated_at,
                     remote.conference_url,
+                    exception_of.as_ref().map(|e| e.0.as_str()),
+                    exception_of.as_ref().map(|e| e.1.as_str()),
+                    exception_of.as_ref().map(|e| e.2),
                 ],
             )?;
             stats.inserted += 1;

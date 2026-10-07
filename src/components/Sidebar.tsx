@@ -33,7 +33,19 @@ export function Sidebar() {
                   checked={allVisible}
                   onChange={(e) => own.forEach((c) => setVisibility.mutate({ calendarId: c.id, visible: e.target.checked }))}
                 />
-                {account.name}
+                <span className="truncate">{account.name}</span>
+                {(account.sync_status === "auth_required" || account.sync_status === "error") && (
+                  <button
+                    type="button"
+                    title={account.sync_status === "auth_required" ? "Accesso da rinnovare: apri Impostazioni > Accounts" : "Errore di sincronizzazione"}
+                    aria-label={account.sync_status === "auth_required" ? "Accesso da rinnovare" : "Errore di sincronizzazione"}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSettingsOpen(true);
+                    }}
+                    className="size-2 shrink-0 rounded-full bg-destructive"
+                  />
+                )}
                 {account.provider === "local" && (
                   <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label="Aggiungi calendario locale" onClick={() => setAddingTo(account.id)}>
                     <Plus />

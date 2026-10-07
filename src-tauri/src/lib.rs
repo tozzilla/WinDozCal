@@ -87,6 +87,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_accounts,
             commands::create_local_account,
+            commands::connect_microsoft,
+            commands::reconnect_account,
+            commands::disconnect_account,
             commands::create_calendar,
             commands::list_calendars,
             commands::set_calendar_visibility,

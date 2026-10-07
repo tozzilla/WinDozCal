@@ -21,7 +21,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-013 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-014 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/fase-2.md](Tasks/fase-2.md) | Piano a stage Fase 2 (PRD §43), attivo |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
@@ -43,6 +43,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 011 | Ricorrenze espanse nel backend | Accettato |
 | 012 | `Ctrl + N` apre Quick Add (conflitto §8/§25) | Accettato, da confermare |
 | 013 | Eccezioni delle ricorrenze e divisione delle serie | Accettato |
+| 014 | Sincronizzazione Microsoft Graph | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 

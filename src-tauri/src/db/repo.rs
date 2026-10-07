@@ -174,6 +174,64 @@ pub fn create_local_account(conn: &Connection, name: &str) -> AppResult<Account>
         .ok_or_else(|| AppError::Internal("local account not found after insert".into()))
 }
 
+/// Account esterno (Microsoft, Google, CalDAV) dopo il consenso: se esiste gia' un account dello
+/// stesso provider con la stessa email (confronto case-insensitive) lo restituisce aggiornando il
+/// nome, altrimenti lo crea. `credential_ref` e' il riferimento alla voce di Credential Manager,
+/// mai il segreto. I calendari arrivano dal primo sync.
+pub fn upsert_external_account(
+    conn: &Connection,
+    provider: ProviderKind,
+    name: &str,
+    email: &str,
+    credential_ref: &str,
+) -> AppResult<Account> {
+    if provider == ProviderKind::Local {
+        return Err(AppError::InvalidInput("use create_local_account".into()));
+    }
+    let existing = list_accounts(conn)?
+        .into_iter()
+        .find(|a| a.provider == provider && a.email.eq_ignore_ascii_case(email));
+    let account_id = match existing {
+        Some(account) => {
+            conn.execute(
+                "UPDATE accounts SET name = ?1, credential_ref = ?2, sync_status = 'idle' WHERE id = ?3",
+                params![name, credential_ref, account.id],
+            )?;
+            account.id
+        }
+        None => {
+            let id = uuid::Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO accounts (id, provider, name, email, sync_status, credential_ref)
+                 VALUES (?1, ?2, ?3, ?4, 'idle', ?5)",
+                params![id, provider, name, email, credential_ref],
+            )?;
+            id
+        }
+    };
+    get_account(conn, &account_id)
+}
+
+pub fn get_account(conn: &Connection, account_id: &str) -> AppResult<Account> {
+    list_accounts(conn)?
+        .into_iter()
+        .find(|a| a.id == account_id)
+        .ok_or_else(|| AppError::NotFound(format!("account {account_id}")))
+}
+
+/// Rimuove un account esterno con calendari, eventi e cursori (ON DELETE CASCADE). L'account
+/// locale non si rimuove da qui: conterrebbe dati che esistono solo su questo computer.
+pub fn delete_account(conn: &Connection, account_id: &str) -> AppResult<()> {
+    let account = get_account(conn, account_id)?;
+    if account.provider == ProviderKind::Local {
+        return Err(AppError::InvalidInput(
+            "the local account cannot be disconnected".into(),
+        ));
+    }
+    conn.execute("DELETE FROM accounts WHERE id = ?1", params![account_id])?;
+    Ok(())
+}
+
 fn insert_calendar(
     conn: &Connection,
     account_id: &str,

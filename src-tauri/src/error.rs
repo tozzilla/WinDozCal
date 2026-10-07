@@ -33,6 +33,10 @@ pub enum AppError {
     #[error("credential store error: {0}")]
     Credentials(String),
 
+    /// Configurazione della build mancante (es. client ID OAuth non iniettato).
+    #[error("not configured: {0}")]
+    Configuration(String),
+
     /// Errore generico restituito da un provider remoto (mai includere token nel messaggio).
     #[error("provider error: {0}")]
     Provider(String),
@@ -68,6 +72,7 @@ impl AppError {
             AppError::InvalidInput(_) => "invalid_input",
             AppError::NotImplemented(_) => "not_implemented",
             AppError::Credentials(_) => "credentials",
+            AppError::Configuration(_) => "configuration",
             AppError::Provider(_) => "provider",
             AppError::AuthRequired => "auth_required",
             AppError::Network(_) => "network",

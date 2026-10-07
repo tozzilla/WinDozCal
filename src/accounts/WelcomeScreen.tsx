@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useCreateLocalAccount } from "@/providers/queries";
+import { useConnectMicrosoft, useCreateLocalAccount } from "@/providers/queries";
+import { errorText } from "@/settings/AccountsSettings";
 import { useUiStore } from "@/stores/uiStore";
 
 /**
- * Schermata di primo avvio (PRD §33). I pulsanti non sono ancora collegati:
- * l'autenticazione vivrà nel backend (src-tauri/src/auth), non nel frontend.
+ * Schermata di primo avvio (PRD §33). Microsoft e modalità locale funzionano; l'autenticazione vive nel
+ * backend (src-tauri/src/auth), il frontend chiede solo di avviarla. Google e CalDAV arrivano con i loro stage.
  */
 export function WelcomeScreen() {
   const createLocal = useCreateLocalAccount();
+  const connect = useConnectMicrosoft();
+  const [error, setError] = useState<string | null>(null);
   const { setView, setCurrentDate } = useUiStore();
 
   const startLocal = async () => {
@@ -30,8 +34,16 @@ export function WelcomeScreen() {
         <Button size="lg" disabled>
           Continue with Google
         </Button>
-        <Button size="lg" variant="outline" disabled>
-          Continue with Microsoft
+        <Button
+          size="lg"
+          variant="outline"
+          disabled={connect.isPending}
+          onClick={() => {
+            setError(null);
+            connect.mutateAsync().catch((err) => setError(errorText(err)));
+          }}
+        >
+          {connect.isPending ? "Complete sign-in in your browser…" : "Continue with Microsoft"}
         </Button>
         <Button size="lg" variant="outline" disabled>
           Add CalDAV account
@@ -40,6 +52,11 @@ export function WelcomeScreen() {
           Use without an account
         </Button>
       </div>
+      {error && (
+        <p role="alert" className="max-w-sm text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <p className="max-w-xs text-xs text-muted-foreground">
         Your calendar data is stored locally and synchronized directly with your provider. Without an account, it never leaves this computer.
       </p>

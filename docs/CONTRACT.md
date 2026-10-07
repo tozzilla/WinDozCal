@@ -79,6 +79,19 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 - nessuna credenziale, nessun accesso di rete;
 - si possono aggiungere account esterni in seguito, e un account locale può convivere con loro.
 
+## Account esterni (Fase 2, stage 3, ADR 014)
+
+| Comando | Argomenti | Ritorno |
+|---|---|---|
+| `connect_microsoft` | — | `Account` (provider=microsoft): consenso nel browser di sistema (PKCE, redirect loopback), profilo da Graph; se esiste già un account Microsoft con la stessa email ne rinnova le credenziali. Primo sync in background |
+| `reconnect_account` | `accountId` | `Account`: nuovo consenso per un account `auth_required`; errore `invalid_input` se si accede con un'altra email |
+| `disconnect_account` | `accountId` | `void`: cancella credenziali e dati locali dell'account (calendari, eventi, cursori); nulla sul server. Errore `invalid_input` per l'account `local` |
+
+- Errore `configuration` (`{ code: "configuration" }`) se la build non ha il client ID Microsoft (`WINDOZCAL_MS_CLIENT_ID`, iniettato in build o letto a runtime): la UI mostra il messaggio
+- `Account.sync_status`: `idle | syncing | error | auth_required`; la UI segnala `auth_required` ed `error` nella sidebar e offre "Riconnetti" in Impostazioni > Accounts
+- evento backend -> frontend `sync-finished` (nessun payload) a fine di ogni ciclo del Sync Engine: il frontend rilegge da SQLite (invalida le query)
+- calendari remoti: nome e `read_only` vengono dal server, colore e visibilità scelti dall'utente non vengono sovrascritti
+
 ## Ricorrenze (stage 5, 7 ott 2026)
 
 - `recurrence_rule` contiene righe RFC 5545 separate da `

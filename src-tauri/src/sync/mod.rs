@@ -155,9 +155,30 @@ async fn push_pending(
     let pending = db.with(|conn| sync_repo::pending_events(conn, &calendar.id))?;
 
     for event in pending {
+        // Create/update inviano anche partecipanti e promemoria. Un'eccezione (ADR 013) parte
+        // solo quando la sua serie ha gia' un remote_id, che il provider riceve in `series_id`.
+        let detail = match event.sync_status {
+            EventSyncStatus::PendingCreate | EventSyncStatus::PendingUpdate => {
+                let mut detail =
+                    db.with(|conn| crate::db::repo::get_event_detail(conn, &event.id))?;
+                if let Some(series_id) = &event.series_id {
+                    let series_remote = db
+                        .with(|conn| crate::db::repo::get_event(conn, series_id))?
+                        .remote_id;
+                    match series_remote {
+                        Some(remote) => detail.event.series_id = Some(remote),
+                        None => continue,
+                    }
+                }
+                Some(detail)
+            }
+            _ => None,
+        };
         let result: AppResult<()> = match event.sync_status {
             EventSyncStatus::PendingCreate => {
-                let remote = provider.create_event(calendar, &event).await;
+                let remote = provider
+                    .create_event(calendar, detail.as_ref().expect("detail loaded"))
+                    .await;
                 match remote {
                     Ok(remote) => db.with(|conn| {
                         sync_repo::mark_pushed(
@@ -171,7 +192,9 @@ async fn push_pending(
                 }
             }
             EventSyncStatus::PendingUpdate => {
-                let remote = provider.update_event(calendar, &event).await;
+                let remote = provider
+                    .update_event(calendar, detail.as_ref().expect("detail loaded"))
+                    .await;
                 match remote {
                     Ok(remote) => db.with(|conn| {
                         sync_repo::mark_pushed(

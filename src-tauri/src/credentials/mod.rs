@@ -32,30 +32,90 @@ pub fn credential_ref(account_id: &str, kind: SecretKind) -> String {
     format!("{account_id}/{}", kind.as_str())
 }
 
-// TODO(verify-compile): API di keyring 4.x con feature `v1` (Entry::new / set_password /
-// get_password / delete_credential, keyring::Error::NoEntry), verificata sul sorgente 4.2.0.
+// API di keyring 4.x con feature `v1` (Entry::new / set_password / get_password /
+// delete_credential, keyring::Error::NoEntry), verificata sul sorgente 4.2.0.
+fn entry_named(name: &str) -> AppResult<keyring::Entry> {
+    keyring::Entry::new(SERVICE, name).map_err(map_err)
+}
+
 fn entry(account_id: &str, kind: SecretKind) -> AppResult<keyring::Entry> {
-    keyring::Entry::new(SERVICE, &credential_ref(account_id, kind)).map_err(map_err)
+    entry_named(&credential_ref(account_id, kind))
+}
+
+/// Una voce di Credential Manager contiene al massimo 2560 byte: i segreti piu' lunghi (i refresh
+/// token di Microsoft possono avvicinarsi al limite) si dividono in parti `<ref>#<n>` e la voce
+/// principale contiene solo il marcatore `chunks:<n>`.
+const CHUNK_CHARS: usize = 1000;
+const CHUNK_MARKER: &str = "chunks:";
+
+fn chunk_name(account_id: &str, kind: SecretKind, index: usize) -> String {
+    format!("{}#{index}", credential_ref(account_id, kind))
 }
 
 pub fn store_secret(account_id: &str, kind: SecretKind, secret: &str) -> AppResult<()> {
+    delete_secret(account_id, kind)?;
+    let chars: Vec<char> = secret.chars().collect();
+    if chars.len() <= CHUNK_CHARS {
+        return entry(account_id, kind)?
+            .set_password(secret)
+            .map_err(map_err);
+    }
+    let parts: Vec<String> = chars
+        .chunks(CHUNK_CHARS)
+        .map(|c| c.iter().collect())
+        .collect();
+    for (index, part) in parts.iter().enumerate() {
+        entry_named(&chunk_name(account_id, kind, index))?
+            .set_password(part)
+            .map_err(map_err)?;
+    }
     entry(account_id, kind)?
-        .set_password(secret)
+        .set_password(&format!("{CHUNK_MARKER}{}", parts.len()))
         .map_err(map_err)
 }
 
 /// `Ok(None)` se la voce non esiste.
 pub fn load_secret(account_id: &str, kind: SecretKind) -> AppResult<Option<String>> {
-    match entry(account_id, kind)?.get_password() {
-        Ok(secret) => Ok(Some(secret)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(err) => Err(map_err(err)),
+    let head = match entry(account_id, kind)?.get_password() {
+        Ok(secret) => secret,
+        Err(keyring::Error::NoEntry) => return Ok(None),
+        Err(err) => return Err(map_err(err)),
+    };
+    let Some(count) = head
+        .strip_prefix(CHUNK_MARKER)
+        .and_then(|n| n.parse::<usize>().ok())
+    else {
+        return Ok(Some(head));
+    };
+    let mut secret = String::new();
+    for index in 0..count {
+        match entry_named(&chunk_name(account_id, kind, index))?.get_password() {
+            Ok(part) => secret.push_str(&part),
+            Err(keyring::Error::NoEntry) => return Ok(None),
+            Err(err) => return Err(map_err(err)),
+        }
     }
+    Ok(Some(secret))
 }
 
-/// Idempotente: una voce assente non e' un errore.
+/// Idempotente: una voce assente non e' un errore. Rimuove anche le eventuali parti.
 pub fn delete_secret(account_id: &str, kind: SecretKind) -> AppResult<()> {
-    match entry(account_id, kind)?.delete_credential() {
+    let head = entry(account_id, kind)?;
+    let count = match head.get_password() {
+        Ok(value) => value
+            .strip_prefix(CHUNK_MARKER)
+            .and_then(|n| n.parse::<usize>().ok())
+            .unwrap_or(0),
+        Err(keyring::Error::NoEntry) => return Ok(()),
+        Err(err) => return Err(map_err(err)),
+    };
+    for index in 0..count {
+        match entry_named(&chunk_name(account_id, kind, index))?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(err) => return Err(map_err(err)),
+        }
+    }
+    match head.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(err) => Err(map_err(err)),
     }

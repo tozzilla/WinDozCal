@@ -73,6 +73,8 @@ fn remote_event(remote_id: &str, title: &str, etag: &str) -> RemoteEvent {
         remote_updated_at: Some("2026-10-07T08:00:00.000Z".into()),
         attendees: vec![],
         reminders: vec![],
+        series_remote_id: None,
+        original_start: None,
     }
 }
 
@@ -298,6 +300,7 @@ fn apply_sync_result_upserts_and_deletes() {
         ],
         deletions: vec![],
         next_cursor: Some("cur-1".into()),
+        reconciled_series: vec![],
     };
     let stats = apply_sync_result(&mut conn, &cal, &result).unwrap();
     assert_eq!(stats.inserted, 2);
@@ -320,6 +323,7 @@ fn apply_sync_result_upserts_and_deletes() {
         upserts: vec![remote_event("r-1", "Remoto v2", "e2")],
         deletions: vec!["r-2".into()],
         next_cursor: Some("cur-2".into()),
+        reconciled_series: vec![],
     };
     let stats = apply_sync_result(&mut conn, &cal, &result).unwrap();
     assert_eq!((stats.overwritten, stats.deleted), (1, 1));

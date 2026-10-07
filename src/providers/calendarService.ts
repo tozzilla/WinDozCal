@@ -11,6 +11,12 @@ export interface CalendarService {
   listAccounts(): Promise<Account[]>;
   /** Idempotente: se esiste già un account locale lo restituisce. Crea anche il calendario "Personale". */
   createLocalAccount(name: string): Promise<Account>;
+  /** Collega un account Microsoft: consenso nel browser di sistema, poi primo sync in background (ADR 014). */
+  connectMicrosoft(): Promise<Account>;
+  /** Rinnova il consenso di un account esterno (stato `auth_required`); deve essere la stessa identità. */
+  reconnectAccount(accountId: string): Promise<Account>;
+  /** Scollega un account esterno e cancella i suoi dati locali (nulla viene cancellato sul server). */
+  disconnectAccount(accountId: string): Promise<void>;
   /** Ammesso solo su account `local`. */
   createCalendar(accountId: string, name: string, color: string): Promise<Calendar>;
   listCalendars(): Promise<Calendar[]>;

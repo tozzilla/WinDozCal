@@ -10,12 +10,15 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
 
+use crate::auth::microsoft as oauth_ms;
+use crate::credentials::{self, SecretKind};
 use crate::db::repo;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     Account, Calendar, Event, EventDetail, EventSyncStatus, NewAttendee, NewEvent, NewReminder,
-    Settings,
+    ProviderKind, Settings,
 };
+use crate::providers::microsoft::MicrosoftProvider;
 use crate::state::AppState;
 use crate::tray;
 
@@ -30,6 +33,108 @@ pub async fn create_local_account(state: State<'_, AppState>, name: String) -> A
     state
         .db
         .with(|conn| repo::create_local_account(conn, &name))
+}
+
+/// Collega un account Microsoft (PRD 14, ADR 014): consenso nel browser di sistema con PKCE,
+/// profilo da Graph, account in SQLite e refresh token in Credential Manager, poi primo sync in
+/// background. Se l'account (stessa email) esiste gia' ne rinnova solo le credenziali.
+#[tauri::command]
+pub async fn connect_microsoft(app: AppHandle, state: State<'_, AppState>) -> AppResult<Account> {
+    let tokens = microsoft_consent(&app).await?;
+    let profile = MicrosoftProvider::profile(&tokens.access_token).await?;
+    let account = state.db.with(|conn| {
+        repo::upsert_external_account(
+            conn,
+            ProviderKind::Microsoft,
+            &profile.name,
+            &profile.email,
+            "",
+        )
+    })?;
+    oauth_ms::remember(&account.id, &tokens)?;
+    let credential_ref = credentials::credential_ref(&account.id, SecretKind::RefreshToken);
+    let account = state.db.with(|conn| {
+        repo::upsert_external_account(
+            conn,
+            ProviderKind::Microsoft,
+            &profile.name,
+            &profile.email,
+            &credential_ref,
+        )
+    })?;
+    tracing::info!(account_id = %account.id, "microsoft account connected");
+    state.sync.request(Some(account.id.clone()));
+    Ok(account)
+}
+
+async fn microsoft_consent(app: &AppHandle) -> AppResult<crate::auth::OAuthTokens> {
+    let config = oauth_ms::MicrosoftOAuthConfig::from_env()?;
+    oauth_ms::authorize_pkce(&config, |url| {
+        app.opener()
+            .open_url(url, None::<&str>)
+            .map_err(|err| AppError::Internal(format!("cannot open browser: {err}")))
+    })
+    .await
+}
+
+/// Rinnova il consenso di un account esterno (stato `auth_required`). Deve essere la stessa
+/// identita': un'altra email e' un errore, non una sostituzione silenziosa.
+#[tauri::command]
+pub async fn reconnect_account(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    account_id: String,
+) -> AppResult<Account> {
+    let account = state.db.with(|conn| repo::get_account(conn, &account_id))?;
+    if account.provider != ProviderKind::Microsoft {
+        return Err(AppError::NotImplemented("reconnect for this provider"));
+    }
+    let tokens = microsoft_consent(&app).await?;
+    let profile = MicrosoftProvider::profile(&tokens.access_token).await?;
+    if !profile.email.eq_ignore_ascii_case(&account.email) {
+        return Err(AppError::InvalidInput(format!(
+            "signed in as a different account ({})",
+            profile.email
+        )));
+    }
+    oauth_ms::remember(&account.id, &tokens)?;
+    state.db.with(|conn| {
+        crate::db::sync_repo::set_account_status(
+            conn,
+            &account.id,
+            crate::models::AccountSyncStatus::Idle,
+            None,
+        )
+    })?;
+    state.sync.request(Some(account.id.clone()));
+    state.db.with(|conn| repo::get_account(conn, &account.id))
+}
+
+/// Scollega un account esterno: cancella le credenziali e tutti i suoi dati locali (calendari,
+/// eventi, cursori). Nulla viene cancellato sul server.
+#[tauri::command]
+pub async fn disconnect_account(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    account_id: String,
+) -> AppResult<()> {
+    let account = state.db.with(|conn| repo::get_account(conn, &account_id))?;
+    if account.provider == ProviderKind::Local {
+        return Err(AppError::InvalidInput(
+            "the local account cannot be disconnected".into(),
+        ));
+    }
+    if let Err(err) = crate::providers::provider_for(&account).disconnect().await {
+        tracing::warn!(account_id = %account.id, error = %err, "cannot clear credentials");
+    }
+    credentials::delete_secret(&account.id, SecretKind::AccessToken)?;
+    credentials::delete_secret(&account.id, SecretKind::RefreshToken)?;
+    state
+        .db
+        .with(|conn| repo::delete_account(conn, &account.id))?;
+    tracing::info!(account_id = %account.id, "account disconnected");
+    tray::refresh_next_event(&app);
+    Ok(())
 }
 
 /// Crea un calendario su un account `local`; errore per gli account esterni.

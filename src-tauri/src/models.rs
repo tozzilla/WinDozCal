@@ -265,15 +265,23 @@ pub struct RemoteEvent {
     pub remote_updated_at: Option<String>,
     pub attendees: Vec<RemoteAttendee>,
     pub reminders: Vec<RemoteReminder>,
+    /// Solo per le eccezioni (ADR 013): `remote_id` della serie a cui appartengono. La serie deve
+    /// precedere le sue eccezioni negli `upserts`.
+    pub series_remote_id: Option<String>,
+    /// Solo per le eccezioni: inizio originale dell'occorrenza sostituita.
+    pub original_start: Option<String>,
 }
 
 /// Esito di `CalendarProvider::sync_events`.
 #[derive(Debug, Clone, Default)]
 pub struct SyncResult {
     pub upserts: Vec<RemoteEvent>,
-    /// `remote_id` degli eventi cancellati sul server.
+    /// `remote_id` degli eventi cancellati sul server (gli id sconosciuti sono ignorati).
     pub deletions: Vec<String>,
     pub next_cursor: Option<String>,
+    /// `remote_id` delle serie riallineate per intero in questo round: le loro eccezioni locali
+    /// `synced` che non compaiono negli `upserts` sono tornate occorrenze normali e si rimuovono.
+    pub reconciled_series: Vec<String>,
 }
 
 /// Identita' remota assegnata/aggiornata dal provider dopo create/update.

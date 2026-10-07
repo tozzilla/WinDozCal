@@ -5,9 +5,10 @@ import { cn } from "@/lib/utils";
 import { openLogFolder } from "@/providers/queries";
 import { useUiStore } from "@/stores/uiStore";
 import type { ThemeMode } from "@/types";
+import { AccountsSettings } from "./AccountsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-// Sezioni PRD §34. Funzionanti: General (tray e avvio), Appearance (tema), link ai log in Advanced.
+// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Appearance (tema), link ai log in Advanced.
 const SECTIONS = ["General", "Accounts", "Calendars", "Notifications", "Appearance", "Advanced", "About"] as const;
 type Section = (typeof SECTIONS)[number];
 
@@ -41,6 +42,7 @@ export function SettingsPage() {
       <main className="flex-1 p-6">
         <h2 className="mb-4 text-xl font-semibold">{section}</h2>
         {section === "General" && <GeneralSettings />}
+        {section === "Accounts" && <AccountsSettings />}
         {section === "Appearance" && (
           <div className="flex gap-2">
             {THEMES.map((t) => (
@@ -55,7 +57,7 @@ export function SettingsPage() {
             Apri cartella dei log
           </Button>
         )}
-        {section !== "General" && section !== "Appearance" && section !== "Advanced" && (
+        {section !== "General" && section !== "Accounts" && section !== "Appearance" && section !== "Advanced" && (
           <p className="text-sm text-muted-foreground">Sezione non ancora implementata.</p>
         )}
       </main>

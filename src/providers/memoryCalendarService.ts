@@ -102,6 +102,20 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       }
       return structuredClone(account);
     },
+    async connectMicrosoft() {
+      throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
+    },
+    async reconnectAccount() {
+      throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
+    },
+    async disconnectAccount(accountId) {
+      const account = accounts.find((a) => a.id === accountId);
+      if (!account || account.provider === "local") throw new Error("L'account locale non si può scollegare.");
+      const own = new Set(calendars.filter((c) => c.account_id === accountId).map((c) => c.id));
+      events = events.filter((e) => !own.has(e.calendar_id));
+      calendars.splice(0, calendars.length, ...calendars.filter((c) => c.account_id !== accountId));
+      accounts.splice(accounts.indexOf(account), 1);
+    },
     async createCalendar(accountId, name, color) {
       const account = accounts.find((a) => a.id === accountId);
       if (account?.provider !== "local") throw new Error("I calendari si possono creare solo su account locali");
