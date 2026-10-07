@@ -4,7 +4,7 @@ Richiesta del proprietario, 7 ott 2026: "ipotizziamo qualcosa di graficamente ac
 
 Fonti: `PRODUCT.md` (verità di prodotto), PRD §5-§9, §31, §34; skill impeccable, modalità Operate.
 
-Stato: costruito e documentato il 7 ott 2026; revisione finale con disposizione `fix` (vedi Aperto). Non rilasciato.
+Stato: costruito, documentato e rilasciato con la v0.5.0 il 7 ott 2026; revisione finale con disposizione `fix` (vedi Aperto).
 
 ## Stage 1: direzione
 
@@ -32,4 +32,4 @@ Finish reviewer, DESIGN.md e `.impeccable/design.json`, release successiva (solo
 
 - Revisione finale `fix` (`.impeccable/review/finish-review.md`): fasi `hero`..`responsive` dello stato della build non chiudibili con lo strumento attuale (SPA); a 900px parole lunghe a capo a metà negli eventi stretti.
 - La chiave OpenAI configurata viene rifiutata: i comp sono pagine HTML catturate, non immagini generate.
-- Non rilasciato: serve una release 0.5.0 (con autorizzazione) per portarlo agli utenti tramite l'auto-update.
+- 7 ott 2026 (3): release v0.5.0 autorizzata dal proprietario. Versione 0.5.0 nei quattro file; 75 test Rust, 44 frontend, clippy pulito. Build firmata (NSIS 4,25 MiB, MSI 5,85 MiB). Backup del DB in `%USERPROFILE%\WinDozCal-backup-20261007-pre050`, installazione silenziosa sopra la 0.4.0 sul PC del proprietario: 0.5.0 in esecuzione, schema v8, dati e avvio automatico intatti. Pubblicata `v0.5.0` (non prerelease) con installer, firme, `latest.json`, `SHA256SUMS.txt`.
