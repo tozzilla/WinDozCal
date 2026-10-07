@@ -1,7 +1,7 @@
 {
   "name": "windozcal",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "The Windows calendar that was missing. Vibecoded by Andrea Tozzi.",
   "author": "Andrea Tozzi",
   "license": "MIT OR Apache-2.0",

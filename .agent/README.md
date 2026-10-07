@@ -4,7 +4,7 @@ Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare do
 
 ## Stato attuale (7 ott 2026)
 
-Release v0.5.0 (redesign Palinsesto). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Prossimo: redesign del frontend (skill impeccable, PRODUCT.md).
+Release v0.5.1 (redesign Palinsesto, creazione col mouse). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Prossimo: redesign del frontend (skill impeccable, PRODUCT.md).
 
 ## Gerarchia documenti
 

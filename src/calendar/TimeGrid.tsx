@@ -4,6 +4,7 @@ import type { Event } from "@/types";
 import { addDays, formatTime, formatWeekday, isSameDay, startOfDay, toIsoWithOffset } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
+import { clickRange, slotRange } from "./drag";
 import { layoutOverlaps } from "./layout";
 import { broadcastMarks, eventSurface, MARK_LABEL, type BroadcastMark } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
@@ -15,7 +16,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MIN_EVENT_HEIGHT = 20;
 /** Sotto questa altezza orario e titolo stanno su una riga sola. */
 const ONE_LINE_HEIGHT = 44;
-/** All'apertura la griglia parte da qui. */
+/** Senza oggi nel periodo mostrato la griglia parte da qui. */
 const FIRST_HOUR = 8;
 
 interface TimeGridProps extends CalendarRendererProps {
@@ -72,9 +73,24 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
   const { drag, begin } = useEventDrag({ days, hourHeight: HOUR_HEIGHT, columnsRef, calendars, onSelectEvent, onChangeEventTime, onNotice });
   const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
 
+  // Se il periodo mostrato contiene oggi, la griglia si apre con la banda IN ONDA a un terzo dell'altezza;
+  // altrimenti dalle 08:00. Si riposiziona solo per azioni dell'utente (apertura, cambio di vista o periodo,
+  // finestra di nuovo visibile dal tray), mai mentre si lavora.
+  const firstDay = days[0].getTime();
   useEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = FIRST_HOUR * HOUR_HEIGHT;
-  }, [days.length]);
+    const position = () => {
+      const el = scroller.current;
+      if (!el) return;
+      const current = new Date();
+      el.scrollTop = days.some((d) => isSameDay(d, current))
+        ? ((current.getTime() - startOfDay(current).getTime()) / 3_600_000) * HOUR_HEIGHT - el.clientHeight / 3
+        : FIRST_HOUR * HOUR_HEIGHT;
+    };
+    position();
+    const onVisible = () => document.visibilityState === "visible" && position();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [days.length, firstDay]);
 
   // Durante il drag l'evento appare già nella nuova posizione e il layout delle sovrapposizioni si ricalcola.
   const shown: Event[] = drag
@@ -82,11 +98,43 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
     : events;
   const marks = broadcastMarks(shown, calendars, now);
 
-  const slotFromClick = (day: Date, e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const hour = Math.max(0, Math.min(23, Math.floor((e.clientY - rect.top) / HOUR_HEIGHT)));
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour);
-    onSelectSlot(start, new Date(start.getTime() + 60 * 60_000));
+  // Clic su una fascia vuota: evento di un'ora; trascinamento: evento della durata disegnata (anteprima a 15 minuti).
+  const [creating, setCreating] = useState<{ day: number; start: Date; end: Date } | null>(null);
+  const beginCreate = (dayIndex: number, down: React.PointerEvent<HTMLDivElement>) => {
+    if (down.button !== 0 || isInteractive(down.target)) return;
+    down.preventDefault();
+    const day = days[dayIndex];
+    const top = down.currentTarget.getBoundingClientRect().top;
+    const minutesAt = (clientY: number) => ((clientY - top) / HOUR_HEIGHT) * 60;
+    const from = minutesAt(down.clientY);
+    let moved = false;
+    let range = clickRange(day, from);
+
+    const onMove = (m: PointerEvent) => {
+      if (!moved && Math.abs(m.clientY - down.clientY) < 4) return;
+      moved = true;
+      range = slotRange(day, from, minutesAt(m.clientY));
+      setCreating({ day: dayIndex, ...range });
+    };
+    const finish = (commit: boolean) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("keydown", onKey, true);
+      setCreating(null);
+      if (commit) onSelectSlot(range.start, range.end);
+    };
+    const onUp = () => finish(true);
+    const onCancel = () => finish(false);
+    const onKey = (k: KeyboardEvent) => {
+      if (k.key !== "Escape") return;
+      k.stopPropagation();
+      finish(false);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("keydown", onKey, true);
   };
 
   const allDay = allDayRows(shown, days);
@@ -161,14 +209,24 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                 <div
                   key={day.toISOString()}
                   className={cn("tg-col relative border-l border-grid-line", isSameDay(day, now) && "bg-today")}
-                  onDoubleClick={(e) => {
-                    if (!isInteractive(e.target)) slotFromClick(day, e);
-                  }}
+                  onPointerDown={(down) => beginCreate(days.indexOf(day), down)}
                   style={{
                     backgroundImage: "linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px)",
                     backgroundSize: `100% ${HOUR_HEIGHT}px`,
                   }}
                 >
+                  {creating?.day === days.indexOf(day) && (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-1 z-20 rounded-[4px] border-2 border-dashed border-primary/60 bg-primary/8 px-2 pt-1 text-[13px] font-bold"
+                      style={{
+                        top: ((creating.start.getTime() - dayStart.getTime()) / 3_600_000) * HOUR_HEIGHT + 1,
+                        height: ((creating.end.getTime() - creating.start.getTime()) / 3_600_000) * HOUR_HEIGHT - 3,
+                      }}
+                    >
+                      {formatTime(creating.start)}–{formatTime(creating.end)}
+                    </div>
+                  )}
                   {timed.map((e) => {
                     const key = eventKey(e);
                     const { start, end } = eventInterval(e);
