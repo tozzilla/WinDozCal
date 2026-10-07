@@ -4,7 +4,7 @@ Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare do
 
 ## Stato attuale (7 ott 2026)
 
-Release v0.3.0. Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 avviata su richiesta del proprietario. Piano attivo: [Tasks/fase-2.md](Tasks/fase-2.md).
+Release v0.4.0. Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Prossimo: redesign del frontend (skill impeccable, PRODUCT.md).
 
 ## Gerarchia documenti
 
@@ -23,7 +23,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
 | [System/decisions/](System/decisions/) | ADR 001-015 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
-| [Tasks/fase-2.md](Tasks/fase-2.md) | Piano a stage Fase 2 (PRD §43), attivo |
+| [Tasks/completed/fase-2.md](Tasks/completed/fase-2.md) | Fase 2 (PRD §43), completata con v0.4.0 (aperta la verifica Microsoft con account reale) |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
 
 ## ADR
