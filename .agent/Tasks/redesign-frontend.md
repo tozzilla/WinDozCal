@@ -4,7 +4,7 @@ Richiesta del proprietario, 7 ott 2026: "ipotizziamo qualcosa di graficamente ac
 
 Fonti: `PRODUCT.md` (verità di prodotto), PRD §5-§9, §31, §34; skill impeccable, modalità Operate.
 
-Stato: costruito, documentato e rilasciato con la v0.5.0 il 7 ott 2026; revisione finale con disposizione `fix` (vedi Aperto).
+Stato: rilasciato (v0.5.0-v0.5.2, ultima 0.5.2 del 7 ott 2026); revisione finale `fix` con due punti aperti (vedi Aperto). Nessun lavoro in corso.
 
 ## Stage 1: direzione
 
@@ -36,3 +36,12 @@ Finish reviewer, DESIGN.md e `.impeccable/design.json`, release successiva (solo
 - 7 ott 2026 (4): segnalazioni del proprietario dopo la 0.5.0. Implementati con suo consenso: clic su una fascia vuota crea un evento di un'ora (allinea PRD §7, "click su una fascia oraria", prima solo doppio clic), trascinamento sulle fasce vuote crea la durata disegnata (anteprima tratteggiata, passo 15 minuti, Esc annulla; `slotRange`/`clickRange` in `src/calendar/drag.ts`), apertura della griglia sull'ora attuale quando il periodo contiene oggi (banda IN ONDA a un terzo dell'altezza; anche al cambio vista/periodo e quando la finestra torna visibile dal tray). Test: 47 frontend, 75 Rust. Verificato nell'app Tauri con mouse reale: trascinamento giovedì 18:00-19:30 con anteprima e editor precompilato, clic venerdì 20:00-21:00, Esc annulla, clic su evento esistente apre l'evento, apertura alle 23:18 con la banda visibile. Release v0.5.1 pubblicata dopo backup del DB (`%USERPROFILE%\WinDozCal-backup-20261007-pre051`) e aggiornamento verificato sul PC del proprietario.
 - 7 ott 2026 (5): richiesta del proprietario "colorare o dare una grafica ai box degli eventi", scelte tutte le opzioni ([ADR 017](../System/decisions/017-aspetto-eventi.md)). Migrazione 009 (`color`, `icon`, `pattern`), validazione nel backend, comando `set_calendar_color`; editor con sezione colore/icona/riempimento; rendering in settimana, giorno, mese e agenda; colore dei calendari da clic destro nella rail e da Impostazioni › Calendars (PRD §34, prima non implementata). Test: 76 Rust, 49 frontend. Verificato nell'app Tauri: evento impostato a Uva + Riunione + Quadretti salvato in SQLite e mostrato nella griglia; calendario Personale cambiato in Mandarino dal clic destro, banda aggiornata.
 - 7 ott 2026 (6): release v0.5.2 (aspetto degli eventi, colore dei calendari) su autorizzazione del proprietario. Backup del DB in `%USERPROFILE%\WinDozCal-backup-20261007-pre052`, aggiornamento 0.5.1 -> 0.5.2 sul suo PC verificato (schema v9, 3 eventi intatti, avvio automatico conservato).
+
+## Chiusura (7 ott 2026, 23:48)
+
+**Fatto**: Fase 2 chiusa (v0.4.0, piano in `completed/`); redesign Palinsesto (v0.5.0); creazione eventi con clic/trascinamento e apertura sull'ora attuale (v0.5.1); colore/icona/riempimento degli eventi e colore dei calendari (v0.5.2). Ogni release verificata installandola sul PC del proprietario, con backup del DB. Tutto committato e pubblicato (`a76b943`, `master` allineato a origin).
+**Bloccato**: Google (stage 3 Fase 1) perché servono client ID e secret OAuth Desktop; verifica Microsoft reale perché serve client ID Entra; chiave OpenAI rifiutata (comp solo HTML).
+**Prossimi passi**: 1. Con credenziali Google: provider Google sul modello di `src-tauri/src/providers/microsoft/`. 2. Senza: pacchetto Impostazioni PRD §34 (General: primo giorno, orario lavorativo, durata default; calendario predefinito; Notifications; compact mode). 3. Aspetta Andrea: backup della chiave `%USERPROFILE%\.tauri\windozcal-updater.key`, scelta su firma del codice.
+**Ambiente**: migrazioni SQLite 007-009; crate reqwest 0.13, sha2 0.11, tauri-plugin-updater 2.13; font `@fontsource-variable/national-park` al posto di Geist.
+**File toccati**: vedi `git log c14cadc..a76b943 --name-only` (sessione intera, tutto committato); fuori repo: chiave updater in `%USERPROFILE%\.tauri\`, backup DB `%USERPROFILE%\WinDozCal-backup-20261007*`, app installata 0.5.2 in `%LOCALAPPDATA%\WinDozCal`, release GitHub v0.4.0, v0.5.0, v0.5.1, v0.5.2.
+
