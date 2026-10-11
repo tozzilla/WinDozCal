@@ -1,5 +1,5 @@
 //! Flusso OAuth per app desktop (RFC 8252): PKCE (RFC 7636, S256) e redirect su un listener
-//! loopback con porta effimera. Comune a Microsoft e, in futuro, Google.
+//! loopback con porta effimera. Comune a Microsoft e Google.
 //!
 //! Il `code` ricevuto non viene mai loggato; la pagina mostrata nel browser non contiene dati.
 

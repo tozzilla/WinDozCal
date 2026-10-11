@@ -2,7 +2,7 @@
 
 Fonte: PRD §42 (perimetro) e §48 (Definition of Done). Obiettivo: "WinDozCal può sostituire Google Calendar web per l'uso quotidiano su Windows."
 
-Stato: stage 0, 1, 2, 4, 5 e 7 completati; stage 3 bloccato (credenziali Google), stage 6 e 8 dipendono dallo stage 3. Release pubblicata: v0.3.0. Ultimo aggiornamento: 7 ott 2026.
+Stato: stage 0, 1, 2, 4, 5 e 7 completati; stage 3 in corso (codice e test fatti, manca la verifica con l'account reale), stage 6 e 8 dipendono dallo stage 3. Ultima release: v0.5.3. Ultimo aggiornamento: 12 ott 2026.
 
 Perimetro §42: Tauri shell, SQLite, UI calendario, account Google, viste giorno/settimana/mese, CRUD eventi, cache offline, notifiche, system tray.
 
@@ -36,9 +36,9 @@ Tre filoni:
 
 - Accettazione complessiva: DoD 13 (chiudere e riaprire ritrova subito gli eventi); i tre filoni sopra chiusi.
 
-## Stage 3: account Google e sync (bloccato)
+## Stage 3: account Google e sync (in corso)
 
-Bloccato: servono client ID e secret OAuth di un progetto Google Cloud (tipo Desktop app); è una decisione del proprietario come distribuirli in un repo pubblico. Nessuna credenziale va nel repository.
+Sbloccato il 12 ott 2026: progetto Google Cloud `windozcal` con client OAuth "Desktop app" creato dal proprietario ([ADR 019](../System/decisions/019-google-calendar-sync.md)). Client ID e secret in `.env.local` (ignorato da git), iniettati in build; la distribuzione nelle release è un'ipotesi da confermare. Nessuna credenziale va nel repository.
 
 - OAuth 2.0 desktop con browser di sistema (§13), token in Credential Manager (ADR 005), lettura calendari ed eventi, sync incrementale con sync token, sync all'avvio e ogni 5 minuti (§22).
 - Accettazione: DoD 2 (collegare l'account), 3 (vedere tutti i calendari), 4 (scegliere quali mostrare); nessuna credenziale in log o SQLite. Integration test in `tests/integration/google/`.
@@ -88,3 +88,4 @@ Bloccato: servono client ID e secret OAuth di un progetto Google Cloud (tipo Des
 **Prossimi passi**: 1. Con le credenziali: stage 3 da `src-tauri/src/auth/google.rs` e `providers/google/`, mappando `recurringEventId` (ADR 011) e `conferenceData` (ADR 010). 2. Poi stage 6 e 8. 3. Senza credenziali: Fase 2 non dipendente da Google (ricerca Ctrl+K, quick add).
 **Ambiente**: installati rustup (1.99.0 msvc), VS 2022 Build Tools VCTools, GitHub CLI 2.102.0 (login `tozzilla`). Crate nuovi: rusqlite, keyring, rrule, chrono-tz, plugin autostart/single-instance/notification, tauri-winrt-notification. Migrazioni SQLite 001-006.
 **File toccati**: intero repo creato in questa sessione (vedi `git log 552cff7..f90081b --name-only`); fuori repo: chiave `HKCU\...\Run\WinDozCal`, app in `%LOCALAPPDATA%\WinDozCal`.
+- 12 ott 2026: stage 3, codice completo ([ADR 019](../System/decisions/019-google-calendar-sync.md)). Comportamenti dell'API verificati sulla documentazione ufficiale (12 ott 2026): parametri incompatibili con `syncToken`, `showDeleted` obbligatorio nel sync incrementale, `originalStart` su `events.instances`, `sendUpdates` senza default dichiarato (si passa sempre `none`), `PATCH` che sostituisce gli array, 410 `fullSyncRequired` diverso da `deleted`, rate limit anche come 403. `auth::google` (PKCE, client secret, `access_type=offline`, `prompt=consent`, revoca alla disconnessione), `GoogleProvider` (calendarList, full sync e sync token, gruppi delle serie per `iCalUID`, istanze cancellate in EXDATE, eccezioni, push con `If-Match` e `sendUpdates=none`), comando `connect_google`, `reconnect_account` anche per Google, pulsanti in primo avvio e Impostazioni › Accounts. Test: 86 Rust (9 nuovi su server simulato), 52 frontend, clippy `-D warnings` pulito. Da fare: verifica con l'account reale del proprietario (consenso nel browser, lettura calendari ed eventi; il push su un calendario reale solo con il suo consenso, azione per azione).

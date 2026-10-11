@@ -8,6 +8,7 @@ export const tauriCalendarService: CalendarService = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
   createLocalAccount: (name) => invoke<Account>("create_local_account", { name }),
   connectMicrosoft: () => invoke<Account>("connect_microsoft"),
+  connectGoogle: () => invoke<Account>("connect_google"),
   reconnectAccount: (accountId) => invoke<Account>("reconnect_account", { accountId }),
   disconnectAccount: (accountId) => invoke<void>("disconnect_account", { accountId }),
   createCalendar: (accountId, name, color) => invoke<Calendar>("create_calendar", { accountId, name, color }),

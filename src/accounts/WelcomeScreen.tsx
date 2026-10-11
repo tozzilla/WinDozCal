@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useConnectMicrosoft, useCreateLocalAccount } from "@/providers/queries";
+import { useConnectGoogle, useConnectMicrosoft, useCreateLocalAccount } from "@/providers/queries";
 import { errorText } from "@/settings/AccountsSettings";
 import { useUiStore } from "@/stores/uiStore";
 
 /**
- * Schermata di primo avvio (PRD §33). Microsoft e modalità locale funzionano; l'autenticazione vive nel
- * backend (src-tauri/src/auth), il frontend chiede solo di avviarla. Google e CalDAV arrivano con i loro stage.
+ * Schermata di primo avvio (PRD §33). Google, Microsoft e modalità locale funzionano; l'autenticazione vive nel
+ * backend (src-tauri/src/auth), il frontend chiede solo di avviarla. CalDAV arriva con il suo stage.
  */
 export function WelcomeScreen() {
   const createLocal = useCreateLocalAccount();
   const connect = useConnectMicrosoft();
+  const connectGoogle = useConnectGoogle();
   const [error, setError] = useState<string | null>(null);
   const { setView, setCurrentDate } = useUiStore();
 
@@ -37,8 +38,16 @@ export function WelcomeScreen() {
       <section className="flex flex-col justify-center gap-3 p-10">
         <h2 className="mb-2 text-[13px] font-bold tracking-[0.12em] text-muted-foreground uppercase">Add your first channel</h2>
         <div className="flex w-80 flex-col gap-2">
-          <Button size="lg" variant="outline" disabled>
-            Continue with Google
+          <Button
+            size="lg"
+            variant="outline"
+            disabled={connectGoogle.isPending}
+            onClick={() => {
+              setError(null);
+              connectGoogle.mutateAsync().catch((err) => setError(errorText(err)));
+            }}
+          >
+            {connectGoogle.isPending ? "Complete sign-in in your browser…" : "Continue with Google"}
           </Button>
           <Button
             size="lg"

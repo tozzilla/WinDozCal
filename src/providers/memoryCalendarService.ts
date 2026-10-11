@@ -105,6 +105,9 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async connectMicrosoft() {
       throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
     },
+    async connectGoogle() {
+      throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
+    },
     async reconnectAccount() {
       throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
     },

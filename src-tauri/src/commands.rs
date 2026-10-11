@@ -11,6 +11,7 @@ use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 
+use crate::auth::google as oauth_google;
 use crate::auth::microsoft as oauth_ms;
 use crate::credentials::{self, SecretKind};
 use crate::db::repo;
@@ -19,6 +20,7 @@ use crate::models::{
     Account, Calendar, Event, EventDetail, EventSyncStatus, NewAttendee, NewEvent, NewReminder,
     ProviderKind, Settings,
 };
+use crate::providers::google::GoogleProvider;
 use crate::providers::microsoft::MicrosoftProvider;
 use crate::state::AppState;
 use crate::tray;
@@ -78,6 +80,48 @@ async fn microsoft_consent(app: &AppHandle) -> AppResult<crate::auth::OAuthToken
     .await
 }
 
+/// Collega un account Google (PRD 13, ADR 019): consenso nel browser di sistema con PKCE,
+/// profilo dall'endpoint userinfo, account in SQLite e refresh token in Credential Manager, poi
+/// primo sync in background. Se l'account (stessa email) esiste gia' ne rinnova le credenziali.
+#[tauri::command]
+pub async fn connect_google(app: AppHandle, state: State<'_, AppState>) -> AppResult<Account> {
+    let tokens = google_consent(&app).await?;
+    let profile = GoogleProvider::profile(&tokens.access_token).await?;
+    let account = state.db.with(|conn| {
+        repo::upsert_external_account(
+            conn,
+            ProviderKind::Google,
+            &profile.name,
+            &profile.email,
+            "",
+        )
+    })?;
+    oauth_google::remember(&account.id, &tokens)?;
+    let credential_ref = credentials::credential_ref(&account.id, SecretKind::RefreshToken);
+    let account = state.db.with(|conn| {
+        repo::upsert_external_account(
+            conn,
+            ProviderKind::Google,
+            &profile.name,
+            &profile.email,
+            &credential_ref,
+        )
+    })?;
+    tracing::info!(account_id = %account.id, "google account connected");
+    state.sync.request(Some(account.id.clone()));
+    Ok(account)
+}
+
+async fn google_consent(app: &AppHandle) -> AppResult<crate::auth::OAuthTokens> {
+    let config = oauth_google::GoogleOAuthConfig::from_env()?;
+    oauth_google::authorize_pkce(&config, |url| {
+        app.opener()
+            .open_url(url, None::<&str>)
+            .map_err(|err| AppError::Internal(format!("cannot open browser: {err}")))
+    })
+    .await
+}
+
 /// Rinnova il consenso di un account esterno (stato `auth_required`). Deve essere la stessa
 /// identita': un'altra email e' un errore, non una sostituzione silenziosa.
 #[tauri::command]
@@ -87,18 +131,30 @@ pub async fn reconnect_account(
     account_id: String,
 ) -> AppResult<Account> {
     let account = state.db.with(|conn| repo::get_account(conn, &account_id))?;
-    if account.provider != ProviderKind::Microsoft {
-        return Err(AppError::NotImplemented("reconnect for this provider"));
-    }
-    let tokens = microsoft_consent(&app).await?;
-    let profile = MicrosoftProvider::profile(&tokens.access_token).await?;
-    if !profile.email.eq_ignore_ascii_case(&account.email) {
+    let (tokens, email) = match account.provider {
+        ProviderKind::Microsoft => {
+            let tokens = microsoft_consent(&app).await?;
+            let email = MicrosoftProvider::profile(&tokens.access_token)
+                .await?
+                .email;
+            (tokens, email)
+        }
+        ProviderKind::Google => {
+            let tokens = google_consent(&app).await?;
+            let email = GoogleProvider::profile(&tokens.access_token).await?.email;
+            (tokens, email)
+        }
+        _ => return Err(AppError::NotImplemented("reconnect for this provider")),
+    };
+    if !email.eq_ignore_ascii_case(&account.email) {
         return Err(AppError::InvalidInput(format!(
-            "signed in as a different account ({})",
-            profile.email
+            "signed in as a different account ({email})"
         )));
     }
-    oauth_ms::remember(&account.id, &tokens)?;
+    match account.provider {
+        ProviderKind::Google => oauth_google::remember(&account.id, &tokens)?,
+        _ => oauth_ms::remember(&account.id, &tokens)?,
+    }
     state.db.with(|conn| {
         crate::db::sync_repo::set_account_status(
             conn,

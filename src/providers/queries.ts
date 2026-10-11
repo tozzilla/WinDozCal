@@ -86,6 +86,11 @@ export function useConnectMicrosoft() {
   return useMutation({ mutationFn: () => calendarService.connectMicrosoft(), onSuccess: () => void qc.invalidateQueries() });
 }
 
+export function useConnectGoogle() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => calendarService.connectGoogle(), onSuccess: () => void qc.invalidateQueries() });
+}
+
 export function useReconnectAccount() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (accountId: string) => calendarService.reconnectAccount(accountId), onSuccess: () => void qc.invalidateQueries() });

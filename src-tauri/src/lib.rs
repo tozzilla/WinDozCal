@@ -89,6 +89,7 @@ pub fn run() {
             commands::list_accounts,
             commands::create_local_account,
             commands::connect_microsoft,
+            commands::connect_google,
             commands::reconnect_account,
             commands::disconnect_account,
             commands::create_calendar,

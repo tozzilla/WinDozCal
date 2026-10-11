@@ -3,7 +3,7 @@
 //! Il Sync Engine parla solo con `CalendarProvider`; nessun'altra parte dell'app conosce le
 //! API remote (PRD 47). Provider futuri (ICS, locale, Exchange) implementano lo stesso trait.
 //!
-//! Le implementazioni attuali sono stub che restituiscono `AppError::NotImplemented`.
+//! Google e Microsoft sono implementati; CalDAV e' ancora uno stub (`AppError::NotImplemented`).
 
 pub mod caldav;
 pub mod google;

@@ -1,7 +1,7 @@
-//! Autenticazione OAuth (PRD 13-14, 19). Microsoft implementato (ADR 014), Google ancora stub.
+//! Autenticazione OAuth (PRD 13-14, 19). Microsoft (ADR 014) e Google (ADR 019).
 //!
 //! - Google: OAuth 2.0 per app desktop, loopback redirect (RFC 8252) su 127.0.0.1 con porta
-//!   effimera, PKCE (`auth::google`).
+//!   effimera, PKCE e client secret non confidenziale (`auth::google`).
 //! - Microsoft: Authorization Code + PKCE, client pubblico, nessun client secret
 //!   (`auth::microsoft`).
 //!

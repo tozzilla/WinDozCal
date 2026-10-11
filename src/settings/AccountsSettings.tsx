@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAccounts, useConnectMicrosoft, useDisconnectAccount, useReconnectAccount, useSyncNow } from "@/providers/queries";
+import { useAccounts, useConnectGoogle, useConnectMicrosoft, useDisconnectAccount, useReconnectAccount, useSyncNow } from "@/providers/queries";
 import type { Account } from "@/types";
 
 const PROVIDER_LABEL: Record<Account["provider"], string> = {
@@ -25,10 +25,11 @@ export function errorText(err: unknown): string {
   return String(err);
 }
 
-/** Sezione Accounts (PRD §34): account collegati con sync, reconnect e disconnect; aggiunta di un account Microsoft. */
+/** Sezione Accounts (PRD §34): account collegati con sync, reconnect e disconnect; aggiunta di un account Google o Microsoft. */
 export function AccountsSettings() {
   const { data: accounts = [] } = useAccounts();
   const connect = useConnectMicrosoft();
+  const connectGoogle = useConnectGoogle();
   const reconnect = useReconnectAccount();
   const disconnect = useDisconnectAccount();
   const syncNow = useSyncNow();
@@ -61,7 +62,7 @@ export function AccountsSettings() {
                 <Button size="sm" variant="outline" disabled={syncNow.isPending} onClick={() => run(syncNow.mutateAsync(a.id))}>
                   Sincronizza
                 </Button>
-                {a.provider === "microsoft" && (
+                {(a.provider === "microsoft" || a.provider === "google") && (
                   <Button
                     size="sm"
                     variant={a.sync_status === "auth_required" ? "default" : "outline"}
@@ -99,10 +100,13 @@ export function AccountsSettings() {
         ))}
       </ul>
       <div className="flex items-center gap-3">
-        <Button disabled={connect.isPending} onClick={() => run(connect.mutateAsync())}>
+        <Button disabled={connectGoogle.isPending} onClick={() => run(connectGoogle.mutateAsync())}>
+          Aggiungi account Google
+        </Button>
+        <Button variant="outline" disabled={connect.isPending} onClick={() => run(connect.mutateAsync())}>
           Aggiungi account Microsoft
         </Button>
-        {(connect.isPending || reconnect.isPending) && <span className="text-sm text-muted-foreground">Completa l&apos;accesso nel browser…</span>}
+        {(connect.isPending || connectGoogle.isPending || reconnect.isPending) && <span className="text-sm text-muted-foreground">Completa l&apos;accesso nel browser…</span>}
       </div>
       {error && (
         <p role="alert" className="text-sm text-destructive">

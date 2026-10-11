@@ -13,6 +13,8 @@ export interface CalendarService {
   createLocalAccount(name: string): Promise<Account>;
   /** Collega un account Microsoft: consenso nel browser di sistema, poi primo sync in background (ADR 014). */
   connectMicrosoft(): Promise<Account>;
+  /** Collega un account Google: consenso nel browser di sistema, poi primo sync in background (ADR 019). */
+  connectGoogle(): Promise<Account>;
   /** Rinnova il consenso di un account esterno (stato `auth_required`); deve essere la stessa identità. */
   reconnectAccount(accountId: string): Promise<Account>;
   /** Scollega un account esterno e cancella i suoi dati locali (nulla viene cancellato sul server). */
