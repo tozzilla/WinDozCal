@@ -4,7 +4,7 @@ Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare do
 
 ## Stato attuale (11 ott 2026)
 
-Release v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi); su `master`, non rilasciate, le preferenze di calendario di PRD §34 (ADR 018). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Redesign del frontend rilasciato.
+Release v0.5.3 (preferenze di calendario PRD §34, ADR 018), dopo la v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Redesign del frontend rilasciato.
 
 ## Gerarchia documenti
 
