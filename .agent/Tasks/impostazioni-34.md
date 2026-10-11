@@ -39,4 +39,4 @@ Fonti: PRD §34, §31 ("densità regolabile"), `docs/CONTRACT.md` (Settings), AD
 **Fatto**: pacchetto Impostazioni §34 (General, Calendars, Appearance) implementato, testato e verificato nell'app; non rilasciato.
 **Aperto**: Notifications senza voci (dichiarato nell'ADR 018); i due punti aperti della revisione finale del redesign restano invariati.
 **Prossimo**: release 0.5.3 solo su autorizzazione del proprietario (backup del DB, aggiornamento sul suo PC come per le release precedenti).
-**Ambiente**: nessuna dipendenza nuova; DB di prova in `%APPDATA%pp.windozcal.devtest` (contiene il calendario di prova "Lavoro").
+**Ambiente**: nessuna dipendenza nuova; DB di prova in `%APPDATA%\app.windozcal.devtest` (contiene il calendario di prova "Lavoro").
