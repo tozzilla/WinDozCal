@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { Calendar, CalendarView, Event } from "@/types";
+import type { WeekStart } from "@/utils/date";
 
 export interface DateRange {
   start: Date;
@@ -7,8 +8,21 @@ export interface DateRange {
   end: Date;
 }
 
+/** Preferenze dell'utente che cambiano la resa (PRD §34): arrivano come dati, il renderer non legge le impostazioni. */
+export interface ViewPrefs {
+  weekStartsOn: WeekStart;
+  /** Orario di lavoro in minuti dalla mezzanotte, `[workStart, workEnd)`. */
+  workStart: number;
+  workEnd: number;
+  /** Durata in minuti degli eventi creati con un clic. */
+  defaultDuration: number;
+  /** Scala oraria ridotta (Appearance › compact mode). */
+  compact: boolean;
+}
+
 export interface CalendarRendererProps {
   date: Date;
+  prefs: ViewPrefs;
   events: Event[];
   calendars: Calendar[];
   onSelectSlot: (start: Date, end: Date) => void;
@@ -31,7 +45,7 @@ export interface CalendarRenderer {
   label: string;
   Component: ComponentType<CalendarRendererProps>;
   /** Intervallo di date da caricare per `date`. */
-  getRange: (date: Date) => DateRange;
+  getRange: (date: Date, prefs: ViewPrefs) => DateRange;
   /** Data raggiunta spostandosi di un periodo avanti (+1) o indietro (-1). */
   navigate: (date: Date, direction: 1 | -1) => Date;
 }

@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { defaultEndTime, draftToFields, emptyDraft } from "./draft";
+import type { Calendar } from "@/types";
+import { defaultEndTime, draftToFields, emptyDraft, pickCalendar } from "./draft";
+
+describe("calendario dei nuovi eventi", () => {
+  const cal = (id: string, visible = true, read_only = false): Calendar => ({ id, account_id: "a", remote_id: id, name: id, color: "#000", visible, read_only });
+  it("usa il predefinito se scrivibile, altrimenti il primo scrivibile visibile", () => {
+    const list = [cal("ro", true, true), cal("hidden", false), cal("vis"), cal("def", false)];
+    expect(pickCalendar(list, "def")?.id).toBe("def");
+    expect(pickCalendar(list, "ro")?.id).toBe("vis");
+    expect(pickCalendar(list, null)?.id).toBe("vis");
+    expect(pickCalendar(list, "gone")?.id).toBe("vis");
+  });
+  it("senza intervallo usa la durata predefinita", () => {
+    const d = emptyDraft("c", null, 30);
+    const [h, m] = d.startTime.split(":").map(Number);
+    expect(d.endTime).toBe(`${String(h).padStart(2, "0")}:${String(m + 30).padStart(2, "0")}`);
+  });
+});
 
 describe("ora di fine di default", () => {
   it("è un'ora dopo l'inizio", () => {

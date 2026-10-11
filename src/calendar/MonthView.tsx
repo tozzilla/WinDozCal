@@ -8,14 +8,14 @@ import type { CalendarRendererProps } from "./types";
 const MAX_CHIPS = 3;
 
 /** Vista mensile compatta (PRD §5): al massimo MAX_CHIPS eventi per cella, poi "+N altri" porta al giorno. */
-export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent, onShowDay }: CalendarRendererProps) {
+export function MonthView({ date, prefs, events, calendars, onSelectSlot, onSelectEvent, onShowDay }: CalendarRendererProps) {
   const today = new Date();
-  const grid = getMonthGrid(date);
+  const grid = getMonthGrid(date, prefs.weekStartsOn);
 
   return (
     <div className="flex h-full flex-col bg-grid">
       <div className="grid grid-cols-7 border-b bg-card">
-        {getWeekDays(date).map((d) => (
+        {getWeekDays(date, prefs.weekStartsOn).map((d) => (
           <div key={d.getDay()} className="px-2.5 py-2 text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {formatWeekday(d)}
           </div>
@@ -31,8 +31,9 @@ export function MonthView({ date, events, calendars, onSelectSlot, onSelectEvent
               className={cn("min-h-0 overflow-hidden border-b border-l border-grid-line p-1.5", isSameDay(day, today) && "bg-today")}
               onDoubleClick={(e) => {
                 if ((e.target as HTMLElement).closest("button")) return;
-                const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
-                onSelectSlot(start, new Date(start.getTime() + 60 * 60_000));
+                // Doppio clic sul giorno: evento all'inizio dell'orario di lavoro, con la durata predefinita.
+                const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, prefs.workStart);
+                onSelectSlot(start, new Date(start.getTime() + prefs.defaultDuration * 60_000));
               }}
             >
               <div

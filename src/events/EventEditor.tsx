@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { openExternal } from "@/providers/externalLinks";
 import {
+  usePreferences,
   useCalendars,
   useCreateEvent,
   useDeleteEvent,
@@ -15,7 +16,7 @@ import { occurrenceRef } from "@/utils/events";
 import { isValidConferenceUrl } from "@/utils/validation";
 import { AppearanceField } from "./AppearanceField";
 import { AttendeesField } from "./AttendeesField";
-import { draftToFields, emptyDraft, eventToDraft, toDateInput, toTimeInput, validateDraft, type EventDraft } from "./draft";
+import { draftToFields, emptyDraft, eventToDraft, pickCalendar, toDateInput, toTimeInput, validateDraft, type EventDraft } from "./draft";
 import { weekdayOf, WEEKDAYS, type RecurrenceFreq, type Weekday } from "./recurrence";
 import { RemindersField } from "./RemindersField";
 import { ScopeChoice } from "./ScopeChoice";
@@ -45,6 +46,7 @@ function errorMessage(err: unknown): string {
 export function EventEditor() {
   const { open, openedAt, event, slot, preset, close } = useEditorStore();
   const { data: calendars = [] } = useCalendars();
+  const settings = usePreferences();
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const remove = useDeleteEvent();
@@ -79,7 +81,7 @@ export function EventEditor() {
     if (initialised.current) return;
     if (!event) {
       initialised.current = true;
-      const base = emptyDraft((writable.find((c) => c.visible) ?? writable[0])?.id ?? "", slot);
+      const base = emptyDraft(pickCalendar(calendars, settings.default_calendar_id)?.id ?? "", slot, settings.default_duration);
       setDraft(preset ? { ...base, title: preset.title, allDay: preset.allDay } : base);
     } else if (detail.data && !detail.isFetching && (!ref?.isException || (seriesDetail.data && !seriesDetail.isFetching))) {
       initialised.current = true;

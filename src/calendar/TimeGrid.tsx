@@ -11,14 +11,13 @@ import { broadcastMarks, MARK_LABEL, type BroadcastMark } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 import { useEventDrag } from "./useEventDrag";
 
-/** Scala oraria del palinsesto, identica in Giorno e Settimana (le viste restano a registro). */
-const HOUR_HEIGHT = 72;
+/** Scala oraria del palinsesto, identica in Giorno e Settimana (le viste restano a registro); ridotta in compact mode. */
+const STANDARD_HOUR_HEIGHT = 72;
+const COMPACT_HOUR_HEIGHT = 48;
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MIN_EVENT_HEIGHT = 20;
 /** Sotto questa altezza orario e titolo stanno su una riga sola. */
 const ONE_LINE_HEIGHT = 44;
-/** Senza oggi nel periodo mostrato la griglia parte da qui. */
-const FIRST_HOUR = 8;
 
 interface TimeGridProps extends CalendarRendererProps {
   days: Date[];
@@ -67,7 +66,8 @@ function allDayRows(events: Event[], days: Date[]) {
 }
 
 /** Griglia oraria condivisa da Giorno e Settimana: palinsesto con banda IN ONDA, eventi affiancati, drag & drop. */
-export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
+export function TimeGrid({ days, prefs, events, calendars, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
+  const HOUR_HEIGHT = prefs.compact ? COMPACT_HOUR_HEIGHT : STANDARD_HOUR_HEIGHT;
   const now = useNow();
   const scroller = useRef<HTMLDivElement>(null);
   const columnsRef = useRef<HTMLDivElement>(null);
@@ -75,7 +75,7 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
   const cols = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
 
   // Se il periodo mostrato contiene oggi, la griglia si apre con la banda IN ONDA a un terzo dell'altezza;
-  // altrimenti dalle 08:00. Si riposiziona solo per azioni dell'utente (apertura, cambio di vista o periodo,
+  // altrimenti dall'inizio dell'orario di lavoro. Si riposiziona solo per azioni dell'utente (apertura, cambio di vista o periodo,
   // finestra di nuovo visibile dal tray), mai mentre si lavora.
   const firstDay = days[0].getTime();
   useEffect(() => {
@@ -85,13 +85,13 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
       const current = new Date();
       el.scrollTop = days.some((d) => isSameDay(d, current))
         ? ((current.getTime() - startOfDay(current).getTime()) / 3_600_000) * HOUR_HEIGHT - el.clientHeight / 3
-        : FIRST_HOUR * HOUR_HEIGHT;
+        : (prefs.workStart / 60) * HOUR_HEIGHT;
     };
     position();
     const onVisible = () => document.visibilityState === "visible" && position();
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [days.length, firstDay]);
+  }, [days.length, firstDay, HOUR_HEIGHT, prefs.workStart]);
 
   // Durante il drag l'evento appare già nella nuova posizione e il layout delle sovrapposizioni si ricalcola.
   const shown: Event[] = drag
@@ -109,7 +109,7 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
     const minutesAt = (clientY: number) => ((clientY - top) / HOUR_HEIGHT) * 60;
     const from = minutesAt(down.clientY);
     let moved = false;
-    let range = clickRange(day, from);
+    let range = clickRange(day, from, prefs.defaultDuration);
 
     const onMove = (m: PointerEvent) => {
       if (!moved && Math.abs(m.clientY - down.clientY) < 4) return;
@@ -217,6 +217,9 @@ export function TimeGrid({ days, events, calendars, onSelectSlot, onSelectEvent,
                     backgroundSize: `100% ${HOUR_HEIGHT}px`,
                   }}
                 >
+                  {/* Fuori dall'orario di lavoro la colonna è attenuata. */}
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 bg-off-hours" style={{ height: (prefs.workStart / 60) * HOUR_HEIGHT }} />
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 bg-off-hours" style={{ top: (prefs.workEnd / 60) * HOUR_HEIGHT }} />
                   {creating?.day === days.indexOf(day) && (
                     <div
                       aria-hidden

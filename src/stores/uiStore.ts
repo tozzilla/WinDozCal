@@ -7,6 +7,8 @@ interface UiState {
   currentDate: Date;
   sidebarOpen: boolean;
   theme: ThemeMode;
+  /** Appearance › compact mode (PRD §34): scala oraria ridotta. */
+  compact: boolean;
   settingsOpen: boolean;
   searchOpen: boolean;
   quickAddOpen: boolean;
@@ -16,6 +18,7 @@ interface UiState {
   setCurrentDate: (date: Date) => void;
   toggleSidebar: () => void;
   setTheme: (theme: ThemeMode) => void;
+  setCompact: (compact: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setSearchOpen: (open: boolean) => void;
   setQuickAddOpen: (open: boolean) => void;
@@ -29,6 +32,7 @@ export const useUiStore = create<UiState>()(
       currentDate: new Date(),
       sidebarOpen: true,
       theme: "system",
+      compact: false,
       settingsOpen: false,
       searchOpen: false,
       quickAddOpen: false,
@@ -37,6 +41,7 @@ export const useUiStore = create<UiState>()(
       setCurrentDate: (currentDate) => set({ currentDate }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setTheme: (theme) => set({ theme }),
+      setCompact: (compact) => set({ compact }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSearchOpen: (searchOpen) => set({ searchOpen }),
       setQuickAddOpen: (quickAddOpen) => set({ quickAddOpen }),
@@ -44,7 +49,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: "windozcal-ui",
-      partialize: (s) => ({ view: s.view, sidebarOpen: s.sidebarOpen, theme: s.theme }),
+      partialize: (s) => ({ view: s.view, sidebarOpen: s.sidebarOpen, theme: s.theme, compact: s.compact }),
     },
   ),
 );

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { WeekView } from "./WeekView";
 import { toIsoWithOffset } from "@/utils/date";
 import type { Event } from "@/types";
+import type { ViewPrefs } from "./types";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -13,6 +14,8 @@ const ev = (id: string, h: number, rule: string | null = null): Event => ({
   all_day: false, recurrence_rule: rule, status: "busy", etag: null, updated_at: null, sync_status: "synced",
   local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null, color: null, icon: null, pattern: null,
 });
+
+const PREFS: ViewPrefs = { weekStartsOn: 1, workStart: 540, workEnd: 1080, defaultDuration: 60, compact: false };
 
 describe("TimeGrid", () => {
   it("rende eventi sovrapposti affiancati e gestisce drag e clic", async () => {
@@ -25,6 +28,7 @@ describe("TimeGrid", () => {
       createRoot(host).render(
         <WeekView
           date={new Date(2026, 9, 6)}
+          prefs={PREFS}
           events={[ev("a", 10), ev("b", 11), ev("r", 15, "RRULE:FREQ=DAILY")]}
           calendars={[]}
           onSelectSlot={() => {}}
@@ -68,6 +72,7 @@ describe("TimeGrid", () => {
       createRoot(host).render(
         <WeekView
           date={new Date(2026, 9, 6)}
+          prefs={PREFS}
           events={[]}
           calendars={[]}
           onSelectSlot={onSelectSlot}
@@ -92,5 +97,34 @@ describe("TimeGrid", () => {
     expect(host.textContent).toContain("14:15–16:45");
     await act(async () => { fire("pointerup", 16 * 72 + 40); });
     expect(onSelectSlot.mock.calls[1].map(hm)).toEqual([[6, 14, 15], [6, 16, 45]]);
+  });
+
+  it("applica primo giorno, durata predefinita, compact mode e orario di lavoro", async () => {
+    const onSelectSlot = vi.fn();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    await act(async () => {
+      createRoot(host).render(
+        <WeekView
+          date={new Date(2026, 9, 6)}
+          prefs={{ weekStartsOn: 0, workStart: 480, workEnd: 1020, defaultDuration: 30, compact: true }}
+          events={[]}
+          calendars={[]}
+          onSelectSlot={onSelectSlot}
+          onSelectEvent={() => {}}
+          onChangeEventTime={() => {}}
+          onNotice={() => {}}
+          onShowDay={() => {}}
+        />,
+      );
+    });
+    // Settimana da domenica 4 ottobre: la colonna 1 è lunedì 5. Compact: 48px/ora.
+    const column = host.querySelectorAll<HTMLElement>(".tg-col")[1];
+    column.dispatchEvent(Object.assign(new Event("pointerdown", { bubbles: true }), { clientX: 5, clientY: 14 * 48 + 10, button: 0, preventDefault() {} }));
+    await act(async () => { window.dispatchEvent(Object.assign(new Event("pointerup"), { clientX: 5, clientY: 14 * 48 + 10 })); });
+    expect(onSelectSlot.mock.calls[0].map((d: Date) => [d.getDate(), d.getHours(), d.getMinutes()])).toEqual([[5, 14, 0], [5, 14, 30]]);
+    // Fasce fuori orario: fino alle 08:00 e dalle 17:00.
+    const veils = [...column.querySelectorAll<HTMLElement>(".bg-off-hours")];
+    expect([veils[0].style.height, veils[1].style.top]).toEqual([`${8 * 48}px`, `${17 * 48}px`]);
   });
 });

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { renderers } from "@/calendar/renderers";
 import { ScopeChoice } from "@/events/ScopeChoice";
 import { toNewEvent, type SeriesScope } from "@/events/seriesEdit";
-import { fetchEventDetail, useCalendars, useChangeEventTime, useEvents, useSaveOccurrence } from "@/providers/queries";
+import type { ViewPrefs } from "@/calendar/types";
+import { fetchEventDetail, useCalendars, useChangeEventTime, useEvents, usePreferences, useSaveOccurrence } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { Event } from "@/types";
@@ -17,10 +18,18 @@ function errorText(err: unknown): string {
 
 /** Collega store, Calendar Service e renderer: conosce solo l'interfaccia `CalendarRenderer`. */
 export function CalendarSurface() {
-  const { view, currentDate, setView, setCurrentDate, setNotice } = useUiStore();
+  const { view, currentDate, compact, setView, setCurrentDate, setNotice } = useUiStore();
   const { openNew, openExisting } = useEditorStore();
+  const settings = usePreferences();
+  const prefs: ViewPrefs = {
+    weekStartsOn: settings.week_start,
+    workStart: settings.work_start,
+    workEnd: settings.work_end,
+    defaultDuration: settings.default_duration,
+    compact,
+  };
   const renderer = renderers[view];
-  const range = renderer.getRange(currentDate);
+  const range = renderer.getRange(currentDate, prefs);
   const { data: events = [] } = useEvents(toIsoWithOffset(range.start), toIsoWithOffset(range.end));
   const { data: calendars = [] } = useCalendars();
   const changeTime = useChangeEventTime();
@@ -52,6 +61,7 @@ export function CalendarSurface() {
     <div className="min-h-0 flex-1">
       <renderer.Component
         date={currentDate}
+        prefs={prefs}
         events={events}
         calendars={calendars}
         onSelectSlot={(start, end) => openNew({ start, end })}

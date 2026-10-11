@@ -183,7 +183,7 @@ Un solo grottesco, **National Park** (variabile, OFL, servito localmente da `@fo
 
 ## Layout
 
-- Rail 248px (208px sotto 1280px), header 60px, griglia oraria a 72px per ora, identica in Giorno e Settimana. All'apertura la griglia parte dalle 08:00.
+- Rail 248px (208px sotto 1280px), header 60px, griglia oraria a 72px per ora (48px in compact mode), identica in Giorno e Settimana. All'apertura, senza oggi nel periodo, la griglia parte dall'inizio dell'orario di lavoro (default 09:00); le ore fuori orario hanno il velo trasparente `--off-hours` (ADR 018).
 - Eventi inseriti di 4px per lato nella colonna; sovrapposti affiancati, ma sotto i 140px di colonna (container query `tgcol`) a cascata con scarto del 40%.
 - Eventi sotto i 44px di altezza su una riga ("11:00 Standup"); nelle colonne sotto i 96px tag sostituiti da un punto colorato e solo l'ora d'inizio.
 - Fascia di tutto il giorno: una barra per evento estesa sui giorni che copre.

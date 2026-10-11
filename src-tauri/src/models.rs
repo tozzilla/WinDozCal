@@ -73,12 +73,21 @@ fn default_event_status() -> EventStatus {
     EventStatus::Busy
 }
 
-/// Impostazioni generali (PRD 34 General), salvate in `app_settings`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Impostazioni (PRD 34 General e Calendars), salvate in `app_settings`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Settings {
     pub start_on_login: bool,
     pub start_minimized: bool,
     pub close_to_tray: bool,
+    /// Primo giorno della settimana: 0 = domenica, 1 = lunedi'.
+    pub week_start: u8,
+    /// Orario di lavoro in minuti dalla mezzanotte, `[work_start, work_end)`.
+    pub work_start: u16,
+    pub work_end: u16,
+    /// Durata dei nuovi eventi in minuti.
+    pub default_duration: u16,
+    /// Calendario dei nuovi eventi; `None` = primo calendario scrivibile visibile.
+    pub default_calendar_id: Option<String>,
 }
 
 impl Default for Settings {
@@ -87,6 +96,11 @@ impl Default for Settings {
             start_on_login: false,
             start_minimized: false,
             close_to_tray: true,
+            week_start: 1,
+            work_start: 9 * 60,
+            work_end: 18 * 60,
+            default_duration: 60,
+            default_calendar_id: None,
         }
     }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NewEvent } from "@/types";
+import { DEFAULT_SETTINGS, type NewEvent } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 
 const event = (calendar_id: string): NewEvent => ({
@@ -96,10 +96,11 @@ describe("memoryCalendarService", () => {
 
   it("espone le impostazioni di default e le salva con un roundtrip", async () => {
     const svc = createMemoryCalendarService();
-    expect(await svc.getSettings()).toEqual({ start_on_login: false, start_minimized: false, close_to_tray: true });
+    expect(await svc.getSettings()).toEqual(DEFAULT_SETTINGS);
 
-    const saved = await svc.updateSettings({ start_on_login: true, start_minimized: true, close_to_tray: false });
-    expect(saved).toEqual({ start_on_login: true, start_minimized: true, close_to_tray: false });
+    const next = { ...DEFAULT_SETTINGS, start_on_login: true, start_minimized: true, close_to_tray: false, week_start: 0 as const, default_duration: 30 };
+    const saved = await svc.updateSettings(next);
+    expect(saved).toEqual(next);
     expect(await svc.getSettings()).toEqual(saved);
   });
 

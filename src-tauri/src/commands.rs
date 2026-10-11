@@ -373,8 +373,9 @@ pub async fn get_settings(state: State<'_, AppState>) -> AppResult<Settings> {
     state.db.with(|conn| repo::get_settings(conn))
 }
 
-/// Salva le impostazioni e le applica subito: registra o rimuove l'avvio automatico di Windows
-/// (voce `Run` con l'argomento `--autostart`). Se l'OS rifiuta la modifica nulla viene salvato.
+/// Salva le impostazioni e le applica subito: se `start_on_login` cambia registra o rimuove l'avvio
+/// automatico di Windows (voce `Run` con l'argomento `--autostart`). Valori fuori dai limiti o un rifiuto
+/// dell'OS: nulla viene salvato.
 // TODO(verify-compile): `app.autolaunch().enable()/disable()` di tauri-plugin-autostart 2.7.
 #[tauri::command]
 pub async fn update_settings(
@@ -382,14 +383,20 @@ pub async fn update_settings(
     state: State<'_, AppState>,
     settings: Settings,
 ) -> AppResult<Settings> {
-    let autolaunch = app.autolaunch();
-    let result = if settings.start_on_login {
-        autolaunch.enable()
-    } else {
-        autolaunch.disable()
-    };
-    result.map_err(|err| AppError::Internal(format!("autostart update failed: {err}")))?;
-
+    // Validazione prima di toccare il registro di Windows.
+    state
+        .db
+        .with(|conn| repo::validate_settings(conn, &settings))?;
+    let current = state.db.with(|conn| repo::get_settings(conn))?;
+    if current.start_on_login != settings.start_on_login {
+        let autolaunch = app.autolaunch();
+        let result = if settings.start_on_login {
+            autolaunch.enable()
+        } else {
+            autolaunch.disable()
+        };
+        result.map_err(|err| AppError::Internal(format!("autostart update failed: {err}")))?;
+    }
     state.db.with(|conn| repo::set_settings(conn, &settings))?;
     state.db.with(|conn| repo::get_settings(conn))
 }

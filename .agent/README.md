@@ -2,9 +2,9 @@
 
 Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare dopo aver implementato.
 
-## Stato attuale (7 ott 2026)
+## Stato attuale (11 ott 2026)
 
-Release v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Prossimo: redesign del frontend (skill impeccable, PRODUCT.md).
+Release v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi); su `master`, non rilasciate, le preferenze di calendario di PRD §34 (ADR 018). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google), 6 e 8 bloccati sulle credenziali Google. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Redesign del frontend rilasciato.
 
 ## Gerarchia documenti
 
@@ -21,11 +21,12 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-017 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-018 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/completed/fase-2.md](Tasks/completed/fase-2.md) | Fase 2 (PRD §43), completata con v0.4.0 (aperta la verifica Microsoft con account reale) |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
 | [Tasks/redesign-frontend.md](Tasks/redesign-frontend.md) | Redesign del frontend (Palinsesto) |
+| [Tasks/impostazioni-34.md](Tasks/impostazioni-34.md) | Impostazioni PRD §34: primo giorno, orario di lavoro, durata, calendario predefinito, compact mode |
 | [../DESIGN.md](../DESIGN.md), [../PRODUCT.md](../PRODUCT.md) | Sistema visivo e verità di prodotto (skill impeccable) |
 
 ## ADR
@@ -49,6 +50,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 015 | Aggiornamenti automatici firmati | Accettato |
 | 016 | Redesign del frontend: Palinsesto | Accettato |
 | 017 | Aspetto degli eventi e colore dei calendari | Accettato |
+| 018 | Preferenze del calendario nelle impostazioni | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 

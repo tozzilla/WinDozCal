@@ -754,10 +754,26 @@ fn settings_default_and_roundtrip() {
         (false, false, true)
     );
 
+    assert_eq!(
+        (
+            defaults.week_start,
+            defaults.work_start,
+            defaults.work_end,
+            defaults.default_duration
+        ),
+        (1, 540, 1080, 60)
+    );
+    assert_eq!(defaults.default_calendar_id, None);
+
     let changed = Settings {
         start_on_login: true,
         start_minimized: true,
         close_to_tray: false,
+        week_start: 0,
+        work_start: 480,
+        work_end: 1050,
+        default_duration: 30,
+        default_calendar_id: Some("c2".into()),
     };
     set_settings(&conn, &changed).unwrap();
     assert_eq!(get_settings(&conn).unwrap(), changed);
@@ -766,7 +782,7 @@ fn settings_default_and_roundtrip() {
     let rows: i64 = conn
         .query_row("SELECT COUNT(*) FROM app_settings", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(rows, 3);
+    assert_eq!(rows, 8);
 
     // Flag di stato indipendente dalle impostazioni.
     assert!(!get_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap());
@@ -775,7 +791,7 @@ fn settings_default_and_roundtrip() {
     assert_eq!(get_settings(&conn).unwrap(), changed);
 
     // JSON del contratto.
-    let json = serde_json::to_value(defaults).unwrap();
+    let json = serde_json::to_value(&defaults).unwrap();
     assert_eq!(json["close_to_tray"], true);
     assert_eq!(json["start_on_login"], false);
 }
@@ -786,6 +802,76 @@ fn event_at(conn: &Connection, title: &str, calendar: &str, start: &str, end: &s
     ev.start = start.into();
     ev.end = end.into();
     insert_event(conn, &ev, &[], &[]).unwrap().event
+}
+
+#[test]
+fn settings_reject_out_of_range_and_drop_stale_default_calendar() {
+    let conn = setup();
+    let base = get_settings(&conn).unwrap();
+    let bad = [
+        Settings {
+            week_start: 2,
+            ..base.clone()
+        },
+        Settings {
+            work_start: 600,
+            work_end: 600,
+            ..base.clone()
+        },
+        Settings {
+            work_start: 545,
+            ..base.clone()
+        },
+        Settings {
+            work_end: 1470,
+            ..base.clone()
+        },
+        Settings {
+            default_duration: 50,
+            ..base.clone()
+        },
+        Settings {
+            default_calendar_id: Some("missing".into()),
+            ..base.clone()
+        },
+    ];
+    for s in bad {
+        assert!(
+            matches!(set_settings(&conn, &s), Err(AppError::InvalidInput(_))),
+            "{s:?}"
+        );
+    }
+    assert_eq!(get_settings(&conn).unwrap(), base);
+
+    conn.execute("UPDATE calendars SET read_only = 1 WHERE id = 'c1'", [])
+        .unwrap();
+    let ro = Settings {
+        default_calendar_id: Some("c1".into()),
+        ..base.clone()
+    };
+    assert!(set_settings(&conn, &ro).is_err());
+
+    // Il calendario predefinito rimosso dopo il salvataggio non blocca i salvataggi successivi.
+    set_settings(
+        &conn,
+        &Settings {
+            default_calendar_id: Some("c2".into()),
+            ..base.clone()
+        },
+    )
+    .unwrap();
+    conn.execute("DELETE FROM calendars WHERE id = 'c2'", [])
+        .unwrap();
+    let after = get_settings(&conn).unwrap();
+    assert_eq!(after.default_calendar_id, None);
+    set_settings(
+        &conn,
+        &Settings {
+            default_duration: 45,
+            ..after
+        },
+    )
+    .unwrap();
 }
 
 #[test]

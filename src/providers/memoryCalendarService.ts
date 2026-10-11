@@ -1,4 +1,4 @@
-import type { Account, Attendee, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Reminder, Settings } from "@/types";
+import { DEFAULT_SETTINGS, type Account, type Attendee, type Calendar, type Event, type EventDetail, type NewAttendee, type NewEvent, type NewReminder, type Reminder, type Settings } from "@/types";
 import { validateAttendees, validateReminders } from "@/utils/validation";
 import { rruleParams, splitLines } from "@/events/recurrence";
 import { expandEvent, exdateValue, utcStamp } from "./memoryRecurrence";
@@ -65,7 +65,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
   let events: Event[] = demo ? seedEvents() : [];
   const attendeesByEvent = new Map<string, Attendee[]>();
   const remindersByEvent = new Map<string, Reminder[]>();
-  let settings: Settings = { start_on_login: false, start_minimized: false, close_to_tray: true };
+  let settings: Settings = { ...DEFAULT_SETTINGS };
   let nextId = 1;
   const newId = (prefix: string) => `${prefix}-${nextId++}`;
   const isLocal = (calendarId: string) =>
@@ -245,7 +245,9 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async syncNow() {},
     async openLogFolder() {},
     async getSettings() {
-      return { ...settings };
+      const id = settings.default_calendar_id;
+      const valid = id && calendars.some((c) => c.id === id && !c.read_only);
+      return { ...settings, default_calendar_id: valid ? id : null };
     },
     async appVersion() {
       return "dev";

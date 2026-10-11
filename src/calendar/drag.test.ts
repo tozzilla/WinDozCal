@@ -35,5 +35,8 @@ describe("drag", () => {
     expect([r.start.getTime(), r.end.getTime()]).toEqual([at(14, 0).getTime(), at(15, 0).getTime()]);
     const late = clickRange(at(0), 23 * 60 + 30);
     expect([late.start.getTime(), late.end.getTime()]).toEqual([at(23, 0).getTime(), at(0, 0, 7).getTime()]);
+    // Durata predefinita delle impostazioni.
+    const short = clickRange(at(0), 9 * 60 + 10, 45);
+    expect([short.start.getTime(), short.end.getTime()]).toEqual([at(9, 0).getTime(), at(9, 45).getTime()]);
   });
 });

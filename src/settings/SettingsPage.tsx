@@ -9,7 +9,8 @@ import { AccountsSettings } from "./AccountsSettings";
 import { CalendarsSettings } from "./CalendarsSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-// Sezioni PRD §34. Funzionanti: General (tray e avvio), Accounts, Calendars, Appearance (tema), link ai log in Advanced, About.
+// Sezioni PRD §34. Funzionanti: General, Accounts, Calendars, Appearance (tema e compact mode), link ai log in Advanced, About.
+// Notifications: il PRD non elenca voci (ADR 018).
 const SECTIONS = ["General", "Accounts", "Calendars", "Notifications", "Appearance", "Advanced", "About"] as const;
 type Section = (typeof SECTIONS)[number];
 
@@ -21,7 +22,7 @@ const THEMES: { value: ThemeMode; label: string }[] = [
 
 export function SettingsPage() {
   const [section, setSection] = useState<Section>("Appearance");
-  const { theme, setTheme, setSettingsOpen } = useUiStore();
+  const { theme, setTheme, compact, setCompact, setSettingsOpen } = useUiStore();
 
   return (
     <div className="flex h-full">
@@ -56,12 +57,21 @@ export function SettingsPage() {
         {section === "Accounts" && <AccountsSettings />}
         {section === "Calendars" && <CalendarsSettings />}
         {section === "Appearance" && (
-          <div className="flex gap-2">
-            {THEMES.map((t) => (
-              <Button key={t.value} variant={theme === t.value ? "default" : "outline"} onClick={() => setTheme(t.value)}>
-                {t.label}
-              </Button>
-            ))}
+          <div className="max-w-xl space-y-6">
+            <div className="flex gap-2">
+              {THEMES.map((t) => (
+                <Button key={t.value} variant={theme === t.value ? "default" : "outline"} onClick={() => setTheme(t.value)}>
+                  {t.label}
+                </Button>
+              ))}
+            </div>
+            <label className="flex items-start justify-between gap-6">
+              <span>
+                <span className="block text-sm font-medium">Compact mode</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">Griglia oraria più fitta in Giorno e Settimana, per vedere più ore senza scorrere.</span>
+              </span>
+              <input type="checkbox" className="mt-1 size-4" checked={compact} onChange={(e) => setCompact(e.target.checked)} />
+            </label>
           </div>
         )}
         {section === "Advanced" && (

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { calendarColor } from "@/calendar/colors";
-import { useCalendars, useCreateEvent } from "@/providers/queries";
+import { pickCalendar } from "@/events/draft";
+import { useCalendars, useCreateEvent, usePreferences } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
 import { formatTime, localTimezone, toIsoWithOffset } from "@/utils/date";
@@ -15,6 +16,7 @@ export function QuickAdd() {
   const openNew = useEditorStore((s) => s.openNew);
   const { data: calendars = [] } = useCalendars();
   const create = useCreateEvent();
+  const settings = usePreferences();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +27,8 @@ export function QuickAdd() {
     }
   }, [quickAddOpen]);
 
-  const parsed = useMemo(() => (text.trim() ? parseQuickAdd(text) : null), [text]);
-  const writable = calendars.filter((c) => !c.read_only);
-  const calendar = writable.find((c) => c.visible) ?? writable[0];
+  const parsed = useMemo(() => (text.trim() ? parseQuickAdd(text, new Date(), settings.default_duration) : null), [text, settings.default_duration]);
+  const calendar = pickCalendar(calendars, settings.default_calendar_id);
 
   if (!quickAddOpen) return null;
 

@@ -113,12 +113,36 @@ export interface SyncState {
   updated_at: string | null;
 }
 
-/** Impostazioni generali (PRD §34), salvate dal backend in SQLite. */
+/** Impostazioni (PRD §34 General e Calendars), salvate dal backend in SQLite. Limiti in docs/CONTRACT.md. */
 export interface Settings {
   start_on_login: boolean;
   start_minimized: boolean;
   close_to_tray: boolean;
+  /** 0 = domenica, 1 = lunedì. */
+  week_start: 0 | 1;
+  /** Orario di lavoro in minuti dalla mezzanotte, `[work_start, work_end)`. */
+  work_start: number;
+  work_end: number;
+  /** Durata dei nuovi eventi in minuti. */
+  default_duration: number;
+  /** `null` = primo calendario scrivibile visibile. */
+  default_calendar_id: string | null;
 }
+
+/** Default di `Settings` (docs/CONTRACT.md), usati anche finché il backend non risponde. */
+export const DEFAULT_SETTINGS: Settings = {
+  start_on_login: false,
+  start_minimized: false,
+  close_to_tray: true,
+  week_start: 1,
+  work_start: 9 * 60,
+  work_end: 18 * 60,
+  default_duration: 60,
+  default_calendar_id: null,
+};
+
+/** Durate ammesse per i nuovi eventi (docs/CONTRACT.md). */
+export const DEFAULT_DURATIONS = [15, 30, 45, 60, 90, 120] as const;
 
 /** Aggiornamento disponibile (PRD §36). */
 export interface UpdateInfo {

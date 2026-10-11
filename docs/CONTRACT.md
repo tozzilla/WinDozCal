@@ -138,7 +138,9 @@ Comandi:
 | `get_settings` | — | `Settings` |
 | `update_settings` | `settings: Settings` | `Settings` (applica subito: registra/rimuove l'avvio automatico) |
 
-`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean }`; default `false`, `false`, `true`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
+`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean, week_start: 0 | 1, work_start: number, work_end: number, default_duration: number, default_calendar_id: string | null }`; default `false`, `false`, `true`, `1` (lunedì), `540`, `1080` (09:00-18:00), `60`, `null`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
+
+Limiti (11 ott 2026, ADR 018), validati da `update_settings` prima di scrivere: `week_start` 0 = domenica o 1 = lunedì; `work_start`/`work_end` in minuti dalla mezzanotte, multipli di 30, `work_start < work_end <= 1440`; `default_duration` tra 15, 30, 45, 60, 90, 120; `default_calendar_id` deve esistere e non essere di sola lettura. `get_settings` restituisce `null` se il calendario predefinito è stato rimosso o è diventato di sola lettura. L'avvio automatico di Windows si tocca solo se `start_on_login` cambia.
 
 Eventi backend -> frontend (Tauri `emit`, nomi esatti):
 - `tray-new-event` (nessun payload): il frontend apre l'editor di un nuovo evento

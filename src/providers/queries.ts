@@ -1,6 +1,6 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { applyToSeries, type SeriesScope } from "@/events/seriesEdit";
-import type { Event, NewAttendee, NewEvent, NewReminder, Settings } from "@/types";
+import { DEFAULT_SETTINGS, type Event, type NewAttendee, type NewEvent, type NewReminder, type Settings } from "@/types";
 import type { OccurrenceRef } from "@/utils/events";
 import { calendarService } from "./calendarService";
 
@@ -42,6 +42,11 @@ export const fetchEventDetail = (eventId: string) =>
   queryClient.fetchQuery({ queryKey: keys.detail(eventId), queryFn: () => calendarService.getEvent(eventId), staleTime: 0 });
 
 export const useSettings = () => useQuery({ queryKey: keys.settings, queryFn: () => calendarService.getSettings() });
+
+/** Preferenze di calendario sempre disponibili: i default finché il backend non risponde. */
+export function usePreferences(): Settings {
+  return useSettings().data ?? DEFAULT_SETTINGS;
+}
 
 export function useUpdateSettings() {
   const qc = useQueryClient();

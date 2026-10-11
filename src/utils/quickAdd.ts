@@ -7,17 +7,16 @@ export interface QuickAddResult {
   allDay: boolean;
 }
 
-/** Durata quando il testo non indica la fine (come l'editor). */
-const DEFAULT_MINUTES = 60;
 
 const parsers = [chrono.it, chrono.en];
 
 /**
  * Quick Add (PRD §8, ADR 012): estrae titolo, data e ora da testo libero in italiano o inglese, in locale.
  * Si prova ogni lingua e si tiene il riconoscimento che copre più testo ("venerdì 9:30" batte "9:30").
- * Senza orario l'evento è "tutto il giorno"; senza data riconosciuta restituisce `null`.
+ * Senza orario l'evento è "tutto il giorno"; senza fine dura `defaultMinutes` (Settings › default_duration);
+ * senza data riconosciuta restituisce `null`.
  */
-export function parseQuickAdd(text: string, reference: Date = new Date()): QuickAddResult | null {
+export function parseQuickAdd(text: string, reference: Date = new Date(), defaultMinutes = 60): QuickAddResult | null {
   const matches = parsers
     .map((p) => p.parse(text, reference, { forwardDate: true })[0])
     .filter((m): m is chrono.ParsedResult => !!m);
@@ -41,7 +40,7 @@ export function parseQuickAdd(text: string, reference: Date = new Date()): Quick
   return {
     title,
     start,
-    end: end && end > start ? end : new Date(start.getTime() + DEFAULT_MINUTES * 60_000),
+    end: end && end > start ? end : new Date(start.getTime() + defaultMinutes * 60_000),
     allDay: false,
   };
 }

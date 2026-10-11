@@ -541,6 +541,13 @@ pub fn delete_occurrence(
 const KEY_START_ON_LOGIN: &str = "start_on_login";
 const KEY_START_MINIMIZED: &str = "start_minimized";
 const KEY_CLOSE_TO_TRAY: &str = "close_to_tray";
+const KEY_WEEK_START: &str = "week_start";
+const KEY_WORK_START: &str = "work_start";
+const KEY_WORK_END: &str = "work_end";
+const KEY_DEFAULT_DURATION: &str = "default_duration";
+const KEY_DEFAULT_CALENDAR: &str = "default_calendar_id";
+/// Durate ammesse per i nuovi eventi, in minuti.
+pub const DEFAULT_DURATIONS: [u16; 6] = [15, 30, 45, 60, 90, 120];
 /// Flag: la notifica "ancora attivo nel tray" e' gia' stata mostrata.
 pub const FLAG_TRAY_NOTICE_SHOWN: &str = "tray_notice_shown";
 
@@ -571,17 +578,92 @@ fn get_bool(conn: &Connection, key: &str, default: bool) -> AppResult<bool> {
     })
 }
 
-/// Impostazioni correnti; le chiavi mancanti prendono il default (`Settings::default`).
+fn get_u16(conn: &Connection, key: &str, default: u16) -> AppResult<u16> {
+    Ok(get_value(conn, key)?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default))
+}
+
+/// Il calendario esiste ed e' scrivibile (requisito del calendario predefinito).
+fn writable_calendar_exists(conn: &Connection, calendar_id: &str) -> AppResult<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT read_only FROM calendars WHERE id = ?1",
+            params![calendar_id],
+            |row| row.get::<_, bool>(0),
+        )
+        .optional()?
+        .is_some_and(|read_only| !read_only))
+}
+
+/// Impostazioni correnti; le chiavi mancanti o non valide prendono il default (`Settings::default`).
+/// Un calendario predefinito rimosso o diventato di sola lettura torna `None`.
 pub fn get_settings(conn: &Connection) -> AppResult<Settings> {
     let default = Settings::default();
-    Ok(Settings {
+    let mut settings = Settings {
         start_on_login: get_bool(conn, KEY_START_ON_LOGIN, default.start_on_login)?,
         start_minimized: get_bool(conn, KEY_START_MINIMIZED, default.start_minimized)?,
         close_to_tray: get_bool(conn, KEY_CLOSE_TO_TRAY, default.close_to_tray)?,
-    })
+        week_start: get_u16(conn, KEY_WEEK_START, default.week_start.into())? as u8,
+        work_start: get_u16(conn, KEY_WORK_START, default.work_start)?,
+        work_end: get_u16(conn, KEY_WORK_END, default.work_end)?,
+        default_duration: get_u16(conn, KEY_DEFAULT_DURATION, default.default_duration)?,
+        default_calendar_id: get_value(conn, KEY_DEFAULT_CALENDAR)?.filter(|v| !v.is_empty()),
+    };
+    if validate_preferences(&settings).is_err() {
+        settings = Settings {
+            week_start: default.week_start,
+            work_start: default.work_start,
+            work_end: default.work_end,
+            default_duration: default.default_duration,
+            ..settings
+        };
+    }
+    if let Some(id) = &settings.default_calendar_id {
+        if !writable_calendar_exists(conn, id)? {
+            settings.default_calendar_id = None;
+        }
+    }
+    Ok(settings)
 }
 
+/// Limiti delle preferenze di calendario: settimana da domenica o lunedi', orario di lavoro a passi
+/// di 30 minuti con inizio prima della fine, durata tra `DEFAULT_DURATIONS`.
+fn validate_preferences(s: &Settings) -> Result<(), String> {
+    if s.week_start > 1 {
+        return Err("week_start must be 0 (Sunday) or 1 (Monday)".into());
+    }
+    if !s.work_start.is_multiple_of(30)
+        || !s.work_end.is_multiple_of(30)
+        || s.work_start >= s.work_end
+        || s.work_end > 24 * 60
+    {
+        return Err("working hours must be 30-minute steps with start before end".into());
+    }
+    if !DEFAULT_DURATIONS.contains(&s.default_duration) {
+        return Err(format!(
+            "default_duration must be one of {DEFAULT_DURATIONS:?}"
+        ));
+    }
+    Ok(())
+}
+
+/// Verifica i limiti delle impostazioni e che il calendario predefinito esista e sia scrivibile.
+pub fn validate_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
+    validate_preferences(settings).map_err(AppError::InvalidInput)?;
+    if let Some(id) = &settings.default_calendar_id {
+        if !writable_calendar_exists(conn, id)? {
+            return Err(AppError::InvalidInput(
+                "default calendar must exist and be writable".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Salva le impostazioni dopo averle validate: nulla viene scritto se un valore e' fuori dai limiti.
 pub fn set_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
+    validate_settings(conn, settings)?;
     let tx = conn.unchecked_transaction()?;
     set_value(
         &tx,
@@ -594,6 +676,19 @@ pub fn set_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
         &settings.start_minimized.to_string(),
     )?;
     set_value(&tx, KEY_CLOSE_TO_TRAY, &settings.close_to_tray.to_string())?;
+    set_value(&tx, KEY_WEEK_START, &settings.week_start.to_string())?;
+    set_value(&tx, KEY_WORK_START, &settings.work_start.to_string())?;
+    set_value(&tx, KEY_WORK_END, &settings.work_end.to_string())?;
+    set_value(
+        &tx,
+        KEY_DEFAULT_DURATION,
+        &settings.default_duration.to_string(),
+    )?;
+    set_value(
+        &tx,
+        KEY_DEFAULT_CALENDAR,
+        settings.default_calendar_id.as_deref().unwrap_or(""),
+    )?;
     tx.commit()?;
     Ok(())
 }

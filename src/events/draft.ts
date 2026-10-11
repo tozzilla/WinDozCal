@@ -1,4 +1,4 @@
-import type { Attendee, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
+import type { Attendee, Calendar, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
 import { addDays, localTimezone, toIsoWithOffset } from "@/utils/date";
 import { isValidConferenceUrl, validateAttendees, validateReminders } from "@/utils/validation";
 import { buildRecurrenceRule, parseRecurrence, type RecurrenceFreq, type Weekday } from "./recurrence";
@@ -43,9 +43,18 @@ export function defaultEndTime(start: Date, end: Date): string {
   return toDateInput(end) === toDateInput(start) ? toTimeInput(end) : "23:59";
 }
 
-export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date } | null): EventDraft {
+/**
+ * Calendario dei nuovi eventi: quello predefinito delle impostazioni se è ancora scrivibile,
+ * altrimenti il primo scrivibile visibile, altrimenti il primo scrivibile.
+ */
+export function pickCalendar(calendars: Calendar[], defaultId: string | null): Calendar | undefined {
+  const writable = calendars.filter((c) => !c.read_only);
+  return writable.find((c) => c.id === defaultId) ?? writable.find((c) => c.visible) ?? writable[0];
+}
+
+export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date } | null, durationMinutes = 60): EventDraft {
   const start = slot?.start ?? new Date(new Date().setMinutes(0, 0, 0));
-  const end = slot?.end ?? new Date(start.getTime() + 60 * 60_000);
+  const end = slot?.end ?? new Date(start.getTime() + durationMinutes * 60_000);
   return {
     title: "",
     date: toDateInput(start),

@@ -6,7 +6,6 @@ import { MonthView } from "./MonthView";
 import type { CalendarRenderer } from "./types";
 import { WeekView } from "./WeekView";
 
-
 export const renderers: Record<CalendarView, CalendarRenderer> = {
   day: {
     view: "day",
@@ -19,15 +18,15 @@ export const renderers: Record<CalendarView, CalendarRenderer> = {
     view: "week",
     label: "Settimana",
     Component: WeekView,
-    getRange: (d) => ({ start: startOfWeek(d), end: addDays(startOfWeek(d), 7) }),
+    getRange: (d, p) => ({ start: startOfWeek(d, p.weekStartsOn), end: addDays(startOfWeek(d, p.weekStartsOn), 7) }),
     navigate: (d, dir) => addDays(d, 7 * dir),
   },
   month: {
     view: "month",
     label: "Mese",
     Component: MonthView,
-    getRange: (d) => {
-      const grid = getMonthGrid(d);
+    getRange: (d, p) => {
+      const grid = getMonthGrid(d, p.weekStartsOn);
       return { start: grid[0], end: addDays(grid[41], 1) };
     },
     navigate: (d, dir) => addMonths(d, dir),

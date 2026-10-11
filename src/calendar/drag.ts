@@ -34,7 +34,7 @@ export function resizeEvent(start: Date, end: Date, deltaMinutes: number, step =
   return { start, end: newEnd < minEnd ? minEnd : newEnd };
 }
 
-/** Durata di un evento creato con un clic singolo su una fascia vuota. */
+/** Durata di default di un evento creato con un clic singolo su una fascia vuota (Settings › default_duration). */
 export const CLICK_EVENT_MINUTES = 60;
 
 /**
@@ -51,8 +51,8 @@ export function slotRange(day: Date, fromMinutes: number, toMinutes: number, ste
   return { start: at(b - a < step ? b - step : a), end: at(b) };
 }
 
-/** Evento di un clic singolo: dall'ora intera cliccata, `CLICK_EVENT_MINUTES` minuti (al massimo fino a mezzanotte). */
-export function clickRange(day: Date, minutes: number) {
+/** Evento di un clic singolo: dall'ora intera cliccata, `duration` minuti (al massimo fino a mezzanotte). */
+export function clickRange(day: Date, minutes: number, duration = CLICK_EVENT_MINUTES) {
   const startMinutes = Math.min(Math.floor(minutes / 60) * 60, 23 * 60);
-  return slotRange(day, startMinutes, startMinutes + CLICK_EVENT_MINUTES, CLICK_EVENT_MINUTES);
+  return slotRange(day, startMinutes, startMinutes + duration);
 }
