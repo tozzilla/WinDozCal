@@ -1880,3 +1880,360 @@ fn event_appearance_is_validated_saved_and_kept_by_sync() {
     assert_eq!(get_calendar(&conn, "c1").unwrap().color, "#8E24AA");
     assert!(set_calendar_color(&conn, "c1", "viola").is_err());
 }
+
+// ---------------------------------------------------------------------------
+// Spostamento tra calendari (ADR 020)
+// ---------------------------------------------------------------------------
+
+/// Calendario "Personale" dell'account locale e calendario di un account Microsoft.
+fn move_setup() -> (Connection, String) {
+    let conn = setup();
+    let account = create_local_account(&conn, "PC").unwrap();
+    let personal: String = conn
+        .query_row(
+            "SELECT id FROM calendars WHERE account_id = ?1",
+            [&account.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, provider, name, email) VALUES ('m1', 'microsoft', 'M', 'm@x.it');
+         INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('ms', 'm1', 'rm', 'Outlook');",
+    )
+    .unwrap();
+    (conn, personal)
+}
+
+fn to_calendar(event: &Event, calendar: &str) -> NewEvent {
+    let mut new = new_event(&event.title);
+    new.calendar_id = calendar.into();
+    new.start = event.start.clone();
+    new.end = event.end.clone();
+    new.recurrence_rule = event.recurrence_rule.clone();
+    new
+}
+
+fn moved_to(conn: &Connection, id: &str) -> Option<String> {
+    conn.query_row("SELECT moved_to FROM events WHERE id = ?1", [id], |r| {
+        r.get(0)
+    })
+    .unwrap()
+}
+
+fn row_exists(conn: &Connection, id: &str) -> bool {
+    conn.query_row("SELECT COUNT(*) FROM events WHERE id = ?1", [id], |r| {
+        r.get::<_, i64>(0)
+    })
+    .unwrap()
+        == 1
+}
+
+#[test]
+fn move_local_to_remote_creates_pending_copy_and_removes_original() {
+    let (conn, personal) = move_setup();
+    let mut ev = new_event("Locale");
+    ev.calendar_id = personal.clone();
+    let original = insert_event(&conn, &ev, &[], &[]).unwrap().event;
+
+    let (copy, needs_sync) =
+        move_event(&conn, &original.id, &to_calendar(&original, "c1"), &[], &[]).unwrap();
+    assert!(needs_sync);
+    assert_eq!(copy.event.calendar_id, "c1");
+    assert_eq!(copy.event.sync_status, EventSyncStatus::PendingCreate);
+    assert!(copy.event.remote_id.is_none());
+    assert!(!row_exists(&conn, &original.id));
+}
+
+#[test]
+fn move_remote_to_local_keeps_original_pending_delete_linked_to_copy() {
+    let (conn, personal) = move_setup();
+    let original = create(&conn, "Remoto");
+    make_synced(&conn, &original.id, "g1", "e1");
+
+    let (copy, _) = move_event(
+        &conn,
+        &original.id,
+        &to_calendar(&original, &personal),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(copy.event.sync_status, EventSyncStatus::Synced);
+    assert_eq!(
+        get_event(&conn, &original.id).unwrap().sync_status,
+        EventSyncStatus::PendingDelete
+    );
+    assert_eq!(
+        moved_to(&conn, &original.id).as_deref(),
+        Some(copy.event.id.as_str())
+    );
+    // Copia locale: la delete remota dell'originale non aspetta nulla.
+    assert!(!moved_copy_waiting(&conn, &original.id).unwrap());
+}
+
+#[test]
+fn remote_delete_of_moved_original_waits_until_copy_is_on_server() {
+    let (conn, _) = move_setup();
+    let original = create(&conn, "Remoto");
+    make_synced(&conn, &original.id, "g1", "e1");
+
+    let (copy, _) =
+        move_event(&conn, &original.id, &to_calendar(&original, "c2"), &[], &[]).unwrap();
+    assert!(moved_copy_waiting(&conn, &original.id).unwrap());
+    // Creazione della copia fallita: l'originale resta sul server.
+    mark_event_error(&conn, &copy.event.id).unwrap();
+    assert!(moved_copy_waiting(&conn, &original.id).unwrap());
+    // Copia creata: ora l'originale si puo' cancellare.
+    make_synced(&conn, &copy.event.id, "g2", "e2");
+    assert!(!moved_copy_waiting(&conn, &original.id).unwrap());
+}
+
+#[test]
+fn move_of_event_never_pushed_drops_it_immediately() {
+    let (conn, _) = move_setup();
+    let original = create(&conn, "Mai inviato");
+    let (copy, _) =
+        move_event(&conn, &original.id, &to_calendar(&original, "c2"), &[], &[]).unwrap();
+    assert!(!row_exists(&conn, &original.id));
+    assert_eq!(copy.event.sync_status, EventSyncStatus::PendingCreate);
+}
+
+#[test]
+fn move_applies_editor_changes_and_copies_children_and_fired_reminders() {
+    let (conn, personal) = move_setup();
+    let local_account: String = conn
+        .query_row(
+            "SELECT account_id FROM calendars WHERE id = ?1",
+            [&personal],
+            |r| r.get(0),
+        )
+        .unwrap();
+    conn.execute(
+        "INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('p2', ?1, 'p2', 'Casa')",
+        [&local_account],
+    )
+    .unwrap();
+    let mut ev = new_event("Prima");
+    ev.calendar_id = personal.clone();
+    let original = insert_event(&conn, &ev, &[attendee("a@b.it")], &[reminder(10, "popup")])
+        .unwrap()
+        .event;
+    conn.execute(
+        "INSERT INTO fired_reminders (event_id, minutes_before, occurrence_ts, fired_at)
+         VALUES (?1, 10, 1791360000, '2026-10-07T07:50:00Z')",
+        [&original.id],
+    )
+    .unwrap();
+
+    let mut edited = to_calendar(&original, "p2");
+    edited.title = "Dopo".into();
+    let (copy, needs_sync) = move_event(
+        &conn,
+        &original.id,
+        &edited,
+        &[attendee("a@b.it"), attendee("c@d.it")],
+        &[reminder(10, "popup")],
+    )
+    .unwrap();
+    assert!(!needs_sync);
+    assert_eq!(copy.event.title, "Dopo");
+    assert_eq!(copy.attendees.len(), 2);
+    assert_eq!(copy.reminders.len(), 1);
+    let fired: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM fired_reminders WHERE event_id = ?1",
+            [&copy.event.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(fired, 1);
+}
+
+#[test]
+fn move_series_keeps_live_exceptions_and_turns_deleted_ones_into_exdates() {
+    let (conn, personal) = move_setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY;COUNT=3");
+    make_synced(&conn, &s.id, "gs", "es");
+    let kept = update_occurrence(
+        &conn,
+        &s.id,
+        "2026-10-12T10:00:00+02:00",
+        &fields(
+            "Spostata",
+            "2026-10-13T11:00:00+02:00",
+            "2026-10-13T12:00:00+02:00",
+            None,
+        ),
+        &[],
+        &[],
+    )
+    .unwrap()
+    .event;
+    make_synced(&conn, &kept.id, "gk", "ek");
+    let gone = update_occurrence(
+        &conn,
+        &s.id,
+        "2026-10-19T10:00:00+02:00",
+        &fields(
+            "Cancellata",
+            "2026-10-19T10:00:00+02:00",
+            "2026-10-19T11:00:00+02:00",
+            None,
+        ),
+        &[],
+        &[],
+    )
+    .unwrap()
+    .event;
+    make_synced(&conn, &gone.id, "gg", "eg");
+    delete_event(&conn, &gone.id).unwrap();
+
+    let (copy, _) = move_event(&conn, &s.id, &to_calendar(&s, &personal), &[], &[]).unwrap();
+    assert_eq!(
+        copy.event.recurrence_rule.as_deref(),
+        Some("RRULE:FREQ=WEEKLY;COUNT=3\nEXDATE:20261019T080000Z")
+    );
+    let exceptions: Vec<(String, String)> = conn
+        .prepare("SELECT title, calendar_id FROM events WHERE series_id = ?1")
+        .unwrap()
+        .query_map([&copy.event.id], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(exceptions, vec![("Spostata".to_string(), personal.clone())]);
+    assert_eq!(
+        october(&conn),
+        vec![
+            ("2026-10-05T10:00:00+02:00".into(), "Settimanale".into()),
+            ("2026-10-13T11:00:00+02:00".into(), "Spostata".into()),
+        ]
+    );
+}
+
+#[test]
+fn move_rejects_exceptions_same_calendar_and_read_only_target() {
+    let (conn, _) = move_setup();
+    let s = monday_series(&conn, "RRULE:FREQ=WEEKLY;COUNT=3");
+    let ex = update_occurrence(
+        &conn,
+        &s.id,
+        "2026-10-12T10:00:00+02:00",
+        &fields(
+            "Eccezione",
+            "2026-10-12T10:00:00+02:00",
+            "2026-10-12T11:00:00+02:00",
+            None,
+        ),
+        &[],
+        &[],
+    )
+    .unwrap()
+    .event;
+    let plain = create(&conn, "Singolo");
+    conn.execute("UPDATE calendars SET read_only = 1 WHERE id = 'c2'", [])
+        .unwrap();
+
+    for (id, target) in [(&ex.id, "c2"), (&plain.id, "c1"), (&plain.id, "c2")] {
+        let event = get_event(&conn, id).unwrap();
+        assert!(matches!(
+            move_event(&conn, id, &to_calendar(&event, target), &[], &[]),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+    assert!(row_exists(&conn, &plain.id));
+}
+
+#[test]
+fn move_rejects_attendees_from_remote_or_to_microsoft_and_meet_links_to_google() {
+    let (conn, personal) = move_setup();
+    let remote = create(&conn, "Riunione");
+    let mut local = new_event("Locale");
+    local.calendar_id = personal.clone();
+    let local = insert_event(&conn, &local, &[], &[]).unwrap().event;
+
+    let rejected = |id: &str, new: &NewEvent, attendees: &[NewAttendee]| {
+        matches!(
+            move_event(&conn, id, new, attendees, &[]),
+            Err(AppError::InvalidInput(_))
+        )
+    };
+    // Partecipanti da un calendario remoto: l'organizzatore non e' noto.
+    assert!(rejected(
+        &remote.id,
+        &to_calendar(&remote, &personal),
+        &[attendee("a@b.it")]
+    ));
+    // Partecipanti verso Microsoft: Graph invierebbe gli inviti.
+    assert!(rejected(
+        &local.id,
+        &to_calendar(&local, "ms"),
+        &[attendee("a@b.it")]
+    ));
+    // Link di videoconferenza verso Google: andrebbe perso.
+    let mut with_link = to_calendar(&local, "c1");
+    with_link.conference_url = Some("https://zoom.us/j/1".into());
+    assert!(rejected(&local.id, &with_link, &[]));
+    // Partecipanti da locale a Google: ammesso (sendUpdates=none).
+    assert!(move_event(
+        &conn,
+        &local.id,
+        &to_calendar(&local, "c1"),
+        &[attendee("a@b.it")],
+        &[]
+    )
+    .is_ok());
+}
+
+#[test]
+fn move_to_microsoft_rejects_rules_graph_cannot_express() {
+    let (conn, personal) = move_setup();
+    let mut ev = new_event("Ogni ora");
+    ev.calendar_id = personal;
+    ev.recurrence_rule = Some("RRULE:FREQ=HOURLY;COUNT=3".into());
+    let original = insert_event(&conn, &ev, &[], &[]).unwrap().event;
+    assert!(matches!(
+        move_event(&conn, &original.id, &to_calendar(&original, "ms"), &[], &[]),
+        Err(AppError::InvalidInput(_))
+    ));
+    assert!(row_exists(&conn, &original.id));
+}
+
+#[test]
+fn series_with_date_or_local_until_expand() {
+    let conn = setup();
+    // Serie all-day di Google con UNTIL a sola data, rifiutato cosi' com'e' dal crate rrule.
+    let mut yearly = new_event("Compleanno");
+    yearly.start = "2015-02-02".into();
+    yearly.end = "2015-02-03".into();
+    yearly.all_day = true;
+    yearly.recurrence_rule = Some("RRULE:FREQ=YEARLY;WKST=MO;UNTIL=20160201".into());
+    insert_event(&conn, &yearly, &[], &[]).unwrap();
+    assert_eq!(
+        starts(&range(
+            &conn,
+            "2015-01-01T00:00:00+01:00",
+            "2017-01-01T00:00:00+01:00"
+        )),
+        vec!["2015-02-02"]
+    );
+
+    // Serie a orario con UNTIL in ora locale, a cavallo dell'ora legale: UNTIL incluso.
+    let mut daily = new_event("Giornaliero");
+    daily.start = "2026-03-27T09:00:00+01:00".into();
+    daily.end = "2026-03-27T10:00:00+01:00".into();
+    daily.recurrence_rule = Some("RRULE:FREQ=DAILY;UNTIL=20260330T090000".into());
+    insert_event(&conn, &daily, &[], &[]).unwrap();
+    assert_eq!(
+        starts(&range(
+            &conn,
+            "2026-03-26T00:00:00+01:00",
+            "2026-04-05T00:00:00+02:00"
+        )),
+        vec![
+            "2026-03-27T09:00:00+01:00",
+            "2026-03-28T09:00:00+01:00",
+            "2026-03-29T09:00:00+02:00",
+            "2026-03-30T09:00:00+02:00",
+        ]
+    );
+}

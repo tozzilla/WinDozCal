@@ -195,6 +195,65 @@ impl MicrosoftProvider {
         Ok((items, delta_link))
     }
 
+    /// Le EXDATE locali diventano istanze cancellate sul server (Graph non le accetta nella
+    /// regola): si cancellano le istanze corrispondenti ancora presenti. Serve all'update e alla
+    /// create di una serie spostata da un altro calendario (ADR 020).
+    async fn delete_excluded_instances(&self, event: &Event, remote_id: &str) -> AppResult<()> {
+        let Some(rule) = event
+            .recurrence_rule
+            .as_deref()
+            .and_then(recurrence::parse_rule)
+        else {
+            return Ok(());
+        };
+        let tz: Tz = event.timezone.parse().unwrap_or(Tz::UTC);
+        let mut instants: Vec<i64> = rule.ex_instants.iter().copied().collect();
+        instants.extend(
+            rule.ex_local
+                .iter()
+                .filter_map(|l| tz.from_local_datetime(l).earliest().map(|d| d.timestamp())),
+        );
+        instants.extend(rule.ex_dates.iter().filter_map(|d| {
+            d.and_hms_opt(0, 0, 0)
+                .and_then(|m| tz.from_local_datetime(&m).earliest())
+                .map(|dt| dt.timestamp())
+        }));
+        let (Some(min), Some(max)) = (instants.iter().min(), instants.iter().max()) else {
+            return Ok(());
+        };
+        let wanted: HashSet<i64> = instants.iter().copied().collect();
+        for instance in self
+            .instances(remote_id, &iso_z_ts(min - 86_400), &iso_z_ts(max + 86_400))
+            .await?
+        {
+            let start = instance
+                .start
+                .as_ref()
+                .and_then(|s| instant_of(&s.date_time));
+            let all_day_match = event.all_day
+                && instance
+                    .start
+                    .as_ref()
+                    .and_then(|s| NaiveDate::parse_from_str(&s.date_time[..10], "%Y-%m-%d").ok())
+                    .is_some_and(|d| rule.ex_dates.contains(&d));
+            if start.is_some_and(|s| wanted.contains(&s)) || all_day_match {
+                match self
+                    .call(
+                        Method::DELETE,
+                        &format!("/me/events/{}", encode(&instance.id)),
+                        None,
+                        None,
+                    )
+                    .await
+                {
+                    Ok(_) | Err(AppError::NotFound(_)) => {}
+                    Err(err) => return Err(err),
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Istanze di una serie in `[from, to)` (UTC, ISO).
     async fn instances(&self, master_id: &str, from: &str, to: &str) -> AppResult<Vec<GEvent>> {
         let path = format!(
@@ -492,6 +551,7 @@ impl CalendarProvider for MicrosoftProvider {
             .and_then(|v| v["id"].as_str())
             .ok_or_else(|| AppError::Provider("graph create: missing id".into()))?
             .to_string();
+        self.delete_excluded_instances(event, &id).await?;
         event_ref(value, &id)
     }
 
@@ -514,60 +574,7 @@ impl CalendarProvider for MicrosoftProvider {
                 event.etag.as_deref(),
             )
             .await?;
-        // Le EXDATE locali diventano istanze cancellate sul server (Graph non le accetta nella
-        // regola): si cancellano le istanze corrispondenti ancora presenti.
-        if let Some(rule) = event
-            .recurrence_rule
-            .as_deref()
-            .and_then(recurrence::parse_rule)
-        {
-            let tz: Tz = event.timezone.parse().unwrap_or(Tz::UTC);
-            let mut instants: Vec<i64> = rule.ex_instants.iter().copied().collect();
-            instants.extend(
-                rule.ex_local
-                    .iter()
-                    .filter_map(|l| tz.from_local_datetime(l).earliest().map(|d| d.timestamp())),
-            );
-            instants.extend(rule.ex_dates.iter().filter_map(|d| {
-                d.and_hms_opt(0, 0, 0)
-                    .and_then(|m| tz.from_local_datetime(&m).earliest())
-                    .map(|dt| dt.timestamp())
-            }));
-            if let (Some(min), Some(max)) = (instants.iter().min(), instants.iter().max()) {
-                let wanted: HashSet<i64> = instants.iter().copied().collect();
-                for instance in self
-                    .instances(&remote_id, &iso_z_ts(min - 86_400), &iso_z_ts(max + 86_400))
-                    .await?
-                {
-                    let start = instance
-                        .start
-                        .as_ref()
-                        .and_then(|s| instant_of(&s.date_time));
-                    let all_day_match = event.all_day
-                        && instance
-                            .start
-                            .as_ref()
-                            .and_then(|s| {
-                                NaiveDate::parse_from_str(&s.date_time[..10], "%Y-%m-%d").ok()
-                            })
-                            .is_some_and(|d| rule.ex_dates.contains(&d));
-                    if start.is_some_and(|s| wanted.contains(&s)) || all_day_match {
-                        match self
-                            .call(
-                                Method::DELETE,
-                                &format!("/me/events/{}", encode(&instance.id)),
-                                None,
-                                None,
-                            )
-                            .await
-                        {
-                            Ok(_) | Err(AppError::NotFound(_)) => {}
-                            Err(err) => return Err(err),
-                        }
-                    }
-                }
-            }
-        }
+        self.delete_excluded_instances(event, &remote_id).await?;
         event_ref(value, &remote_id)
     }
 
@@ -861,6 +868,11 @@ fn to_remote(event: &GEvent) -> Option<RemoteEvent> {
         series_remote_id: None,
         original_start: None,
     })
+}
+
+/// Verifica senza rete che l'evento sia inviabile a Graph (es. una ricorrenza esprimibile).
+pub fn validate_event(detail: &EventDetail) -> AppResult<()> {
+    event_body(detail, true).map(|_| ())
 }
 
 /// Corpo JSON per create/update. Gli orari si inviano nel fuso dell'evento (nome Windows); se il

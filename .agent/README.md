@@ -21,12 +21,13 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-019 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-020 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/completed/fase-2.md](Tasks/completed/fase-2.md) | Fase 2 (PRD §43), completata con v0.4.0 (aperta la verifica Microsoft con account reale) |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
 | [Tasks/redesign-frontend.md](Tasks/redesign-frontend.md) | Redesign del frontend (Palinsesto) |
 | [Tasks/impostazioni-34.md](Tasks/impostazioni-34.md) | Impostazioni PRD §34: primo giorno, orario di lavoro, durata, calendario predefinito, compact mode |
+| [Tasks/sposta-evento-calendario.md](Tasks/sposta-evento-calendario.md) | Spostare un evento tra calendari (bug stage 5) e UNTIL a data delle serie Google |
 | [../DESIGN.md](../DESIGN.md), [../PRODUCT.md](../PRODUCT.md) | Sistema visivo e verità di prodotto (skill impeccable) |
 
 ## ADR
@@ -52,6 +53,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 017 | Aspetto degli eventi e colore dei calendari | Accettato |
 | 018 | Preferenze del calendario nelle impostazioni | Accettato |
 | 019 | Sincronizzazione Google Calendar | Accettato, distribuzione del client da confermare |
+| 020 | Spostamento di eventi tra calendari | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 

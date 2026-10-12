@@ -31,6 +31,11 @@ export interface CalendarService {
   createEvent(event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
   /** Gli array sostituiscono interamente partecipanti e promemoria esistenti. */
   updateEvent(event: Event, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /**
+   * Sposta l'evento, o la serie intera con le sue eccezioni, nel calendario `event.calendar_id` applicando
+   * insieme le modifiche (ADR 020). Restituisce la copia, che ha un id nuovo.
+   */
+  moveEvent(eventId: string, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
   /** Elimina la serie intera. */
   deleteEvent(eventId: string): Promise<void>;
   /** Aggiunge una EXDATE alla serie: elimina solo l'occorrenza che inizia a `occurrenceStart` (ed eventuale eccezione). */

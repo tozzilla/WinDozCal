@@ -181,6 +181,16 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       storeExtras(updated.id, attendees, reminders);
       return detailOf(updated);
     },
+    // Versione semplice di `move_event`: copia nel calendario di destinazione e cancella l'originale
+    // (le eccezioni della serie si perdono).
+    async moveEvent(eventId, input, attendees, reminders) {
+      const original = events.find((e) => e.id === eventId);
+      if (!original) throw new Error("Evento non trovato");
+      if (original.series_id) throw new Error("Un'eccezione resta nel calendario della serie");
+      const copy = await this.createEvent(input, attendees, reminders);
+      await this.deleteEvent(eventId);
+      return copy;
+    },
     async deleteEvent(eventId) {
       events = events.filter((e) => e.id !== eventId && e.series_id !== eventId);
       attendeesByEvent.delete(eventId);

@@ -100,6 +100,7 @@ pub fn run() {
             commands::get_event,
             commands::create_event,
             commands::update_event,
+            commands::move_event,
             commands::delete_event,
             commands::delete_occurrence,
             commands::update_occurrence,

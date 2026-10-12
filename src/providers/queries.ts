@@ -1,5 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { applyToSeries, type SeriesScope } from "@/events/seriesEdit";
+import { applyToSeries, toNewEvent, type SeriesScope } from "@/events/seriesEdit";
 import { DEFAULT_SETTINGS, type Event, type NewAttendee, type NewEvent, type NewReminder, type Settings } from "@/types";
 import type { OccurrenceRef } from "@/utils/events";
 import { calendarService } from "./calendarService";
@@ -138,6 +138,12 @@ export function useUpdateEvent() {
       calendarService.updateEvent(v.event, v.attendees, v.reminders), onSuccess: () => invalidate() });
 }
 
+export function useMoveEvent() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: (v: { eventId: string; event: NewEvent; attendees: NewAttendee[]; reminders: NewReminder[] }) =>
+      calendarService.moveEvent(v.eventId, v.event, v.attendees, v.reminders), onSuccess: () => invalidate() });
+}
+
 export function useDeleteEvent() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: (eventId: string) => calendarService.deleteEvent(eventId), onSuccess: () => invalidate() });
@@ -147,7 +153,8 @@ export function useDeleteEvent() {
  * Salva una modifica fatta su un'occorrenza di serie con la portata scelta (PRD §10, ADR 013):
  * - `this`: eccezione (`update_occurrence`), o `update_event` se l'occorrenza è già un'eccezione (`exception`);
  * - `following`: `split_series` con i campi e la regola modificati;
- * - `all`: `update_event` sulla serie, spostata come l'occorrenza (vedi `applyToSeries`).
+ * - `all`: `update_event` sulla serie, spostata come l'occorrenza (vedi `applyToSeries`); se cambia il
+ *   calendario, `move_event` (ADR 020: solo la serie intera cambia calendario).
  */
 export function useSaveOccurrence() {
   const invalidate = useInvalidate();
@@ -170,7 +177,11 @@ export function useSaveOccurrence() {
         return calendarService.splitSeries(v.ref.seriesId, v.ref.occurrenceStart, v.fields, v.attendees, v.reminders);
       }
       const series = await calendarService.getEvent(v.ref.seriesId);
-      return calendarService.updateEvent(applyToSeries(series.event, v.ref.occurrenceStart, v.fields, v.ref.isException), v.attendees, v.reminders);
+      const updated = applyToSeries(series.event, v.ref.occurrenceStart, v.fields, v.ref.isException);
+      if (v.fields.calendar_id !== series.event.calendar_id) {
+        return calendarService.moveEvent(series.event.id, { ...toNewEvent(updated), calendar_id: v.fields.calendar_id }, v.attendees, v.reminders);
+      }
+      return calendarService.updateEvent(updated, v.attendees, v.reminders);
     },
     onSuccess: () => invalidate(),
   });

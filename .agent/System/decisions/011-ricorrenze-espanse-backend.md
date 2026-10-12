@@ -10,6 +10,8 @@ PRD §10: ricorrenze giornaliere, settimanali, mensili, annuali e giorni persona
 - Modifica di una singola occorrenza e "questo e i successivi": rinviate, come consente §10. `get_event`, `update_event` e `delete_event` agiscono sulla serie intera; nella UI il drag di un'occorrenza ricorrente è disabilitato.
 - Tray ("Next event") e promemoria usano le occorrenze espanse.
 
+- `UNTIL` a sola data (serie all-day) o in ora locale, ammessi da RFC 5545 e usati da Google, si convertono in UTC solo durante l'espansione: la data diventa la fine di quel giorno nel fuso dell'evento. La regola salvata, che torna al provider, non cambia (12 ott 2026, [ADR 020](020-spostamento-tra-calendari.md) per il contesto).
+
 Fonte tecnica canonica: sezione "Ricorrenze" di `docs/CONTRACT.md`.
 
 ## Conseguenze

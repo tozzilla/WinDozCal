@@ -63,6 +63,7 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `get_event` | `eventId` | `EventDetail` |
 | `create_event` | `event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (sync_status=pending_create, `synced` su calendari local) |
 | `update_event` | `event: Event, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (pending_update, `synced` su local); gli array sostituiscono interamente quelli esistenti |
+| `move_event` | `eventId, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` della copia nel calendario `event.calendar_id`, con id nuovo (ADR 020). Copia e cancellazione dell'originale in una transazione; un originale remoto resta `pending_delete` finché la copia non è sul server. Serie: si sposta con le eccezioni vive, quelle cancellate diventano `EXDATE`. Errore `invalid_input` per: eccezioni, stesso calendario, calendario di sola lettura, partecipanti da un calendario remoto o verso Microsoft, link di videoconferenza verso Google, ricorrenza non esprimibile su Microsoft. `update_event` continua a ignorare `calendar_id` |
 | `delete_event` | `eventId` | `void` (pending_delete) |
 | `search_events` | `query` | `Event[]`: titolo, descrizione, luogo e partecipanti (email e nome), solo calendari visibili, max 200, dal più recente; le serie compaiono una volta (non espanse) |
 | `sync_now` | `accountId?` | `void` |

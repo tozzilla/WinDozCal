@@ -414,6 +414,39 @@ async fn push_create_update_delete() {
 }
 
 #[tokio::test]
+async fn created_series_deletes_instances_excluded_by_exdate() {
+    // Serie spostata da un altro calendario (ADR 020): le EXDATE valgono anche alla creazione.
+    let (base, seen) = serve(Box::new(|method, path| {
+        match (method, path) {
+        ("POST", "/me/calendars/CAL1/events") => Some((
+            201,
+            r#"{"id":"NEW1","@odata.etag":"W/\"n1\""}"#.into(),
+            None,
+        )),
+        ("GET", p) if p.starts_with("/me/events/NEW1/instances?") => Some((
+            200,
+            r#"{"value":[{"id":"I19","type":"occurrence","start":{"dateTime":"2026-10-19T08:00:00.0000000","timeZone":"UTC"},"end":{"dateTime":"2026-10-19T09:00:00.0000000","timeZone":"UTC"}}]}"#.into(),
+            None,
+        )),
+        ("DELETE", "/me/events/I19") => Some((204, String::new(), None)),
+        _ => None,
+    }
+    }));
+    let provider = MicrosoftProvider::with_base(&base, "tok");
+    let mut series = local_event();
+    series.recurrence_rule =
+        Some("RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=3\nEXDATE:20261019T080000Z".into());
+    let mut moved = detail(series);
+    moved.attendees.clear();
+    provider.create_event(&calendar(), &moved).await.unwrap();
+    assert!(seen
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|s| s.method == "DELETE" && s.path == "/me/events/I19"));
+}
+
+#[tokio::test]
 async fn exception_push_patches_the_matching_instance() {
     let (base, seen) = serve(Box::new(|method, path| match (method, path) {
         ("GET", p) if p.starts_with("/me/events/M1/instances?") => {

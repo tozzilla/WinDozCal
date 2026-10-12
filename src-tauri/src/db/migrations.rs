@@ -15,6 +15,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/007_attendee_search.sql"),
     include_str!("migrations/008_recurrence_exceptions.sql"),
     include_str!("migrations/009_event_appearance.sql"),
+    include_str!("migrations/010_moved_to.sql"),
 ];
 
 pub fn run(conn: &mut Connection) -> AppResult<()> {

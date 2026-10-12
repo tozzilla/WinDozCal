@@ -172,6 +172,14 @@ async fn push_pending(
                 }
                 Some(detail)
             }
+            // Originale di uno spostamento (ADR 020): si cancella sul server solo quando la copia
+            // non e' piu' in attesa di creazione, cosi' un errore non fa sparire l'evento.
+            EventSyncStatus::PendingDelete => {
+                if db.with(|conn| sync_repo::moved_copy_waiting(conn, &event.id))? {
+                    continue;
+                }
+                None
+            }
             _ => None,
         };
         let result: AppResult<()> = match event.sync_status {
@@ -248,4 +256,133 @@ async fn pull_changes(
     let stats = db.with(|conn| sync_repo::apply_sync_result(conn, calendar, &result))?;
     tracing::debug!(calendar_id = %calendar.id, ?stats, "remote changes applied");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+
+    use async_trait::async_trait;
+
+    use super::*;
+    use crate::db::repo;
+    use crate::models::{
+        Event, EventDetail, EventStatus, NewEvent, RemoteCalendar, RemoteEventRef, SyncResult,
+        SyncState,
+    };
+
+    /// Provider finto: registra le chiamate di push; la create puo' fallire in modo permanente.
+    struct Recorder {
+        fail_create: bool,
+        calls: Mutex<Vec<String>>,
+    }
+
+    #[async_trait]
+    impl CalendarProvider for Recorder {
+        fn kind(&self) -> ProviderKind {
+            ProviderKind::Google
+        }
+        async fn authenticate(&self) -> AppResult<()> {
+            Ok(())
+        }
+        async fn disconnect(&self) -> AppResult<()> {
+            Ok(())
+        }
+        async fn get_calendars(&self) -> AppResult<Vec<RemoteCalendar>> {
+            Ok(Vec::new())
+        }
+        async fn sync_events(&self, _: &Calendar, _: Option<String>) -> AppResult<SyncResult> {
+            Ok(SyncResult::default())
+        }
+        async fn create_event(&self, c: &Calendar, _: &EventDetail) -> AppResult<RemoteEventRef> {
+            self.calls.lock().unwrap().push(format!("create {}", c.id));
+            if self.fail_create {
+                return Err(AppError::Provider("rejected".into()));
+            }
+            Ok(RemoteEventRef {
+                remote_id: "copy".into(),
+                etag: Some("e2".into()),
+                remote_updated_at: None,
+            })
+        }
+        async fn update_event(&self, _: &Calendar, _: &EventDetail) -> AppResult<RemoteEventRef> {
+            unreachable!("no updates in these tests")
+        }
+        async fn delete_event(&self, c: &Calendar, _: &Event) -> AppResult<()> {
+            self.calls.lock().unwrap().push(format!("delete {}", c.id));
+            Ok(())
+        }
+        async fn get_sync_state(&self) -> AppResult<Vec<SyncState>> {
+            Ok(Vec::new())
+        }
+    }
+
+    /// Evento `synced` nel calendario c1 spostato in c2: restituisce il db e i due calendari.
+    fn moved_between_remote_calendars() -> (Db, Calendar, Calendar) {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.with(|conn| {
+            conn.execute_batch(
+                "INSERT INTO accounts (id, provider, name, email) VALUES ('a1', 'google', 'A', 'a@x.it');
+                 INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('c1', 'a1', 'r1', 'Uno');
+                 INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('c2', 'a1', 'r2', 'Due');",
+            )?;
+            let new = NewEvent {
+                calendar_id: "c1".into(),
+                title: "Spostami".into(),
+                description: None,
+                location: None,
+                conference_url: None,
+                start: "2026-10-07T10:00:00+02:00".into(),
+                end: "2026-10-07T11:00:00+02:00".into(),
+                timezone: "Europe/Rome".into(),
+                all_day: false,
+                recurrence_rule: None,
+                status: EventStatus::Busy,
+                color: None,
+                icon: None,
+                pattern: None,
+            };
+            let original = repo::insert_event(conn, &new, &[], &[])?.event;
+            conn.execute(
+                "UPDATE events SET sync_status = 'synced', remote_id = 'orig', etag = 'e1'
+                 WHERE id = ?1",
+                [&original.id],
+            )?;
+            repo::move_event(conn, &original.id, &NewEvent { calendar_id: "c2".into(), ..new }, &[], &[])?;
+            Ok(())
+        })
+        .unwrap();
+        let c1 = db.with(|conn| repo::get_calendar(conn, "c1")).unwrap();
+        let c2 = db.with(|conn| repo::get_calendar(conn, "c2")).unwrap();
+        (db, c1, c2)
+    }
+
+    #[tokio::test]
+    async fn moved_original_is_deleted_only_after_its_copy_is_created() {
+        let (db, c1, c2) = moved_between_remote_calendars();
+        let provider = Recorder {
+            fail_create: false,
+            calls: Mutex::new(Vec::new()),
+        };
+        // Calendario d'origine per primo: la delete aspetta la copia.
+        push_pending(&db, &provider, &c1).await.unwrap();
+        push_pending(&db, &provider, &c2).await.unwrap();
+        push_pending(&db, &provider, &c1).await.unwrap();
+        assert_eq!(
+            *provider.calls.lock().unwrap(),
+            vec!["create c2", "delete c1"]
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_copy_never_deletes_the_original_on_the_server() {
+        let (db, c1, c2) = moved_between_remote_calendars();
+        let provider = Recorder {
+            fail_create: true,
+            calls: Mutex::new(Vec::new()),
+        };
+        push_pending(&db, &provider, &c2).await.unwrap();
+        push_pending(&db, &provider, &c1).await.unwrap();
+        assert_eq!(*provider.calls.lock().unwrap(), vec!["create c2"]);
+    }
 }

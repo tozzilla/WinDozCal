@@ -33,4 +33,6 @@ Una modifica UI è finita quando la si vede funzionare dentro Tauri, non solo co
 WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9333" npm run tauri dev
 ```
 
+Se la 0.5.x installata è nel tray, il single-instance inoltra l'avvio a lei: usa il profilo di prova (DB in `%APPDATA%\app.windozcal.devtest`) aggiungendo `-- --config '{"identifier":"app.windozcal.devtest"}'`. I client OAuth stanno in `.env.local`, che nessuno carica da solo: prima `set -a && . ./.env.local && set +a`.
+
 Poi `http://127.0.0.1:9333/json` elenca la pagina; con un piccolo script Node (WebSocket nativo) si invia `Runtime.evaluate` per cliccare e leggere il DOM e `Page.captureScreenshot` per lo screenshot. Il DB di dev è in `%APPDATA%\app.windozcal.desktop\windozcal.db`, i log in `%LOCALAPPDATA%\app.windozcal.desktop\logs`.

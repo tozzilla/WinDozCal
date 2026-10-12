@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { openExternal } from "@/providers/externalLinks";
 import {
   usePreferences,
+  useAccounts,
   useCalendars,
   useCreateEvent,
   useDeleteEvent,
   useDeleteOccurrenceScoped,
   useEventDetail,
+  useMoveEvent,
   useSaveOccurrence,
   useUpdateEvent,
 } from "@/providers/queries";
@@ -16,6 +18,7 @@ import { occurrenceRef } from "@/utils/events";
 import { isValidConferenceUrl } from "@/utils/validation";
 import { AppearanceField } from "./AppearanceField";
 import { AttendeesField } from "./AttendeesField";
+import { moveBlockReason } from "./move";
 import { draftToFields, emptyDraft, eventToDraft, pickCalendar, toDateInput, toTimeInput, validateDraft, type EventDraft } from "./draft";
 import { weekdayOf, WEEKDAYS, type RecurrenceFreq, type Weekday } from "./recurrence";
 import { RemindersField } from "./RemindersField";
@@ -46,9 +49,11 @@ function errorMessage(err: unknown): string {
 export function EventEditor() {
   const { open, openedAt, event, slot, preset, close } = useEditorStore();
   const { data: calendars = [] } = useCalendars();
+  const { data: accounts = [] } = useAccounts();
   const settings = usePreferences();
   const create = useCreateEvent();
   const update = useUpdateEvent();
+  const move = useMoveEvent();
   const remove = useDeleteEvent();
   const removeScoped = useDeleteOccurrenceScoped();
   const saveOccurrence = useSaveOccurrence();
@@ -126,15 +131,31 @@ export function EventEditor() {
 
   const set = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => setDraft({ ...draft, [key]: value });
 
+  // Cambio di calendario di un evento esistente (ADR 020): copia nel nuovo calendario e cancellazione
+  // dell'originale; per una serie si sposta sempre la serie intera.
+  const currentCalendarId = detail.data?.event.calendar_id;
+  const moving = !!event && !!currentCalendarId && draft.calendarId !== currentCalendarId;
+  const moveBlocked = moving
+    ? moveBlockReason(
+        calendars.find((c) => c.id === currentCalendarId),
+        calendars.find((c) => c.id === draft.calendarId),
+        accounts,
+        { attendees: draft.attendees.length, conferenceUrl: draft.conferenceUrl },
+      )
+    : null;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const problems = validateDraft(draft);
     setErrors(problems);
-    if (problems.length > 0) return;
+    // Il motivo del blocco è già sotto il selettore del calendario.
+    if (problems.length > 0 || moveBlocked) return;
     if (ref) return setChoosingScope(true);
     const fields = draftToFields(draft);
     try {
-      if (event && detail.data) {
+      if (event && detail.data && moving) {
+        await move.mutateAsync({ eventId: detail.data.event.id, event: fields, attendees: draft.attendees, reminders: draft.reminders });
+      } else if (event && detail.data) {
         await update.mutateAsync({ event: { ...detail.data.event, ...fields }, attendees: draft.attendees, reminders: draft.reminders });
       } else {
         await create.mutateAsync({ event: fields, attendees: draft.attendees, reminders: draft.reminders });
@@ -214,6 +235,14 @@ export function EventEditor() {
               </option>
             ))}
           </select>
+          {moving && (
+            <span className={`block text-xs ${moveBlocked ? "text-destructive" : "text-muted-foreground"}`}>
+              {moveBlocked ??
+                (ref
+                  ? "La serie intera passa nel nuovo calendario."
+                  : "L'evento passa nel nuovo calendario; nel calendario di origine viene cancellato.")}
+            </span>
+          )}
         </Field>
 
         <Field label="Luogo">
@@ -310,7 +339,12 @@ export function EventEditor() {
         {choosingScope && (
           <ScopeChoice
             question="Applicare la modifica a"
-            note="Se cambi data, orari o ricorrenza di tutta la serie o dei successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."
+            note={
+              moving
+                ? "Cambiando calendario si sposta tutta la serie."
+                : "Se cambi data, orari o ricorrenza di tutta la serie o dei successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."
+            }
+            scopes={moving ? ["all"] : undefined}
             disabled={saveOccurrence.isPending}
             onChoose={(scope) => void saveWithScope(scope)}
             onCancel={() => setChoosingScope(false)}

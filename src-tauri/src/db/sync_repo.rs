@@ -138,6 +138,22 @@ pub fn mark_event_error(conn: &Connection, event_id: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// `true` se l'evento e' l'originale di uno spostamento (ADR 020) e la sua copia non esiste
+/// ancora sul server (senza `remote_id`, `pending_create` o `error`): la delete remota aspetta.
+/// Una copia gia' creata, in un calendario locale o cancellata nel frattempo non blocca nulla.
+pub fn moved_copy_waiting(conn: &Connection, event_id: &str) -> AppResult<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM events o JOIN events c ON c.id = o.moved_to
+             WHERE o.id = ?1 AND c.remote_id IS NULL
+               AND c.sync_status IN ('pending_create', 'error')",
+            params![event_id],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
+}
+
 /// Rimuove la riga locale dopo una delete remota riuscita (solo se e' ancora `pending_delete`).
 pub fn finish_delete(conn: &Connection, event_id: &str) -> AppResult<()> {
     conn.execute(

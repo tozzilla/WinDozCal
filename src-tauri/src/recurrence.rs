@@ -146,7 +146,7 @@ pub fn expand(event: &Event, range_start: i64, range_end: i64) -> Result<Vec<Eve
         "DTSTART;TZID={}:{}\nRRULE:{}",
         tz.name(),
         local_start.format("%Y%m%dT%H%M%S"),
-        rule.rrule
+        utc_until(&rule.rrule, &tz)
     );
     let set: RRuleSet = set_text
         .parse()
@@ -251,6 +251,44 @@ pub fn has_occurrence(event: &Event, occurrence_start: &str) -> Result<bool, Str
     Ok(occurrences
         .iter()
         .any(|o| o.occurrence_start.as_deref().and_then(|s| parse_ts(s).ok()) == Some(ts)))
+}
+
+/// Il crate `rrule` accetta con un `DTSTART;TZID` solo un `UNTIL` in UTC, mentre RFC 5545 e
+/// Google ammettono anche la sola data (serie all-day) o un'ora locale. Si converte nel fuso
+/// dell'evento: la data diventa la fine di quel giorno, l'ora locale l'istante corrispondente
+/// (nei buchi dell'ora legale l'ora successiva). Solo per l'espansione: la regola salvata, che
+/// torna al provider, resta com'e'.
+fn utc_until(body: &str, tz: &ChronoTz) -> String {
+    let mut parts = rule_parts(body);
+    let Some((_, value)) = parts.iter_mut().find(|(k, _)| k == "UNTIL") else {
+        return body.to_string();
+    };
+    let local = if value.len() == 8 {
+        NaiveDate::parse_from_str(value, "%Y%m%d")
+            .ok()
+            .and_then(|d| d.and_hms_opt(23, 59, 59))
+    } else if value.ends_with(['Z', 'z']) {
+        None
+    } else {
+        NaiveDateTime::parse_from_str(value, "%Y%m%dT%H%M%S").ok()
+    };
+    let Some(local) = local else {
+        return body.to_string();
+    };
+    let instant = tz.from_local_datetime(&local).earliest().or_else(|| {
+        tz.from_local_datetime(&(local + Duration::hours(1)))
+            .earliest()
+    });
+    match instant {
+        Some(instant) => {
+            *value = instant
+                .with_timezone(&Utc)
+                .format("%Y%m%dT%H%M%SZ")
+                .to_string();
+            join_parts(&parts)
+        }
+        None => body.to_string(),
+    }
 }
 
 /// Parti `KEY=VALUE` del corpo di una RRULE.

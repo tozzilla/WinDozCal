@@ -307,6 +307,27 @@ pub async fn delete_event(
     Ok(())
 }
 
+/// Sposta l'evento (o la serie intera) nel calendario `event.calendar_id` applicando le modifiche
+/// dell'editor (ADR 020). Restituisce la copia, che ha un id nuovo.
+#[tauri::command]
+pub async fn move_event(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    event_id: String,
+    event: NewEvent,
+    attendees: Vec<NewAttendee>,
+    reminders: Vec<NewReminder>,
+) -> AppResult<EventDetail> {
+    let (moved, needs_sync) = state
+        .db
+        .with(|conn| repo::move_event(conn, &event_id, &event, &attendees, &reminders))?;
+    if needs_sync {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(moved)
+}
+
 /// Esclude una singola occorrenza di una serie ricorrente (aggiunge una EXDATE).
 #[tauri::command]
 pub async fn delete_occurrence(

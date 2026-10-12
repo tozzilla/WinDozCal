@@ -10,6 +10,7 @@ export function ScopeChoice({
   note,
   destructive = false,
   disabled = false,
+  scopes = SCOPES,
   onChoose,
   onCancel,
 }: {
@@ -17,6 +18,8 @@ export function ScopeChoice({
   note?: string | null;
   destructive?: boolean;
   disabled?: boolean;
+  /** Portate offerte (es. solo "Tutta la serie" quando cambia il calendario). */
+  scopes?: SeriesScope[];
   onChoose: (scope: SeriesScope) => void;
   onCancel: () => void;
 }) {
@@ -30,7 +33,7 @@ export function ScopeChoice({
       <p className="text-sm font-medium">{question}</p>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
       <div className="flex flex-wrap gap-2">
-        {SCOPES.map((scope) => (
+        {scopes.map((scope) => (
           <Button key={scope} type="button" variant={destructive ? "destructive" : "default"} disabled={disabled} onClick={() => onChoose(scope)}>
             {SCOPE_LABEL[scope]}
           </Button>

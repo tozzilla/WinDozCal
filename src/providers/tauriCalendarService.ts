@@ -19,6 +19,7 @@ export const tauriCalendarService: CalendarService = {
   getEvent: (eventId) => invoke<EventDetail>("get_event", { eventId }),
   createEvent: (event, attendees, reminders) => invoke<EventDetail>("create_event", { event, attendees, reminders }),
   updateEvent: (event, attendees, reminders) => invoke<EventDetail>("update_event", { event, attendees, reminders }),
+  moveEvent: (eventId, event, attendees, reminders) => invoke<EventDetail>("move_event", { eventId, event, attendees, reminders }),
   deleteEvent: (eventId) => invoke<void>("delete_event", { eventId }),
   deleteOccurrence: (eventId, occurrenceStart) => invoke<void>("delete_occurrence", { eventId, occurrenceStart }),
   updateOccurrence: (seriesId, occurrenceStart, event, attendees, reminders) =>

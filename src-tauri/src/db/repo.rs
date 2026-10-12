@@ -1177,6 +1177,225 @@ pub fn delete_event(conn: &Connection, event_id: &str) -> AppResult<bool> {
     Ok(true)
 }
 
+/// Provider dell'account a cui appartiene il calendario.
+fn calendar_provider(conn: &Connection, calendar_id: &str) -> AppResult<ProviderKind> {
+    conn.query_row(
+        "SELECT a.provider FROM calendars c JOIN accounts a ON a.id = c.account_id
+         WHERE c.id = ?1",
+        params![calendar_id],
+        |row| row.get(0),
+    )
+    .optional()?
+    .ok_or_else(|| AppError::NotFound(format!("calendar {calendar_id}")))
+}
+
+/// Eccezioni della serie, incluse quelle in `pending_delete`.
+fn exceptions_of(conn: &Connection, series_id: &str) -> AppResult<Vec<Event>> {
+    let sql = format!("SELECT {EVENT_COLS} FROM events e WHERE e.series_id = ?1");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params![series_id], event_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Promemoria gia' scattati dell'evento: la copia li eredita, cosi' non suonano due volte.
+fn copy_fired_reminders(conn: &Connection, from: &str, to: &str) -> AppResult<()> {
+    conn.execute(
+        "INSERT OR IGNORE INTO fired_reminders (event_id, minutes_before, occurrence_ts, fired_at)
+         SELECT ?2, minutes_before, occurrence_ts, fired_at FROM fired_reminders
+         WHERE event_id = ?1",
+        params![from, to],
+    )?;
+    Ok(())
+}
+
+fn new_event_from(event: &Event, calendar_id: &str) -> NewEvent {
+    NewEvent {
+        calendar_id: calendar_id.to_string(),
+        title: event.title.clone(),
+        description: event.description.clone(),
+        location: event.location.clone(),
+        conference_url: event.conference_url.clone(),
+        start: event.start.clone(),
+        end: event.end.clone(),
+        timezone: event.timezone.clone(),
+        all_day: event.all_day,
+        recurrence_rule: event.recurrence_rule.clone(),
+        status: event.status,
+        color: event.color.clone(),
+        icon: event.icon.clone(),
+        pattern: event.pattern.clone(),
+    }
+}
+
+/// Sposta un evento (o una serie intera) nel calendario `new.calendar_id`, applicando insieme le
+/// modifiche dell'editor (ADR 020). Si crea la copia nel calendario di destinazione e si cancella
+/// l'originale con la semantica di `delete_event`, in un'unica transazione; l'id locale cambia.
+/// Se l'originale resta `pending_delete`, `moved_to` punta alla copia: il sync lo cancella sul
+/// server solo dopo che la copia e' stata creata.
+///
+/// Serie: le eccezioni vive si copiano legate alla nuova serie, quelle cancellate diventano
+/// `EXDATE`; se cambiano orari o regola le eccezioni si scartano, come in `update_event`.
+/// Rifiutati: eccezioni (restano nel calendario della serie), stesso calendario, partecipanti
+/// da un calendario remoto o verso Microsoft, link di videoconferenza verso Google.
+/// Ritorna la copia e `true` se serve un sync.
+pub fn move_event(
+    conn: &Connection,
+    event_id: &str,
+    new: &NewEvent,
+    attendees: &[NewAttendee],
+    reminders: &[NewReminder],
+) -> AppResult<(EventDetail, bool)> {
+    let existing = get_event(conn, event_id)?;
+    if existing.sync_status == EventSyncStatus::PendingDelete {
+        return Err(AppError::NotFound(format!("event {event_id}")));
+    }
+    if existing.series_id.is_some() {
+        return Err(AppError::InvalidInput(
+            "an exception stays in the calendar of its series".into(),
+        ));
+    }
+    if existing.calendar_id == new.calendar_id {
+        return Err(AppError::InvalidInput(
+            "event is already in this calendar".into(),
+        ));
+    }
+    let source = calendar_provider(conn, &existing.calendar_id)?;
+    let target = calendar_provider(conn, &new.calendar_id)?;
+
+    let reshapes_series = existing.recurrence_rule.is_some()
+        && (existing.start != new.start
+            || existing.end != new.end
+            || existing.timezone != new.timezone
+            || existing.all_day != new.all_day
+            || !recurrence::same_rrule(
+                existing.recurrence_rule.as_deref(),
+                new.recurrence_rule.as_deref(),
+            ));
+    let exceptions = if existing.recurrence_rule.is_some() && !reshapes_series {
+        exceptions_of(conn, event_id)?
+    } else {
+        Vec::new()
+    };
+    let mut live = Vec::new();
+    let mut cancelled = Vec::new();
+    for exception in exceptions {
+        if exception.sync_status == EventSyncStatus::PendingDelete {
+            cancelled.push(exception);
+        } else {
+            let detail = get_event_detail(conn, &exception.id)?;
+            live.push(detail);
+        }
+    }
+
+    // ADR 020: l'organizzatore non e' salvato e Graph invia sempre gli inviti.
+    let has_attendees = !attendees.is_empty() || live.iter().any(|d| !d.attendees.is_empty());
+    if has_attendees && source != ProviderKind::Local {
+        return Err(AppError::InvalidInput(
+            "events with attendees cannot be moved out of a synced calendar".into(),
+        ));
+    }
+    if has_attendees && target == ProviderKind::Microsoft {
+        return Err(AppError::InvalidInput(
+            "events with attendees cannot be moved to Microsoft: invitations would be sent".into(),
+        ));
+    }
+    let has_conference = new
+        .conference_url
+        .as_deref()
+        .is_some_and(|u| !u.trim().is_empty())
+        || live.iter().any(|d| d.event.conference_url.is_some());
+    if has_conference && target == ProviderKind::Google {
+        return Err(AppError::InvalidInput(
+            "events with a video call link cannot be moved to Google: the link would be lost"
+                .into(),
+        ));
+    }
+
+    // Una regola che Graph non sa esprimere fallirebbe solo al push: meglio rifiutarla subito.
+    if target == ProviderKind::Microsoft && new.recurrence_rule.is_some() {
+        let mut preview = existing.clone();
+        preview.start = new.start.clone();
+        preview.end = new.end.clone();
+        preview.timezone = new.timezone.clone();
+        preview.all_day = new.all_day;
+        preview.recurrence_rule = new.recurrence_rule.clone();
+        crate::providers::microsoft::validate_event(&EventDetail {
+            event: preview,
+            attendees: Vec::new(),
+            reminders: Vec::new(),
+        })?;
+    }
+
+    let needs_sync = source != ProviderKind::Local || target != ProviderKind::Local;
+    let copy = atomically(conn, |tx| {
+        let copy = insert_row(tx, new, attendees, reminders, None)?;
+        copy_fired_reminders(tx, event_id, &copy.event.id)?;
+
+        for detail in &live {
+            let exception = &detail.event;
+            let (Some(original), Some(_)) = (&exception.original_start, &exception.series_id)
+            else {
+                continue;
+            };
+            let original_ts = parse_ts(original)?;
+            let children_attendees: Vec<NewAttendee> = detail
+                .attendees
+                .iter()
+                .map(|a| NewAttendee {
+                    email: a.email.clone(),
+                    name: a.name.clone(),
+                })
+                .collect();
+            let children_reminders: Vec<NewReminder> = detail
+                .reminders
+                .iter()
+                .map(|r| NewReminder {
+                    minutes_before: r.minutes_before,
+                    r#type: r.r#type.clone(),
+                })
+                .collect();
+            let moved = insert_row(
+                tx,
+                &NewEvent {
+                    recurrence_rule: None,
+                    ..new_event_from(exception, &new.calendar_id)
+                },
+                &children_attendees,
+                &children_reminders,
+                Some((&copy.event.id, original, original_ts)),
+            )?;
+            copy_fired_reminders(tx, &exception.id, &moved.event.id)?;
+        }
+
+        if let (Some(rule), false) = (&copy.event.recurrence_rule, cancelled.is_empty()) {
+            let mut rule = rule.clone();
+            for exception in &cancelled {
+                let Some(original) = &exception.original_start else {
+                    continue;
+                };
+                let line = recurrence::exdate_line(&copy.event, original).map_err(|reason| {
+                    AppError::InvalidInput(format!("invalid exception start: {reason}"))
+                })?;
+                if !rule.lines().any(|l| l.trim().eq_ignore_ascii_case(&line)) {
+                    rule = format!("{rule}\n{line}");
+                }
+            }
+            tx.execute(
+                "UPDATE events SET recurrence_rule = ?1 WHERE id = ?2",
+                params![rule, copy.event.id],
+            )?;
+        }
+
+        delete_event(tx, event_id)?;
+        tx.execute(
+            "UPDATE events SET moved_to = ?1 WHERE id = ?2",
+            params![copy.event.id, event_id],
+        )?;
+        get_event_detail(tx, &copy.event.id)
+    })?;
+    Ok((copy, needs_sync))
+}
+
 // ---------------------------------------------------------------------------
 // Ricorrenze: eccezioni e divisione delle serie (PRD 10, ADR 013)
 // ---------------------------------------------------------------------------
