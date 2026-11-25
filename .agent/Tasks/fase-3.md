@@ -4,7 +4,7 @@ Fonte: PRD §44. Non avviare prima della chiusura della Fase 2.
 
 Contenuto previsto, con riferimenti:
 
-- CalDAV: discovery, PROPFIND/REPORT/GET/PUT/DELETE, ETag, sync-token (§15).
+- CalDAV: discovery, PROPFIND/REPORT/GET/PUT/DELETE, ETag, sync-token (§15). Primo lavoro della fase, dopo la release 0.5.4 e la localizzazione: priorità e perimetro in [ADR 023](../System/decisions/023-caldav-priorita-perimetro.md) (proposto, 25 nov 2026).
 - Seconda timezone (§30).
 - Vista Agenda (§5).
 - Conflict resolution migliore, con schermata manuale (§23, ADR 007).

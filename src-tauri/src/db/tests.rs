@@ -1981,7 +1981,13 @@ fn remote_delete_of_moved_original_waits_until_copy_is_on_server() {
         move_event(&conn, &original.id, &to_calendar(&original, "c2"), &[], &[]).unwrap();
     assert!(moved_copy_waiting(&conn, &original.id).unwrap());
     // Creazione della copia fallita: l'originale resta sul server.
-    mark_event_error(&conn, &copy.event.id).unwrap();
+    mark_event_error(
+        &conn,
+        &copy.event.id,
+        EventSyncStatus::PendingCreate,
+        "rejected",
+    )
+    .unwrap();
     assert!(moved_copy_waiting(&conn, &original.id).unwrap());
     // Copia creata: ora l'originale si puo' cancellare.
     make_synced(&conn, &copy.event.id, "g2", "e2");
@@ -2236,4 +2242,129 @@ fn series_with_date_or_local_until_expand() {
             "2026-03-30T09:00:00+02:00",
         ]
     );
+}
+
+// ---------------------------------------------------------------------------
+// Modifiche rifiutate dal server (ADR 021)
+// ---------------------------------------------------------------------------
+
+fn failed_op(conn: &Connection, id: &str) -> Option<String> {
+    conn.query_row("SELECT failed_op FROM events WHERE id = ?1", [id], |r| {
+        r.get(0)
+    })
+    .unwrap()
+}
+
+#[test]
+fn rejected_change_keeps_operation_and_reason_until_retried() {
+    let conn = setup();
+    let ev = create(&conn, "Riunione");
+    make_synced(&conn, &ev.id, "g1", "e1");
+    let mut edited = get_event(&conn, &ev.id).unwrap();
+    edited.title = "Spostata".into();
+    update_event(&conn, &edited, &[], &[]).unwrap();
+
+    mark_event_error(
+        &conn,
+        &ev.id,
+        EventSyncStatus::PendingUpdate,
+        "provider error: google 403 Forbidden forbiddenForNonOrganizer",
+    )
+    .unwrap();
+    let detail = get_event_detail(&conn, &ev.id).unwrap();
+    assert_eq!(detail.event.sync_status, EventSyncStatus::Error);
+    assert_eq!(
+        detail.sync_error.as_deref(),
+        Some("provider error: google 403 Forbidden forbiddenForNonOrganizer")
+    );
+    assert_eq!(failed_events(&conn).unwrap().len(), 1);
+
+    assert_eq!(retry_failed(&conn, Some(&ev.id)).unwrap(), 1);
+    let retried = get_event_detail(&conn, &ev.id).unwrap();
+    assert_eq!(retried.event.sync_status, EventSyncStatus::PendingUpdate);
+    assert!(retried.sync_error.is_none());
+    assert!(failed_op(&conn, &ev.id).is_none());
+}
+
+#[test]
+fn retry_infers_operation_of_rows_failed_before_the_migration() {
+    let conn = setup();
+    let never_pushed = create(&conn, "Mai inviato");
+    let pushed = create(&conn, "Inviato");
+    make_synced(&conn, &pushed.id, "g1", "e1");
+    conn.execute("UPDATE events SET sync_status = 'error'", [])
+        .unwrap();
+
+    assert_eq!(retry_failed(&conn, None).unwrap(), 2);
+    assert_eq!(
+        get_event(&conn, &never_pushed.id).unwrap().sync_status,
+        EventSyncStatus::PendingCreate
+    );
+    assert_eq!(
+        get_event(&conn, &pushed.id).unwrap().sync_status,
+        EventSyncStatus::PendingUpdate
+    );
+}
+
+#[test]
+fn discarding_a_rejected_edit_refetches_the_calendar_from_the_server() {
+    let conn = setup();
+    let ev = create(&conn, "Riunione");
+    make_synced(&conn, &ev.id, "g1", "e1");
+    set_cursor(&conn, "a1", Some("c1"), Some("cur-1")).unwrap();
+    mark_event_error(&conn, &ev.id, EventSyncStatus::PendingUpdate, "rejected").unwrap();
+
+    discard_failed(&conn, &ev.id).unwrap();
+    let event = get_event(&conn, &ev.id).unwrap();
+    assert_eq!(event.sync_status, EventSyncStatus::Synced);
+    assert!(event.etag.is_none());
+    assert!(get_cursor(&conn, "a1", Some("c1")).unwrap().is_none());
+}
+
+#[test]
+fn discarding_a_rejected_moved_copy_restores_the_original() {
+    let (conn, _) = move_setup();
+    let original = create(&conn, "Remoto");
+    make_synced(&conn, &original.id, "g1", "e1");
+    let (copy, _) =
+        move_event(&conn, &original.id, &to_calendar(&original, "c2"), &[], &[]).unwrap();
+    mark_event_error(
+        &conn,
+        &copy.event.id,
+        EventSyncStatus::PendingCreate,
+        "rejected",
+    )
+    .unwrap();
+
+    discard_failed(&conn, &copy.event.id).unwrap();
+    assert!(!row_exists(&conn, &copy.event.id));
+    let restored = get_event(&conn, &original.id).unwrap();
+    assert_eq!(restored.sync_status, EventSyncStatus::Synced);
+    assert!(moved_to(&conn, &original.id).is_none());
+    // Nessuna delete in attesa: l'originale resta sul server.
+    assert!(pending_events(&conn, "c1").unwrap().is_empty());
+}
+
+#[test]
+fn server_change_over_a_rejected_edit_is_kept_as_conflict() {
+    let mut conn = setup();
+    let cal = get_calendar(&conn, "c1").unwrap();
+    let ev = create(&conn, "Locale");
+    make_synced(&conn, &ev.id, "r-1", "e1");
+    mark_event_error(&conn, &ev.id, EventSyncStatus::PendingUpdate, "rejected").unwrap();
+
+    let result = SyncResult {
+        upserts: vec![remote_event("r-1", "Dal server", "e2")],
+        deletions: vec![],
+        next_cursor: Some("cur-2".into()),
+        reconciled_series: vec![],
+    };
+    let stats = apply_sync_result(&mut conn, &cal, &result).unwrap();
+    assert_eq!(stats.conflicts, 1);
+    let event = get_event(&conn, &ev.id).unwrap();
+    assert_eq!(
+        (event.title.as_str(), event.sync_status),
+        ("Dal server", EventSyncStatus::Synced)
+    );
+    assert!(failed_op(&conn, &ev.id).is_none());
 }

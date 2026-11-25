@@ -17,7 +17,7 @@ PRD §14: Microsoft 365 e Outlook.com via Microsoft Graph, OAuth Authorization C
 - Una serie con molte modifiche costa due richieste per round in cui è toccata; nel caso normale (nessuna modifica) il round costa una sola richiesta delta per calendario.
 - `conference_url` si legge da Graph (`onlineMeeting.joinUrl`) ma non si invia: Graph non permette di impostare il link di una riunione esterna. Un link aggiunto in locale a un evento Microsoft si perde al pull successivo (server wins, ADR 007).
 - Il listener del redirect ascolta su 127.0.0.1 mentre l'URI registrato è `http://localhost`: i browser che risolvono prima `::1` ripiegano su IPv4.
-- Senza client ID nella build il pulsante Microsoft spiega che manca la configurazione; la verifica con un tenant reale richiede la registrazione dell'app su Microsoft Entra da parte del proprietario.
+- Senza client ID nella build il pulsante Microsoft non compare (`provider_availability`, dal 18 ott 2026; prima spiegava che mancava la configurazione); la verifica con un tenant reale richiede la registrazione dell'app su Microsoft Entra da parte del proprietario.
 
 ## Stato
 Accettato (7 ott 2026).

@@ -104,6 +104,8 @@ export interface EventDetail {
   event: Event;
   attendees: Attendee[];
   reminders: Reminder[];
+  /** Solo con `sync_status = "error"`: messaggio del provider che ha rifiutato la modifica (ADR 021). */
+  sync_error: string | null;
 }
 
 export interface SyncState {
@@ -143,6 +145,12 @@ export const DEFAULT_SETTINGS: Settings = {
 
 /** Durate ammesse per i nuovi eventi (docs/CONTRACT.md). */
 export const DEFAULT_DURATIONS = [15, 30, 45, 60, 90, 120] as const;
+
+/** Provider esterni con client OAuth in questa build: solo i loro pulsanti si mostrano. */
+export interface ProviderAvailability {
+  google: boolean;
+  microsoft: boolean;
+}
 
 /** Aggiornamento disponibile (PRD §36). */
 export interface UpdateInfo {

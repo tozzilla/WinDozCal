@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAccounts, useConnectGoogle, useConnectMicrosoft, useDisconnectAccount, useReconnectAccount, useSyncNow } from "@/providers/queries";
+import {
+  useAccounts,
+  useConnectGoogle,
+  useConnectMicrosoft,
+  useDisconnectAccount,
+  useFailedEvents,
+  useProviderAvailability,
+  useReconnectAccount,
+  useRetryFailedEvents,
+  useSyncNow,
+} from "@/providers/queries";
 import type { Account } from "@/types";
 
 const PROVIDER_LABEL: Record<Account["provider"], string> = {
@@ -30,9 +40,12 @@ export function AccountsSettings() {
   const { data: accounts = [] } = useAccounts();
   const connect = useConnectMicrosoft();
   const connectGoogle = useConnectGoogle();
+  const { data: available } = useProviderAvailability();
   const reconnect = useReconnectAccount();
   const disconnect = useDisconnectAccount();
   const syncNow = useSyncNow();
+  const { data: failed = [] } = useFailedEvents();
+  const retryFailed = useRetryFailedEvents();
   const [confirming, setConfirming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +56,17 @@ export function AccountsSettings() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {failed.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <span>
+            {failed.length === 1 ? "1 modifica rifiutata dal server" : `${failed.length} modifiche rifiutate dal server`}: apri l&apos;evento per i
+            dettagli, oppure riprova.
+          </span>
+          <Button variant="outline" disabled={retryFailed.isPending} onClick={() => run(retryFailed.mutateAsync(undefined))}>
+            Riprova tutte
+          </Button>
+        </div>
+      )}
       <ul className="divide-y rounded-lg border">
         {accounts.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center gap-3 p-3">
@@ -100,12 +124,16 @@ export function AccountsSettings() {
         ))}
       </ul>
       <div className="flex items-center gap-3">
-        <Button disabled={connectGoogle.isPending} onClick={() => run(connectGoogle.mutateAsync())}>
-          Aggiungi account Google
-        </Button>
-        <Button variant="outline" disabled={connect.isPending} onClick={() => run(connect.mutateAsync())}>
-          Aggiungi account Microsoft
-        </Button>
+        {available?.google && (
+          <Button disabled={connectGoogle.isPending} onClick={() => run(connectGoogle.mutateAsync())}>
+            Aggiungi account Google
+          </Button>
+        )}
+        {available?.microsoft && (
+          <Button variant="outline" disabled={connect.isPending} onClick={() => run(connect.mutateAsync())}>
+            Aggiungi account Microsoft
+          </Button>
+        )}
         {(connect.isPending || connectGoogle.isPending || reconnect.isPending) && <span className="text-sm text-muted-foreground">Completa l&apos;accesso nel browser…</span>}
       </div>
       {error && (

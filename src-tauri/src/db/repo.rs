@@ -975,10 +975,20 @@ pub fn get_event_detail(conn: &Connection, event_id: &str) -> AppResult<EventDet
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
+    let sync_error = if event.sync_status == EventSyncStatus::Error {
+        conn.query_row(
+            "SELECT sync_error FROM events WHERE id = ?1",
+            params![event_id],
+            |row| row.get(0),
+        )?
+    } else {
+        None
+    };
     Ok(EventDetail {
         event,
         attendees,
         reminders,
+        sync_error,
     })
 }
 
@@ -1177,6 +1187,89 @@ pub fn delete_event(conn: &Connection, event_id: &str) -> AppResult<bool> {
     Ok(true)
 }
 
+// ---------------------------------------------------------------------------
+// Modifiche rifiutate dal server (ADR 021)
+// ---------------------------------------------------------------------------
+
+/// Eventi in `error` (il server ha rifiutato la modifica), dal piu' recente.
+pub fn failed_events(conn: &Connection) -> AppResult<Vec<Event>> {
+    let sql = format!(
+        "SELECT {EVENT_COLS} FROM events e WHERE e.sync_status = 'error'
+         ORDER BY e.local_updated_at DESC"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map([], event_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// "Riprova": l'evento torna all'operazione rifiutata e il prossimo sync la ritenta. Le righe
+/// finite in `error` prima della migrazione 011 non hanno `failed_op`: senza `remote_id` era una
+/// creazione, altrimenti una modifica. Ritorna il numero di eventi rimessi in coda.
+pub fn retry_failed(conn: &Connection, event_id: Option<&str>) -> AppResult<usize> {
+    Ok(conn.execute(
+        "UPDATE events SET
+            sync_status = COALESCE(failed_op,
+                CASE WHEN remote_id IS NULL THEN 'pending_create' ELSE 'pending_update' END),
+            failed_op = NULL, sync_error = NULL
+         WHERE sync_status = 'error' AND (?1 IS NULL OR id = ?1)",
+        params![event_id],
+    )?)
+}
+
+/// "Ripristina dal server": si rinuncia alla modifica rifiutata.
+/// - Creazione mai arrivata sul server: la riga locale (con le sue eccezioni) si cancella. Se era
+///   la copia di uno spostamento (ADR 020) l'originale torna `synced` e smette di aspettare: senza
+///   questo il sync lo cancellerebbe sul server e l'evento sparirebbe da entrambi i calendari.
+/// - Modifica o cancellazione: la riga torna `synced` senza etag e il cursore del calendario si
+///   azzera; il full sync successivo riscrive la versione del server (il provider non ha una
+///   lettura del singolo evento).
+pub fn discard_failed(conn: &Connection, event_id: &str) -> AppResult<()> {
+    let event = get_event(conn, event_id)?;
+    if event.sync_status != EventSyncStatus::Error {
+        return Err(AppError::InvalidInput(
+            "event has no rejected change".into(),
+        ));
+    }
+    let calendar = get_calendar(conn, &event.calendar_id)?;
+    atomically(conn, |tx| {
+        if event.remote_id.is_none() {
+            let original: Option<(String, String)> = tx
+                .query_row(
+                    "SELECT id, calendar_id FROM events WHERE moved_to = ?1",
+                    params![event_id],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .optional()?;
+            if let Some((original_id, original_calendar)) = original {
+                tx.execute(
+                    "UPDATE events SET sync_status = 'synced', moved_to = NULL WHERE id = ?1",
+                    params![original_id],
+                )?;
+                // Le eccezioni della serie originale sono state rimosse dallo spostamento: il
+                // full sync le riporta.
+                let original_calendar = get_calendar(tx, &original_calendar)?;
+                crate::db::sync_repo::set_cursor(
+                    tx,
+                    &original_calendar.account_id,
+                    Some(&original_calendar.id),
+                    None,
+                )?;
+            }
+            remove_exceptions(tx, event_id, None)?;
+            tx.execute("DELETE FROM events WHERE id = ?1", params![event_id])?;
+        } else {
+            tx.execute(
+                "UPDATE events SET sync_status = 'synced', etag = NULL, failed_op = NULL,
+                        sync_error = NULL
+                 WHERE id = ?1",
+                params![event_id],
+            )?;
+            crate::db::sync_repo::set_cursor(tx, &calendar.account_id, Some(&calendar.id), None)?;
+        }
+        Ok(())
+    })
+}
+
 /// Provider dell'account a cui appartiene il calendario.
 fn calendar_provider(conn: &Connection, calendar_id: &str) -> AppResult<ProviderKind> {
     conn.query_row(
@@ -1323,6 +1416,7 @@ pub fn move_event(
             event: preview,
             attendees: Vec::new(),
             reminders: Vec::new(),
+            sync_error: None,
         })?;
     }
 

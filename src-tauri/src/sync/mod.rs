@@ -229,7 +229,14 @@ async fn push_pending(
             Err(err @ (AppError::AuthRequired | AppError::NotImplemented(_))) => return Err(err),
             Err(err) => {
                 tracing::error!(event_id = %event.id, error = %err, "event push failed");
-                db.with(|conn| sync_repo::mark_event_error(conn, &event.id))?;
+                db.with(|conn| {
+                    sync_repo::mark_event_error(
+                        conn,
+                        &event.id,
+                        event.sync_status,
+                        &err.to_string(),
+                    )
+                })?;
             }
         }
     }
@@ -384,5 +391,15 @@ mod tests {
         push_pending(&db, &provider, &c2).await.unwrap();
         push_pending(&db, &provider, &c1).await.unwrap();
         assert_eq!(*provider.calls.lock().unwrap(), vec!["create c2"]);
+        // La copia ricorda l'operazione rifiutata e il motivo (ADR 021).
+        let failed = db.with(|conn| repo::failed_events(conn)).unwrap();
+        assert_eq!(failed.len(), 1);
+        let detail = db
+            .with(|conn| repo::get_event_detail(conn, &failed[0].id))
+            .unwrap();
+        assert_eq!(
+            detail.sync_error.as_deref(),
+            Some("provider error: rejected")
+        );
     }
 }

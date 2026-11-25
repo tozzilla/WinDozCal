@@ -19,6 +19,9 @@ export const keys = {
 
 export const useAccounts = () => useQuery({ queryKey: keys.accounts, queryFn: () => calendarService.listAccounts() });
 
+export const useProviderAvailability = () =>
+  useQuery({ queryKey: ["providers"], queryFn: () => calendarService.providerAvailability(), staleTime: Infinity });
+
 export const useCalendars = () => useQuery({ queryKey: keys.calendars, queryFn: () => calendarService.listCalendars() });
 
 export const useEvents = (rangeStart: string, rangeEnd: string) =>
@@ -142,6 +145,19 @@ export function useMoveEvent() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: (v: { eventId: string; event: NewEvent; attendees: NewAttendee[]; reminders: NewReminder[] }) =>
       calendarService.moveEvent(v.eventId, v.event, v.attendees, v.reminders), onSuccess: () => invalidate() });
+}
+
+/** Eventi rifiutati dal server; la chiave sta sotto "events", così ogni invalidazione degli eventi la rilegge. */
+export const useFailedEvents = () => useQuery({ queryKey: ["events", "failed"], queryFn: () => calendarService.failedEvents() });
+
+export function useRetryFailedEvents() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: (eventId?: string) => calendarService.retryFailedEvents(eventId), onSuccess: () => invalidate() });
+}
+
+export function useDiscardFailedEvent() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: (eventId: string) => calendarService.discardFailedEvent(eventId), onSuccess: () => invalidate() });
 }
 
 export function useDeleteEvent() {

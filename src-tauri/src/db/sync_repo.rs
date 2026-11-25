@@ -117,7 +117,9 @@ pub fn mark_pushed(
             remote_id = ?1,
             etag = ?2,
             remote_updated_at = ?3,
-            sync_status = CASE WHEN local_updated_at = ?4 THEN 'synced' ELSE 'pending_update' END
+            sync_status = CASE WHEN local_updated_at = ?4 THEN 'synced' ELSE 'pending_update' END,
+            failed_op = NULL,
+            sync_error = NULL
          WHERE id = ?5 AND sync_status IN ('pending_create', 'pending_update')",
         params![
             remote.remote_id,
@@ -130,10 +132,19 @@ pub fn mark_pushed(
     Ok(())
 }
 
-pub fn mark_event_error(conn: &Connection, event_id: &str) -> AppResult<()> {
+/// Il server ha rifiutato la modifica (errore non transitorio, ADR 021): l'evento passa a
+/// `error` ricordando l'operazione da ritentare e il messaggio del provider. Non si ritenta da
+/// solo: decide l'utente (Riprova o Ripristina dal server).
+pub fn mark_event_error(
+    conn: &Connection,
+    event_id: &str,
+    failed_op: EventSyncStatus,
+    reason: &str,
+) -> AppResult<()> {
+    let reason: String = reason.chars().take(300).collect();
     conn.execute(
-        "UPDATE events SET sync_status = 'error' WHERE id = ?1",
-        params![event_id],
+        "UPDATE events SET sync_status = 'error', failed_op = ?2, sync_error = ?3 WHERE id = ?1",
+        params![event_id, failed_op, reason],
     )?;
     Ok(())
 }
@@ -377,9 +388,13 @@ fn apply_remote_event(
             id
         }
         Some((id, status, local_etag)) => {
+            // Anche una modifica rifiutata dal server (`error`) e' locale: se il server cambia
+            // l'evento vince lui, ma la versione locale resta in `event_conflicts` (ADR 007, 021).
             let has_local_changes = matches!(
                 status,
-                EventSyncStatus::PendingUpdate | EventSyncStatus::PendingDelete
+                EventSyncStatus::PendingUpdate
+                    | EventSyncStatus::PendingDelete
+                    | EventSyncStatus::Error
             );
             let remote_unchanged = local_etag.is_some() && local_etag == remote.etag;
             if has_local_changes && remote_unchanged {
@@ -396,7 +411,8 @@ fn apply_remote_event(
                 "UPDATE events SET title = ?1, description = ?2, location = ?3, \"start\" = ?4,
                         \"end\" = ?5, start_ts = ?6, end_ts = ?7, timezone = ?8, all_day = ?9,
                         recurrence_rule = ?10, status = ?11, etag = ?12, updated_at = ?13,
-                        sync_status = 'synced', remote_updated_at = ?14, conference_url = ?15
+                        sync_status = 'synced', remote_updated_at = ?14, conference_url = ?15,
+                        failed_op = NULL, sync_error = NULL
                  WHERE id = ?16",
                 params![
                     remote.title,

@@ -32,7 +32,7 @@ Valori:
 - `NewEvent` = `Event` senza id, remote_id, etag, updated_at, sync_status, local_updated_at, remote_updated_at
 - campi opzionali (remote_id, description, location, recurrence_rule, etag, timestamp, `Account.last_sync`, `SyncState.cursor`): `Option<String>` in Rust, `string | null` in TS
 - `conference_url` (nullable): link della videoconferenza (Meet, Teams, Zoom, Webex; PRD §7, §29). Campo in più rispetto a §12, vedi ADR 010
-- `EventDetail` = `{ event: Event, attendees: Attendee[], reminders: Reminder[] }`
+- `EventDetail` = `{ event: Event, attendees: Attendee[], reminders: Reminder[], sync_error: string | null }`; `sync_error` solo con `sync_status = error`: messaggio del provider che ha rifiutato la modifica, senza contenuto dell'evento (ADR 021)
 - `NewAttendee` = `{ email, name }` (status iniziale `needs_action`); `NewReminder` = `{ minutes_before, type }`
 - `list_events` e `search_events` restituiscono solo `Event` (niente partecipanti/promemoria: restano leggeri); il dettaglio si legge con `get_event`
 - Su calendari `local` partecipanti e promemoria si salvano ma non si invia alcun invito
@@ -65,6 +65,9 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `update_event` | `event: Event, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (pending_update, `synced` su local); gli array sostituiscono interamente quelli esistenti |
 | `move_event` | `eventId, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` della copia nel calendario `event.calendar_id`, con id nuovo (ADR 020). Copia e cancellazione dell'originale in una transazione; un originale remoto resta `pending_delete` finché la copia non è sul server. Serie: si sposta con le eccezioni vive, quelle cancellate diventano `EXDATE`. Errore `invalid_input` per: eccezioni, stesso calendario, calendario di sola lettura, partecipanti da un calendario remoto o verso Microsoft, link di videoconferenza verso Google, ricorrenza non esprimibile su Microsoft. `update_event` continua a ignorare `calendar_id` |
 | `delete_event` | `eventId` | `void` (pending_delete) |
+| `failed_events` | — | `Event[]` con `sync_status = error`, dal più recente (ADR 021) |
+| `retry_failed_events` | `eventId?` | `number`: rimette in coda l'operazione rifiutata (`failed_op`; per le righe precedenti alla migrazione 011 `pending_create` senza `remote_id`, altrimenti `pending_update`) di un evento o di tutti, e chiede un sync |
+| `discard_failed_event` | `eventId` | `void`: rinuncia alla modifica rifiutata. Creazione: la riga locale si cancella e l'originale di uno spostamento torna `synced`; modifica o cancellazione: riga `synced` senza etag e cursore del calendario azzerato (full sync). Errore `invalid_input` se l'evento non è in `error` |
 | `search_events` | `query` | `Event[]`: titolo, descrizione, luogo e partecipanti (email e nome), solo calendari visibili, max 200, dal più recente; le serie compaiono una volta (non espanse) |
 | `sync_now` | `accountId?` | `void` |
 | `open_log_folder` | — | `void` |
@@ -86,6 +89,7 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 | Comando | Argomenti | Ritorno |
 |---|---|---|
 | `connect_microsoft` | — | `Account` (provider=microsoft): consenso nel browser di sistema (PKCE, redirect loopback), profilo da Graph; se esiste già un account Microsoft con la stessa email ne rinnova le credenziali. Primo sync in background |
+| `provider_availability` | — | `{ google: boolean, microsoft: boolean }`: provider con client OAuth in questa build; la UI mostra solo i loro pulsanti |
 | `connect_google` | — | `Account` (provider=google): consenso nel browser di sistema (PKCE, redirect loopback su 127.0.0.1), profilo da userinfo; se esiste già un account Google con la stessa email ne rinnova le credenziali. Primo sync in background |
 | `reconnect_account` | `accountId` | `Account`: nuovo consenso per un account `auth_required`; errore `invalid_input` se si accede con un'altra email |
 | `disconnect_account` | `accountId` | `void`: cancella credenziali e dati locali dell'account (calendari, eventi, cursori); nulla sul server. Errore `invalid_input` per l'account `local` |

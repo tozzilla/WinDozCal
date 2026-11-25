@@ -8,8 +8,10 @@ import {
   useCreateEvent,
   useDeleteEvent,
   useDeleteOccurrenceScoped,
+  useDiscardFailedEvent,
   useEventDetail,
   useMoveEvent,
+  useRetryFailedEvents,
   useSaveOccurrence,
   useUpdateEvent,
 } from "@/providers/queries";
@@ -54,6 +56,8 @@ export function EventEditor() {
   const create = useCreateEvent();
   const update = useUpdateEvent();
   const move = useMoveEvent();
+  const retryFailed = useRetryFailedEvents();
+  const discardFailed = useDiscardFailedEvent();
   const remove = useDeleteEvent();
   const removeScoped = useDeleteOccurrenceScoped();
   const saveOccurrence = useSaveOccurrence();
@@ -134,6 +138,11 @@ export function EventEditor() {
   // Cambio di calendario di un evento esistente (ADR 020): copia nel nuovo calendario e cancellazione
   // dell'originale; per una serie si sposta sempre la serie intera.
   const currentCalendarId = detail.data?.event.calendar_id;
+  // Evento di un calendario di sola lettura (es. calendari condivisi o festività): si consulta soltanto.
+  const sourceCalendar = calendars.find((c) => c.id === currentCalendarId);
+  const readOnly = !!event && !!sourceCalendar?.read_only;
+  // Modifica rifiutata dal server (ADR 021): l'editor offre Riprova o Ripristina dal server.
+  const failedId = detail.data?.event.sync_status === "error" ? detail.data.event.id : null;
   const moving = !!event && !!currentCalendarId && draft.calendarId !== currentCalendarId;
   const moveBlocked = moving
     ? moveBlockReason(
@@ -146,6 +155,7 @@ export function EventEditor() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     const problems = validateDraft(draft);
     setErrors(problems);
     // Il motivo del blocco è già sotto il selettore del calendario.
@@ -202,131 +212,163 @@ export function EventEditor() {
         className="max-h-full w-full max-w-lg space-y-3 overflow-y-auto rounded-lg border bg-popover p-5 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]"
         style={{ borderTop: `5px solid ${draft.color ?? calendars.find((c) => c.id === draft.calendarId)?.color ?? "var(--border)"}` }}
       >
-        <input
-          autoFocus
-          placeholder="Titolo"
-          value={draft.title}
-          onChange={(e) => set("title", e.target.value)}
-          className="w-full border-b bg-transparent pb-1.5 text-[22px] font-bold tracking-[-0.01em] outline-none placeholder:font-semibold placeholder:text-muted-foreground/70"
-        />
-
-        <div className="grid grid-cols-3 gap-2">
-          <Field label="Data">
-            <input type="date" required value={draft.date} onChange={(e) => set("date", e.target.value)} className={inputClass} />
-          </Field>
-          <Field label="Ora inizio">
-            <input type="time" disabled={draft.allDay} value={draft.startTime} onChange={(e) => set("startTime", e.target.value)} className={inputClass} />
-          </Field>
-          <Field label="Ora fine">
-            <input type="time" disabled={draft.allDay} value={draft.endTime} onChange={(e) => set("endTime", e.target.value)} className={inputClass} />
-          </Field>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={draft.allDay} onChange={(e) => set("allDay", e.target.checked)} />
-          Tutto il giorno
-        </label>
-
-        <Field label="Calendario">
-          <select required value={draft.calendarId} onChange={(e) => set("calendarId", e.target.value)} className={inputClass}>
-            {writable.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {moving && (
-            <span className={`block text-xs ${moveBlocked ? "text-destructive" : "text-muted-foreground"}`}>
-              {moveBlocked ??
-                (ref
-                  ? "La serie intera passa nel nuovo calendario."
-                  : "L'evento passa nel nuovo calendario; nel calendario di origine viene cancellato.")}
-            </span>
-          )}
-        </Field>
-
-        <Field label="Luogo">
-          <input value={draft.location} onChange={(e) => set("location", e.target.value)} className={inputClass} />
-        </Field>
-        <Field label="Descrizione / note">
-          <textarea rows={3} value={draft.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Ricorrenza">
-            <select
-              value={draft.recurrence}
-              onChange={(e) => {
-                const freq = e.target.value as RecurrenceFreq;
-                const days = freq === "weekly" && draft.recurrenceDays.length === 0 ? [weekdayOf(new Date(`${draft.date}T00:00`))] : draft.recurrenceDays;
-                setDraft({ ...draft, recurrence: freq, recurrenceDays: days });
-              }}
-              className={inputClass}
-            >
-              <option value="none">Non si ripete</option>
-              <option value="daily">Ogni giorno</option>
-              <option value="weekly">Ogni settimana</option>
-              <option value="monthly">Ogni mese</option>
-              <option value="yearly">Ogni anno</option>
-              {draft.recurrence === "custom" && <option value="custom">Personalizzata (non modificabile qui)</option>}
-            </select>
-          </Field>
-          <Field label="Stato">
-            <select value={draft.status} onChange={(e) => set("status", e.target.value as EventDraft["status"])} className={inputClass}>
-              <option value="busy">Occupato</option>
-              <option value="free">Libero</option>
-            </select>
-          </Field>
-        </div>
-
-        {draft.recurrence === "weekly" && (
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Giorni della settimana">
-            {WEEKDAYS.map((d) => {
-              const on = draft.recurrenceDays.includes(d);
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => set("recurrenceDays", on ? draft.recurrenceDays.filter((x) => x !== d) : [...draft.recurrenceDays, d])}
-                  className={`rounded-md border px-2.5 py-1 text-xs ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent"}`}
-                >
-                  {WEEKDAY_LABEL[d]}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {ref && (
-          <p className="text-xs text-muted-foreground">
-            Occorrenza di una serie: al salvataggio scegli se modificare solo questo evento, anche i successivi o tutta la serie.
-          </p>
-        )}
-        {event && !ref && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
-
-        <Field label="Videoconferenza (link)">
-          <div className="flex gap-2">
-            <input
-              type="url"
-              placeholder="https://meet.google.com/..."
-              value={draft.conferenceUrl}
-              onChange={(e) => set("conferenceUrl", e.target.value)}
-              className={inputClass}
-            />
-            {isValidConferenceUrl(draft.conferenceUrl) && (
-              <Button type="button" variant="outline" className="shrink-0" onClick={() => void openExternal(draft.conferenceUrl)}>
-                Join meeting
+        {failedId && (
+          <div role="alert" className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <p>
+              Il server ha rifiutato l&apos;ultima modifica di questo evento, che quindi non è sincronizzata.
+              {detail.data?.sync_error && <span className="block text-xs text-muted-foreground">{detail.data.sync_error}</span>}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={retryFailed.isPending}
+                onClick={() => retryFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorMessage(err)]))}
+              >
+                Riprova
               </Button>
-            )}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={discardFailed.isPending}
+                onClick={() => discardFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorMessage(err)]))}
+              >
+                Ripristina dal server
+              </Button>
+            </div>
           </div>
-        </Field>
-        <AppearanceField
-          value={{ color: draft.color, icon: draft.icon, pattern: draft.pattern }}
-          calendarColor={calendars.find((c) => c.id === draft.calendarId)?.color ?? "#9AA1BD"}
-          onChange={(v) => setDraft({ ...draft, ...v })}
-        />
-        <AttendeesField value={draft.attendees} onChange={(v) => set("attendees", v)} />
-        <RemindersField value={draft.reminders} onChange={(v) => set("reminders", v)} />
+        )}
+        <fieldset disabled={readOnly} className="min-w-0 space-y-3">
+          <input
+            autoFocus
+            placeholder="Titolo"
+            value={draft.title}
+            onChange={(e) => set("title", e.target.value)}
+            className="w-full border-b bg-transparent pb-1.5 text-[22px] font-bold tracking-[-0.01em] outline-none placeholder:font-semibold placeholder:text-muted-foreground/70"
+          />
+
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Data">
+              <input type="date" required value={draft.date} onChange={(e) => set("date", e.target.value)} className={inputClass} />
+            </Field>
+            <Field label="Ora inizio">
+              <input type="time" disabled={draft.allDay} value={draft.startTime} onChange={(e) => set("startTime", e.target.value)} className={inputClass} />
+            </Field>
+            <Field label="Ora fine">
+              <input type="time" disabled={draft.allDay} value={draft.endTime} onChange={(e) => set("endTime", e.target.value)} className={inputClass} />
+            </Field>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={draft.allDay} onChange={(e) => set("allDay", e.target.checked)} />
+            Tutto il giorno
+          </label>
+
+          <Field label="Calendario">
+            {readOnly ? (
+              <input readOnly value={sourceCalendar?.name ?? ""} className={inputClass} />
+            ) : (
+              <select required value={draft.calendarId} onChange={(e) => set("calendarId", e.target.value)} className={inputClass}>
+                {writable.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {moving && (
+              <span className={`block text-xs ${moveBlocked ? "text-destructive" : "text-muted-foreground"}`}>
+                {moveBlocked ??
+                  (ref
+                    ? "La serie intera passa nel nuovo calendario."
+                    : "L'evento passa nel nuovo calendario; nel calendario di origine viene cancellato.")}
+              </span>
+            )}
+          </Field>
+
+          <Field label="Luogo">
+            <input value={draft.location} onChange={(e) => set("location", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Descrizione / note">
+            <textarea rows={3} value={draft.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Ricorrenza">
+              <select
+                value={draft.recurrence}
+                onChange={(e) => {
+                  const freq = e.target.value as RecurrenceFreq;
+                  const days = freq === "weekly" && draft.recurrenceDays.length === 0 ? [weekdayOf(new Date(`${draft.date}T00:00`))] : draft.recurrenceDays;
+                  setDraft({ ...draft, recurrence: freq, recurrenceDays: days });
+                }}
+                className={inputClass}
+              >
+                <option value="none">Non si ripete</option>
+                <option value="daily">Ogni giorno</option>
+                <option value="weekly">Ogni settimana</option>
+                <option value="monthly">Ogni mese</option>
+                <option value="yearly">Ogni anno</option>
+                {draft.recurrence === "custom" && <option value="custom">Personalizzata (non modificabile qui)</option>}
+              </select>
+            </Field>
+            <Field label="Stato">
+              <select value={draft.status} onChange={(e) => set("status", e.target.value as EventDraft["status"])} className={inputClass}>
+                <option value="busy">Occupato</option>
+                <option value="free">Libero</option>
+              </select>
+            </Field>
+          </div>
+
+          {draft.recurrence === "weekly" && (
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Giorni della settimana">
+              {WEEKDAYS.map((d) => {
+                const on = draft.recurrenceDays.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => set("recurrenceDays", on ? draft.recurrenceDays.filter((x) => x !== d) : [...draft.recurrenceDays, d])}
+                    className={`rounded-md border px-2.5 py-1 text-xs ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  >
+                    {WEEKDAY_LABEL[d]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {ref && !readOnly && (
+            <p className="text-xs text-muted-foreground">
+              Occorrenza di una serie: al salvataggio scegli se modificare solo questo evento, anche i successivi o tutta la serie.
+            </p>
+          )}
+          {event && !ref && !readOnly && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
+
+          <Field label="Videoconferenza (link)">
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://meet.google.com/..."
+                value={draft.conferenceUrl}
+                onChange={(e) => set("conferenceUrl", e.target.value)}
+                className={inputClass}
+              />
+              {isValidConferenceUrl(draft.conferenceUrl) && (
+                <Button type="button" variant="outline" className="shrink-0" onClick={() => void openExternal(draft.conferenceUrl)}>
+                  Join meeting
+                </Button>
+              )}
+            </div>
+          </Field>
+          <AppearanceField
+            value={{ color: draft.color, icon: draft.icon, pattern: draft.pattern }}
+            calendarColor={calendars.find((c) => c.id === draft.calendarId)?.color ?? "#9AA1BD"}
+            onChange={(v) => setDraft({ ...draft, ...v })}
+          />
+          <AttendeesField value={draft.attendees} onChange={(v) => set("attendees", v)} />
+          <RemindersField value={draft.reminders} onChange={(v) => set("reminders", v)} />
+        </fieldset>
 
         {errors.length > 0 && (
           <ul role="alert" className="space-y-0.5 text-sm text-destructive">
@@ -360,7 +402,22 @@ export function EventEditor() {
           />
         )}
 
-        {!choosingScope && !confirmDelete && (
+        {readOnly && (
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <p className="text-xs text-muted-foreground">Calendario di sola lettura: l&apos;evento si può solo consultare.</p>
+            <div className="flex shrink-0 gap-2">
+              {isValidConferenceUrl(draft.conferenceUrl) && (
+                <Button type="button" variant="outline" onClick={() => void openExternal(draft.conferenceUrl)}>
+                  Join meeting
+                </Button>
+              )}
+              <Button type="button" onClick={close}>
+                Chiudi
+              </Button>
+            </div>
+          </div>
+        )}
+        {!readOnly && !choosingScope && !confirmDelete && (
           <div className="flex items-center justify-between pt-1">
             {event ? (
               <Button

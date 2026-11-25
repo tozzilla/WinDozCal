@@ -84,7 +84,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     remindersByEvent.set(eventId, reminders.map((r) => ({ id: newId("rem"), event_id: eventId, ...r })));
   };
   const detailOf = (event: Event): EventDetail =>
-    structuredClone({ event, attendees: attendeesByEvent.get(event.id) ?? [], reminders: remindersByEvent.get(event.id) ?? [] });
+    structuredClone({ event, attendees: attendeesByEvent.get(event.id) ?? [], reminders: remindersByEvent.get(event.id) ?? [], sync_error: null });
 
   return {
     async listAccounts() {
@@ -101,6 +101,9 @@ export function createMemoryCalendarService(demo = false): CalendarService {
         });
       }
       return structuredClone(account);
+    },
+    async providerAvailability() {
+      return { google: true, microsoft: true };
     },
     async connectMicrosoft() {
       throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
@@ -191,6 +194,14 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       await this.deleteEvent(eventId);
       return copy;
     },
+    // Senza server nessuna modifica viene rifiutata.
+    async failedEvents() {
+      return [];
+    },
+    async retryFailedEvents() {
+      return 0;
+    },
+    async discardFailedEvent() {},
     async deleteEvent(eventId) {
       events = events.filter((e) => e.id !== eventId && e.series_id !== eventId);
       attendeesByEvent.delete(eventId);

@@ -1,4 +1,4 @@
-import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, Settings, UpdateInfo } from "@/types";
+import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, ProviderAvailability, Settings, UpdateInfo } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 import { tauriCalendarService } from "./tauriCalendarService";
 
@@ -11,6 +11,8 @@ export interface CalendarService {
   listAccounts(): Promise<Account[]>;
   /** Idempotente: se esiste già un account locale lo restituisce. Crea anche il calendario "Personale". */
   createLocalAccount(name: string): Promise<Account>;
+  /** Provider esterni configurati in questa build (client OAuth presente). */
+  providerAvailability(): Promise<ProviderAvailability>;
   /** Collega un account Microsoft: consenso nel browser di sistema, poi primo sync in background (ADR 014). */
   connectMicrosoft(): Promise<Account>;
   /** Collega un account Google: consenso nel browser di sistema, poi primo sync in background (ADR 019). */
@@ -36,6 +38,12 @@ export interface CalendarService {
    * insieme le modifiche (ADR 020). Restituisce la copia, che ha un id nuovo.
    */
   moveEvent(eventId: string, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]): Promise<EventDetail>;
+  /** Eventi la cui modifica è stata rifiutata dal server (`sync_status = "error"`, ADR 021). */
+  failedEvents(): Promise<Event[]>;
+  /** "Riprova": rimette in coda la modifica rifiutata di un evento, o di tutti senza `eventId`; restituisce quanti. */
+  retryFailedEvents(eventId?: string): Promise<number>;
+  /** "Ripristina dal server": rinuncia alla modifica rifiutata; il prossimo sync riporta la versione del server. */
+  discardFailedEvent(eventId: string): Promise<void>;
   /** Elimina la serie intera. */
   deleteEvent(eventId: string): Promise<void>;
   /** Aggiunge una EXDATE alla serie: elimina solo l'occorrenza che inizia a `occurrenceStart` (ed eventuale eccezione). */

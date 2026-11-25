@@ -18,7 +18,7 @@ use crate::db::repo;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     Account, Calendar, Event, EventDetail, EventSyncStatus, NewAttendee, NewEvent, NewReminder,
-    ProviderKind, Settings,
+    ProviderAvailability, ProviderKind, Settings,
 };
 use crate::providers::google::GoogleProvider;
 use crate::providers::microsoft::MicrosoftProvider;
@@ -78,6 +78,15 @@ async fn microsoft_consent(app: &AppHandle) -> AppResult<crate::auth::OAuthToken
             .map_err(|err| AppError::Internal(format!("cannot open browser: {err}")))
     })
     .await
+}
+
+/// Provider esterni configurati in questa build: senza client OAuth il pulsante non si mostra.
+#[tauri::command]
+pub fn provider_availability() -> ProviderAvailability {
+    ProviderAvailability {
+        google: oauth_google::GoogleOAuthConfig::from_env().is_ok(),
+        microsoft: oauth_ms::MicrosoftOAuthConfig::from_env().is_ok(),
+    }
 }
 
 /// Collega un account Google (PRD 13, ADR 019): consenso nel browser di sistema con PKCE,
@@ -326,6 +335,45 @@ pub async fn move_event(
     }
     tray::refresh_next_event(&app);
     Ok(moved)
+}
+
+/// Eventi la cui modifica e' stata rifiutata dal server (ADR 021).
+#[tauri::command]
+pub fn failed_events(state: State<'_, AppState>) -> AppResult<Vec<Event>> {
+    state.db.with(|conn| repo::failed_events(conn))
+}
+
+/// "Riprova": rimette in coda la modifica rifiutata di un evento, o di tutti se `eventId` manca.
+/// Restituisce quanti eventi sono stati rimessi in coda.
+#[tauri::command]
+pub async fn retry_failed_events(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    event_id: Option<String>,
+) -> AppResult<usize> {
+    let count = state
+        .db
+        .with(|conn| repo::retry_failed(conn, event_id.as_deref()))?;
+    if count > 0 {
+        state.sync.request(None);
+    }
+    tray::refresh_next_event(&app);
+    Ok(count)
+}
+
+/// "Ripristina dal server": rinuncia alla modifica rifiutata (ADR 021).
+#[tauri::command]
+pub async fn discard_failed_event(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    event_id: String,
+) -> AppResult<()> {
+    state
+        .db
+        .with(|conn| repo::discard_failed(conn, &event_id))?;
+    state.sync.request(None);
+    tray::refresh_next_event(&app);
+    Ok(())
 }
 
 /// Esclude una singola occorrenza di una serie ricorrente (aggiunge una EXDATE).

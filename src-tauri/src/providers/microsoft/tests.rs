@@ -319,6 +319,7 @@ fn detail(event: Event) -> EventDetail {
             r#type: "popup".into(),
         }],
         event,
+        sync_error: None,
     }
 }
 

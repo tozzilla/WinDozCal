@@ -1,12 +1,13 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, Calendar, Event, EventDetail, Settings, UpdateInfo } from "@/types";
+import type { Account, Calendar, Event, EventDetail, ProviderAvailability, Settings, UpdateInfo } from "@/types";
 import type { CalendarService } from "./calendarService";
 
 // Argomenti in camelCase lato JS (convenzione Tauri 2); i nomi dei comandi sono quelli di docs/CONTRACT.md.
 export const tauriCalendarService: CalendarService = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
   createLocalAccount: (name) => invoke<Account>("create_local_account", { name }),
+  providerAvailability: () => invoke<ProviderAvailability>("provider_availability"),
   connectMicrosoft: () => invoke<Account>("connect_microsoft"),
   connectGoogle: () => invoke<Account>("connect_google"),
   reconnectAccount: (accountId) => invoke<Account>("reconnect_account", { accountId }),
@@ -20,6 +21,9 @@ export const tauriCalendarService: CalendarService = {
   createEvent: (event, attendees, reminders) => invoke<EventDetail>("create_event", { event, attendees, reminders }),
   updateEvent: (event, attendees, reminders) => invoke<EventDetail>("update_event", { event, attendees, reminders }),
   moveEvent: (eventId, event, attendees, reminders) => invoke<EventDetail>("move_event", { eventId, event, attendees, reminders }),
+  failedEvents: () => invoke<Event[]>("failed_events"),
+  retryFailedEvents: (eventId) => invoke<number>("retry_failed_events", { eventId: eventId ?? null }),
+  discardFailedEvent: (eventId) => invoke<void>("discard_failed_event", { eventId }),
   deleteEvent: (eventId) => invoke<void>("delete_event", { eventId }),
   deleteOccurrence: (eventId, occurrenceStart) => invoke<void>("delete_occurrence", { eventId, occurrenceStart }),
   updateOccurrence: (seriesId, occurrenceStart, event, attendees, reminders) =>

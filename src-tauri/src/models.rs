@@ -105,6 +105,14 @@ impl Default for Settings {
     }
 }
 
+/// Provider esterni utilizzabili in questa build (client OAuth presente), per mostrare solo i
+/// pulsanti che funzionano.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct ProviderAvailability {
+    pub google: bool,
+    pub microsoft: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: String,
@@ -243,6 +251,9 @@ pub struct EventDetail {
     pub event: Event,
     pub attendees: Vec<Attendee>,
     pub reminders: Vec<Reminder>,
+    /// Solo con `sync_status = error`: messaggio del provider che ha rifiutato la modifica
+    /// (ADR 021), senza contenuto dell'evento.
+    pub sync_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
