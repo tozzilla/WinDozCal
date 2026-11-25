@@ -1,3 +1,4 @@
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { formatWeekday, getMonthGrid, getWeekDays, isSameDay } from "@/utils/date";
 import { eventKey, eventsOnDay } from "@/utils/events";
@@ -9,6 +10,7 @@ const MAX_CHIPS = 3;
 
 /** Vista mensile compatta (PRD §5): al massimo MAX_CHIPS eventi per cella, poi "+N altri" porta al giorno. */
 export function MonthView({ date, prefs, events, calendars, onSelectSlot, onSelectEvent, onShowDay }: CalendarRendererProps) {
+  const t = useT();
   const today = new Date();
   const grid = getMonthGrid(date, prefs.weekStartsOn);
 
@@ -59,7 +61,7 @@ export function MonthView({ date, prefs, events, calendars, onSelectSlot, onSele
               ))}
               {hidden > 0 && (
                 <button type="button" onClick={() => onShowDay(day)} className="px-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
-                  +{hidden} altri
+                  {t("calendar.month.more", { count: hidden })}
                 </button>
               )}
             </div>

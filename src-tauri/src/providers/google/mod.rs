@@ -340,6 +340,7 @@ impl CalendarProvider for GoogleProvider {
             .sync_token
             .ok_or_else(|| AppError::Provider("google: missing nextSyncToken".into()))?;
         Ok(SyncResult {
+            full_snapshot: false,
             upserts,
             deletions,
             next_cursor: Some(next_cursor),

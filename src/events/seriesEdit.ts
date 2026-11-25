@@ -1,13 +1,14 @@
+import { t } from "@/i18n";
 import type { Event, NewEvent } from "@/types";
 import { addDays, startOfDay, toIsoWithOffset } from "@/utils/date";
 
 /** Portata di una modifica su un'occorrenza di serie (PRD §10, ADR 013). */
 export type SeriesScope = "this" | "following" | "all";
 
-export const SCOPE_LABEL: Record<SeriesScope, string> = {
-  this: "Solo questo evento",
-  following: "Questo e i successivi",
-  all: "Tutta la serie",
+/** Etichetta tradotta di una portata; va chiamata al render, non a livello di modulo. */
+export const scopeLabel = (scope: SeriesScope): string => {
+  const key = { this: "events.scope.this", following: "events.scope.following", all: "events.scope.all" } as const;
+  return t(key[scope]);
 };
 
 const minutesOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes();

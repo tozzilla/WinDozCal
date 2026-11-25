@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Account, Calendar, ProviderKind } from "@/types";
 import { moveBlockReason } from "./move";
 
-const account = (id: string, provider: ProviderKind): Account => ({ id, provider, name: id, email: "", sync_status: "idle", last_sync: null });
+const account = (id: string, provider: ProviderKind): Account => ({ id, provider, name: id, email: "", sync_status: "idle", last_sync: null, server_url: null });
 const cal = (id: string, account_id: string): Calendar => ({ id, account_id, remote_id: id, name: id, color: "#000", visible: true, read_only: false });
-const accounts = [account("l", "local"), account("g", "google"), account("m", "microsoft")];
-const [local, google, outlook] = [cal("pc", "l"), cal("gc", "g"), cal("mc", "m")];
+const accounts = [account("l", "local"), account("g", "google"), account("m", "microsoft"), account("d", "caldav")];
+const [local, google, outlook, nas] = [cal("pc", "l"), cal("gc", "g"), cal("mc", "m"), cal("dc", "d")];
 const none = { attendees: 0, conferenceUrl: "" };
 
 describe("spostamento tra calendari (ADR 020)", () => {
@@ -18,6 +18,8 @@ describe("spostamento tra calendari (ADR 020)", () => {
     const withGuests = { attendees: 1, conferenceUrl: "" };
     expect(moveBlockReason(google, local, accounts, withGuests)).toMatch(/sincronizzato/);
     expect(moveBlockReason(local, outlook, accounts, withGuests)).toMatch(/inviti/);
+    expect(moveBlockReason(local, nas, accounts, withGuests)).toMatch(/CalDAV/);
+    expect(moveBlockReason(local, nas, accounts, none)).toBeNull();
     expect(moveBlockReason(local, google, accounts, withGuests)).toBeNull();
   });
   it("blocca il link di videoconferenza verso Google", () => {

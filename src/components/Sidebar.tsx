@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Settings } from "lucide-react";
+import { useT } from "@/i18n";
 import { useAccounts, useCalendars, useCreateCalendar, useSetCalendarColor, useSetCalendarVisibility } from "@/providers/queries";
 import { CalendarColorPicker } from "./CalendarColorPicker";
 import { useUiStore } from "@/stores/uiStore";
@@ -25,6 +26,7 @@ function channelName(a: Account): string {
  * hanno il quadratino colore come casella di visibilità. Collassabile dall'header.
  */
 export function Sidebar() {
+  const t = useT();
   const open = useUiStore((s) => s.sidebarOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const { data: accounts = [] } = useAccounts();
@@ -55,7 +57,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   aria-pressed={allVisible}
-                  title={allVisible ? "Nascondi tutto il canale" : "Mostra tutto il canale"}
+                  title={allVisible ? t("shell.sidebar.hideChannel") : t("shell.sidebar.showChannel")}
                   onClick={() => own.forEach((c) => setVisibility.mutate({ calendarId: c.id, visible: !allVisible }))}
                   className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left leading-[13px] outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                 >
@@ -65,8 +67,8 @@ export function Sidebar() {
                 {attention && (
                   <button
                     type="button"
-                    title={account.sync_status === "auth_required" ? "Accesso da rinnovare: apri Impostazioni > Accounts" : "Errore di sincronizzazione"}
-                    aria-label={account.sync_status === "auth_required" ? "Accesso da rinnovare" : "Errore di sincronizzazione"}
+                    title={account.sync_status === "auth_required" ? t("shell.sidebar.authRenewTitle") : t("shell.sidebar.syncError")}
+                    aria-label={account.sync_status === "auth_required" ? t("shell.sidebar.authRenew") : t("shell.sidebar.syncError")}
                     onClick={() => setSettingsOpen(true)}
                     className="size-2 shrink-0 rounded-full bg-onair"
                   />
@@ -74,7 +76,7 @@ export function Sidebar() {
                 {account.provider === "local" && (
                   <button
                     type="button"
-                    aria-label="Aggiungi calendario locale"
+                    aria-label={t("shell.sidebar.addLocalCalendar")}
                     onClick={() => setAddingTo(account.id)}
                     className="-my-1.5 grid size-6 place-items-center rounded-sm text-rail-muted opacity-0 outline-none group-hover:opacity-100 hover:bg-rail-accent hover:text-rail-foreground focus-visible:opacity-100"
                   >
@@ -96,7 +98,7 @@ export function Sidebar() {
                   <input
                     autoFocus
                     value={name}
-                    placeholder="Nome del calendario"
+                    placeholder={t("shell.sidebar.calendarNamePlaceholder")}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={() => setAddingTo(null)}
                     onKeyDown={(e) => e.key === "Escape" && e.stopPropagation()}
@@ -111,7 +113,7 @@ export function Sidebar() {
                       type="button"
                       role="checkbox"
                       aria-checked={c.visible}
-                      title="Clic: mostra o nascondi · Clic destro: colore"
+                      title={t("shell.sidebar.toggleHint")}
                       onClick={() => setVisibility.mutate({ calendarId: c.id, visible: !c.visible })}
                       onContextMenu={(ev) => {
                         ev.preventDefault();
@@ -138,13 +140,13 @@ export function Sidebar() {
         <div className="fixed inset-0 z-50" onClick={() => setMenu(null)} onContextMenu={(ev) => { ev.preventDefault(); setMenu(null); }}>
           <div
             role="dialog"
-            aria-label={`Colore di ${menuCalendar.name}`}
+            aria-label={t("shell.sidebar.colorOf", { name: menuCalendar.name })}
             onClick={(ev) => ev.stopPropagation()}
             onKeyDown={(ev) => ev.key === "Escape" && setMenu(null)}
             className="absolute w-60 rounded-lg border bg-popover p-3 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]"
             style={{ left: Math.min(menu.x, window.innerWidth - 256), top: Math.min(menu.y, window.innerHeight - 170) }}
           >
-            <p className="mb-2 truncate text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">Colore · {menuCalendar.name}</p>
+            <p className="mb-2 truncate text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">{t("shell.sidebar.colorHeading", { name: menuCalendar.name })}</p>
             <CalendarColorPicker
               key={menuCalendar.id}
               value={menuCalendar.color}
@@ -162,7 +164,7 @@ export function Sidebar() {
           onClick={() => setSettingsOpen(true)}
           className="flex w-full items-center gap-2 rounded-sm px-1 py-1.5 text-[14px] font-semibold text-rail-muted outline-none hover:bg-rail-accent hover:text-rail-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <Settings className="size-4" /> Impostazioni
+          <Settings className="size-4" /> {t("shell.sidebar.settings")}
         </button>
       </div>
     </aside>

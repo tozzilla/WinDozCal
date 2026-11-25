@@ -495,6 +495,7 @@ impl CalendarProvider for MicrosoftProvider {
         })
         .map_err(|err| AppError::Internal(format!("cursor: {err}")))?;
         Ok(SyncResult {
+            full_snapshot: false,
             upserts,
             deletions,
             next_cursor: Some(next_cursor),

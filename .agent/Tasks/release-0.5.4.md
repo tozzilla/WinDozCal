@@ -90,6 +90,10 @@ Prima di pubblicare: verificare che l'eseguibile di release contenga il client (
 - creati: `.agent/Tasks/release-0.5.4.md`, `.agent/System/decisions/021-modifiche-rifiutate-dal-server.md`, `src-tauri/src/db/migrations/011_sync_error.sql`;
 - modificati: `.agent/README.md`, ADR 014 e 019, `docs/CONTRACT.md`, `src-tauri/src/{commands,lib,models}.rs`, `src-tauri/src/db/{migrations,repo,sync_repo,tests}.rs`, `src-tauri/src/providers/{google,microsoft}/tests.rs`, `src-tauri/src/sync/mod.rs`, `src/accounts/WelcomeScreen.tsx`, `src/events/EventEditor.tsx`, `src/providers/{calendarService,memoryCalendarService,queries,tauriCalendarService}.ts`, `src/settings/AccountsSettings.tsx`, `src/types/index.ts`.
 
+## Nota (26 nov 2026): lavoro sopra la 0.5.4
+
+Sopra il lavoro non committato della 0.5.4 ci sono ora la localizzazione e CalDAV (`i18n-caldav.md`): lo schema è v12 (migrazione 012), non v11 come nelle verifiche del lavoro 5. Il diff della sola 0.5.4 è salvato in `C:/Developer/_snapshot/WinDozCal-0.5.4-prima-di-i18n-caldav-2026-11-25/` (`tracked.patch` più i file non tracciati).
+
 ## Nota (25 nov 2026): issue #1 su GitHub
 
 Risposta pubblicata su autorizzazione del proprietario: https://github.com/tozzilla/WinDozCal/issues/1#issuecomment-7176403805. Impegni presi in pubblico: interfaccia in inglese con un livello di localizzazione, ad alta priorità (oggi il PRD non la prevede: serve un ADR o una modifica al PRD); CalDAV confermato dopo la release Google, come da `fase-3.md`. Chiesto all'utente quale server CalDAV usa sul NAS, per i test. ADR scritti lo stesso giorno, in stato Proposto: [022](../System/decisions/022-localizzazione-interfaccia.md) localizzazione, [023](../System/decisions/023-caldav-priorita-perimetro.md) CalDAV.

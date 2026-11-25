@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { CaldavForm, CaldavPasswordPrompt } from "@/accounts/CaldavForm";
 import { Button } from "@/components/ui/button";
+import { dateFormat, errorText, hasKey, useT, type TKey } from "@/i18n";
 import {
   useAccounts,
   useConnectGoogle,
@@ -11,32 +13,10 @@ import {
   useRetryFailedEvents,
   useSyncNow,
 } from "@/providers/queries";
-import type { Account } from "@/types";
 
-const PROVIDER_LABEL: Record<Account["provider"], string> = {
-  local: "Questo computer",
-  google: "Google",
-  microsoft: "Microsoft",
-  caldav: "CalDAV",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  idle: "Sincronizzato",
-  syncing: "Sincronizzazione in corso",
-  error: "Errore di sincronizzazione",
-  auth_required: "Accesso da rinnovare",
-};
-
-const dateTime = new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short" });
-
-export function errorText(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
-  return String(err);
-}
-
-/** Sezione Accounts (PRD §34): account collegati con sync, reconnect e disconnect; aggiunta di un account Google o Microsoft. */
+/** Sezione Accounts (PRD §34): account collegati con sync, reconnect e disconnect; aggiunta di un account Google, Microsoft o CalDAV. */
 export function AccountsSettings() {
+  const t = useT();
   const { data: accounts = [] } = useAccounts();
   const connect = useConnectMicrosoft();
   const connectGoogle = useConnectGoogle();
@@ -48,6 +28,8 @@ export function AccountsSettings() {
   const retryFailed = useRetryFailedEvents();
   const [confirming, setConfirming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [caldavOpen, setCaldavOpen] = useState(false);
+  const [passwordFor, setPasswordFor] = useState<string | null>(null);
 
   const run = (action: Promise<unknown>) => {
     setError(null);
@@ -59,11 +41,10 @@ export function AccountsSettings() {
       {failed.length > 0 && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
           <span>
-            {failed.length === 1 ? "1 modifica rifiutata dal server" : `${failed.length} modifiche rifiutate dal server`}: apri l&apos;evento per i
-            dettagli, oppure riprova.
+            {t("accounts.rejected", { count: failed.length })}
           </span>
           <Button variant="outline" disabled={retryFailed.isPending} onClick={() => run(retryFailed.mutateAsync(undefined))}>
-            Riprova tutte
+            {t("accounts.retryAll")}
           </Button>
         </div>
       )}
@@ -72,19 +53,20 @@ export function AccountsSettings() {
           <li key={a.id} className="flex flex-wrap items-center gap-3 p-3">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">
-                {a.name} <span className="font-normal text-muted-foreground">· {PROVIDER_LABEL[a.provider]}</span>
+                {a.name} <span className="font-normal text-muted-foreground">· {t(`accounts.providers.${a.provider}` as TKey)}</span>
               </div>
               <div className="truncate text-xs text-muted-foreground">
                 {a.email && `${a.email} · `}
+                {a.provider === "caldav" && a.server_url && `${a.server_url} · `}
                 {a.provider === "local"
-                  ? "Dati solo su questo computer"
-                  : `${STATUS_LABEL[a.sync_status] ?? a.sync_status}${a.last_sync ? ` · ultimo sync ${dateTime.format(new Date(a.last_sync))}` : ""}`}
+                  ? t("accounts.localOnly")
+                  : `${hasKey(`accounts.status.${a.sync_status}`) ? t(`accounts.status.${a.sync_status}` as TKey) : a.sync_status}${a.last_sync ? ` · ${t("accounts.lastSync", { date: dateFormat({ dateStyle: "short", timeStyle: "short" }).format(new Date(a.last_sync)) })}` : ""}`}
               </div>
             </div>
-            {a.provider !== "local" && confirming !== a.id && (
+            {a.provider !== "local" && confirming !== a.id && passwordFor !== a.id && (
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" disabled={syncNow.isPending} onClick={() => run(syncNow.mutateAsync(a.id))}>
-                  Sincronizza
+                  {t("accounts.sync")}
                 </Button>
                 {(a.provider === "microsoft" || a.provider === "google") && (
                   <Button
@@ -93,17 +75,23 @@ export function AccountsSettings() {
                     disabled={reconnect.isPending}
                     onClick={() => run(reconnect.mutateAsync(a.id))}
                   >
-                    Riconnetti
+                    {t("accounts.reconnect")}
+                  </Button>
+                )}
+                {a.provider === "caldav" && (
+                  <Button size="sm" variant={a.sync_status === "auth_required" ? "default" : "outline"} onClick={() => setPasswordFor(a.id)}>
+                    {t(a.sync_status === "auth_required" ? "accounts.reconnect" : "accounts.caldav.changePassword")}
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(a.id)}>
-                  Scollega
+                  {t("accounts.disconnect")}
                 </Button>
               </div>
             )}
+            {passwordFor === a.id && <CaldavPasswordPrompt accountId={a.id} onDone={() => setPasswordFor(null)} onCancel={() => setPasswordFor(null)} />}
             {confirming === a.id && (
               <div className="flex w-full flex-wrap items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Calendari ed eventi di questo account spariscono da WinDozCal; sul server non cambia nulla.</span>
+                <span className="text-muted-foreground">{t("accounts.disconnectNote")}</span>
                 <Button
                   size="sm"
                   variant="destructive"
@@ -113,10 +101,10 @@ export function AccountsSettings() {
                     run(disconnect.mutateAsync(a.id));
                   }}
                 >
-                  Scollega
+                  {t("accounts.disconnect")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirming(null)}>
-                  Annulla
+                  {t("accounts.cancel")}
                 </Button>
               </div>
             )}
@@ -126,16 +114,20 @@ export function AccountsSettings() {
       <div className="flex items-center gap-3">
         {available?.google && (
           <Button disabled={connectGoogle.isPending} onClick={() => run(connectGoogle.mutateAsync())}>
-            Aggiungi account Google
+            {t("accounts.addGoogle")}
           </Button>
         )}
         {available?.microsoft && (
           <Button variant="outline" disabled={connect.isPending} onClick={() => run(connect.mutateAsync())}>
-            Aggiungi account Microsoft
+            {t("accounts.addMicrosoft")}
           </Button>
         )}
-        {(connect.isPending || connectGoogle.isPending || reconnect.isPending) && <span className="text-sm text-muted-foreground">Completa l&apos;accesso nel browser…</span>}
+        <Button variant="outline" disabled={caldavOpen} onClick={() => setCaldavOpen(true)}>
+          {t("accounts.addCaldav")}
+        </Button>
+        {(connect.isPending || connectGoogle.isPending || reconnect.isPending) && <span className="text-sm text-muted-foreground">{t("accounts.completeInBrowser")}</span>}
       </div>
+      {caldavOpen && <CaldavForm onDone={() => setCaldavOpen(false)} onCancel={() => setCaldavOpen(false)} />}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

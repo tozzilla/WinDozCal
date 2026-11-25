@@ -12,6 +12,7 @@ mod commands;
 mod credentials;
 pub mod db;
 pub mod error;
+mod i18n;
 mod logging;
 pub mod models;
 mod notifications;
@@ -91,6 +92,9 @@ pub fn run() {
             commands::connect_microsoft,
             commands::connect_google,
             commands::provider_availability,
+            commands::connect_caldav,
+            commands::update_caldav_password,
+            commands::set_ui_language,
             commands::reconnect_account,
             commands::disconnect_account,
             commands::create_calendar,
@@ -142,9 +146,11 @@ fn close_to_tray(app: &tauri::AppHandle) -> bool {
         .with(|conn| db::repo::get_flag(conn, db::repo::FLAG_TRAY_NOTICE_SHOWN))
         .unwrap_or(true);
     if !already_told {
-        if let Err(err) =
-            notifications::show(app, "WinDozCal", "WinDozCal is still running in the tray")
-        {
+        if let Err(err) = notifications::show(
+            app,
+            "WinDozCal",
+            crate::i18n::text(crate::i18n::Key::TrayNotice),
+        ) {
             tracing::warn!(error = %err, "cannot show tray notice");
         }
         let _ = state

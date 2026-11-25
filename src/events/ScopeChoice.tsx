@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { SCOPE_LABEL, type SeriesScope } from "./seriesEdit";
+import { useT } from "@/i18n";
+import { scopeLabel, type SeriesScope } from "./seriesEdit";
 
 const SCOPES: SeriesScope[] = ["this", "following", "all"];
 
@@ -23,6 +24,7 @@ export function ScopeChoice({
   onChoose: (scope: SeriesScope) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const box = useRef<HTMLDivElement>(null);
   // Nell'editor la scelta compare in fondo a un form che scorre: la si porta in vista.
   useEffect(() => {
@@ -35,11 +37,11 @@ export function ScopeChoice({
       <div className="flex flex-wrap gap-2">
         {scopes.map((scope) => (
           <Button key={scope} type="button" variant={destructive ? "destructive" : "default"} disabled={disabled} onClick={() => onChoose(scope)}>
-            {SCOPE_LABEL[scope]}
+            {scopeLabel(scope)}
           </Button>
         ))}
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Indietro
+          {t("events.editor.back")}
         </Button>
       </div>
     </div>

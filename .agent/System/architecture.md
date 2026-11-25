@@ -32,6 +32,7 @@ Il renderer del calendario deve poter essere sostituito senza toccare Sync Engin
 ```
 src/                     frontend React/TS
   components/ calendar/ events/ accounts/ settings/ hooks/ stores/ utils/
+  i18n/                  dizionari it, en (completi), es, fr, de (parziali) per namespace (ADR 022)
   providers/             solo client IPC (Calendar Service), nessuna logica provider
 src-tauri/src/           backend Rust
   db/                    SQLite

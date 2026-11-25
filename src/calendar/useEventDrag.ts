@@ -1,4 +1,5 @@
 import { useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { t } from "@/i18n";
 import type { Calendar, Event } from "@/types";
 import { isSameDay } from "@/utils/date";
 import { eventInterval, eventKey } from "@/utils/events";
@@ -53,7 +54,7 @@ export function useEventDrag({ days, hourHeight, columnsRef, calendars, onSelect
         if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
         if (readOnly) {
           blocked = true;
-          return onNotice("Questo calendario è in sola lettura");
+          return onNotice(t("calendar.readOnly"));
         }
         moved = true;
       }

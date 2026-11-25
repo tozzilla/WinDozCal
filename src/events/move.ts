@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import type { Account, Calendar, ProviderKind } from "@/types";
 
 /**
@@ -13,13 +14,16 @@ export function moveBlockReason(
   if (!from || !to || from.id === to.id) return null;
   const provider = (c: Calendar): ProviderKind | undefined => accounts.find((a) => a.id === c.account_id)?.provider;
   if (change.attendees > 0 && provider(from) !== "local") {
-    return "Un evento con partecipanti non si sposta da un calendario sincronizzato: per loro risulterebbe cancellato e ricreato da te.";
+    return t("events.move.syncedWithGuests");
   }
   if (change.attendees > 0 && provider(to) === "microsoft") {
-    return "Un evento con partecipanti non si sposta su Microsoft: Outlook invierebbe gli inviti.";
+    return t("events.move.microsoftWithGuests");
+  }
+  if (change.attendees > 0 && provider(to) === "caldav") {
+    return t("events.move.caldavWithGuests");
   }
   if (change.conferenceUrl.trim() !== "" && provider(to) === "google") {
-    return "Un evento con link di videoconferenza non si sposta su Google: il link andrebbe perso.";
+    return t("events.move.googleWithConference");
   }
   return null;
 }

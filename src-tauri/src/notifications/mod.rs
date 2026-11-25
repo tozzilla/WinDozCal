@@ -4,7 +4,8 @@
 //! - `show_reminder`: notifica di un promemoria. Su Windows usa direttamente
 //!   `tauri-winrt-notification` (la stessa libreria del plugin), perche' il plugin desktop non
 //!   espone pulsanti ne' il clic: qui si aggiungono i pulsanti "Join" (apre il link della
-//!   videoconferenza con il browser di sistema) e "Dismiss", e il clic sulla notifica mostra
+//!   videoconferenza con il browser di sistema) e "Dismiss", con i testi nella lingua corrente
+//!   (`i18n`), e il clic sulla notifica mostra
 //!   la finestra ed emette `tray-open-event` con l'evento. Altrove ripiega su `show`.
 //!
 //! Nei log non finiscono titoli ne' contenuti degli eventi (PRD 35).
@@ -47,9 +48,15 @@ pub fn show_reminder(
         toast = toast.text2(line2);
     }
     if reminder.conference_url.is_some() {
-        toast = toast.add_button("Join", ACTION_JOIN);
+        toast = toast.add_button(
+            crate::i18n::text(crate::i18n::Key::ReminderJoin),
+            ACTION_JOIN,
+        );
     }
-    toast = toast.add_button("Dismiss", ACTION_DISMISS);
+    toast = toast.add_button(
+        crate::i18n::text(crate::i18n::Key::ReminderDismiss),
+        ACTION_DISMISS,
+    );
 
     let handle = app.clone();
     let event_id = reminder.event_id.clone();

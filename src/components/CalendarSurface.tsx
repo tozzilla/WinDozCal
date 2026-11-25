@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { errorText, useT } from "@/i18n";
 import { renderers } from "@/calendar/renderers";
 import { ScopeChoice } from "@/events/ScopeChoice";
 import { toNewEvent, type SeriesScope } from "@/events/seriesEdit";
@@ -10,14 +11,9 @@ import type { Event } from "@/types";
 import { formatTime, toIsoWithOffset } from "@/utils/date";
 import { occurrenceRef } from "@/utils/events";
 
-function errorText(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
-  return String(err);
-}
-
 /** Collega store, Calendar Service e renderer: conosce solo l'interfaccia `CalendarRenderer`. */
 export function CalendarSurface() {
+  const t = useT();
   const { view, currentDate, compact, setView, setCurrentDate, setNotice } = useUiStore();
   const { openNew, openExisting } = useEditorStore();
   const settings = usePreferences();
@@ -53,7 +49,7 @@ export function CalendarSurface() {
         reminders: series.reminders.map((r) => ({ minutes_before: r.minutes_before, type: r.type })),
       });
     } catch (err) {
-      setNotice(`Spostamento non riuscito: ${errorText(err)}`);
+      setNotice(t("shell.move.failed", { error: errorText(err) }));
     }
   };
 
@@ -72,7 +68,7 @@ export function CalendarSurface() {
           if (ref && !ref.isException) return setPendingMove({ event, start, end });
           changeTime.mutate(
             { event, start: toIsoWithOffset(start), end: toIsoWithOffset(end) },
-            { onError: (err) => setNotice(`Spostamento non riuscito: ${errorText(err)}`) },
+            { onError: (err) => setNotice(t("shell.move.failed", { error: errorText(err) })) },
           );
         }}
         onNotice={setNotice}
@@ -85,8 +81,8 @@ export function CalendarSurface() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-rail/45 p-4" onClick={(e) => e.target === e.currentTarget && setPendingMove(null)}>
           <div className="w-full max-w-lg rounded-lg border bg-popover p-5 text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
             <ScopeChoice
-              question={`Spostare "${pendingMove.event.title}" alle ${formatTime(pendingMove.start)}–${formatTime(pendingMove.end)}: applicare a`}
-              note="Spostando tutta la serie o i successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."
+              question={t("shell.move.question", { title: pendingMove.event.title, start: formatTime(pendingMove.start), end: formatTime(pendingMove.end) })}
+              note={t("shell.move.note")}
               onChoose={(scope) => void moveOccurrence(scope)}
               onCancel={() => setPendingMove(null)}
             />

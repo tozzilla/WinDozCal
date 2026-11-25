@@ -1,13 +1,13 @@
+import { COMPLETE_LANGUAGES, LANGUAGE_NAMES, errorText, useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useSettings, useUpdateSettings } from "@/providers/queries";
-import { DEFAULT_DURATIONS, type Settings } from "@/types";
+import { DEFAULT_DURATIONS, LANGUAGES, type LanguageSetting, type Settings } from "@/types";
 
 const selectClass = "rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50";
 
 /** Orari a passi di 30 minuti, in minuti dalla mezzanotte (limiti in docs/CONTRACT.md). */
 const HALF_HOURS = Array.from({ length: 49 }, (_, i) => i * 30);
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-const durationLabel = (m: number) => (m < 60 ? `${m} minuti` : m === 60 ? "1 ora" : `${String(m / 60).replace(".", ",")} ore`);
 
 function FieldRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
@@ -61,11 +61,16 @@ function SwitchRow({ label, description, checked, disabled, onChange }: SwitchRo
 
 /** Sezione General (PRD §34): avvio, tray e preferenze del calendario. Ogni modifica si salva subito; un errore resta visibile. */
 export function GeneralSettings() {
+  const t = useT();
+  const message = (err: unknown) => (err ? errorText(err) : t("settings.general.unknownError"));
   const { data: settings, isPending, error: loadError } = useSettings();
   const update = useUpdateSettings();
 
-  if (isPending) return <p className="text-sm text-muted-foreground">Caricamento…</p>;
-  if (!settings) return <p className="text-sm text-destructive">Impossibile leggere le impostazioni: {message(loadError)}</p>;
+  if (isPending) return <p className="text-sm text-muted-foreground">{t("settings.general.loading")}</p>;
+  if (!settings) return <p className="text-sm text-destructive">{t("settings.general.loadFailed", { error: message(loadError) })}</p>;
+
+  const durationLabel = (m: number) =>
+    m < 60 ? t("settings.general.minutes", { n: m }) : m === 60 ? t("settings.general.oneHour") : t("settings.general.hours", { n: String(m / 60).replace(".", t("settings.general.decimal")) });
 
   const save = (patch: Partial<Settings>) => update.mutate({ ...settings, ...patch });
 
@@ -73,40 +78,56 @@ export function GeneralSettings() {
     <div className="max-w-xl">
       <div className="divide-y">
         <SwitchRow
-          label="Start on Windows login"
+          label={t("settings.general.startOnLogin")}
           checked={settings.start_on_login}
           disabled={update.isPending}
           onChange={(v) => save({ start_on_login: v })}
         />
         <SwitchRow
-          label="Start minimized"
-          description="Vale solo per l'avvio automatico di Windows: se avvii WinDozCal a mano, la finestra si apre sempre."
+          label={t("settings.general.startMinimized")}
+          description={t("settings.general.startMinimizedHint")}
           checked={settings.start_minimized}
           disabled={update.isPending || !settings.start_on_login}
           onChange={(v) => save({ start_minimized: v })}
         />
         <SwitchRow
-          label="Keep running in the tray when the window is closed"
-          description="Chiudendo la finestra l'app resta attiva nel tray; per uscire usa Quit dal menu del tray."
+          label={t("settings.general.closeToTray")}
+          description={t("settings.general.closeToTrayHint")}
           checked={settings.close_to_tray}
           disabled={update.isPending}
           onChange={(v) => save({ close_to_tray: v })}
         />
-        <FieldRow label="First day of week">
+        <FieldRow label={t("settings.general.language")} description={t("settings.general.languageHint")}>
           <select
-            aria-label="First day of week"
+            aria-label={t("settings.general.language")}
+            className={selectClass}
+            disabled={update.isPending}
+            value={settings.language}
+            onChange={(e) => save({ language: e.target.value as LanguageSetting })}
+          >
+            <option value="system">{t("settings.general.languageSystem")}</option>
+            {LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {COMPLETE_LANGUAGES.includes(l) ? LANGUAGE_NAMES[l] : `${LANGUAGE_NAMES[l]} (${t("settings.general.languageCommunity")})`}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
+        <FieldRow label={t("settings.general.weekStart")}>
+          <select
+            aria-label={t("settings.general.weekStart")}
             className={selectClass}
             disabled={update.isPending}
             value={settings.week_start}
             onChange={(e) => save({ week_start: Number(e.target.value) as Settings["week_start"] })}
           >
-            <option value={1}>Lunedì</option>
-            <option value={0}>Domenica</option>
+            <option value={1}>{t("settings.general.monday")}</option>
+            <option value={0}>{t("settings.general.sunday")}</option>
           </select>
         </FieldRow>
-        <FieldRow label="Working hours" description="La griglia si apre all'inizio dell'orario; le ore fuori orario sono attenuate.">
+        <FieldRow label={t("settings.general.workingHours")} description={t("settings.general.workingHoursHint")}>
           <select
-            aria-label="Inizio dell'orario di lavoro"
+            aria-label={t("settings.general.workStart")}
             className={selectClass}
             disabled={update.isPending}
             value={settings.work_start}
@@ -120,7 +141,7 @@ export function GeneralSettings() {
           </select>
           <span aria-hidden>–</span>
           <select
-            aria-label="Fine dell'orario di lavoro"
+            aria-label={t("settings.general.workEnd")}
             className={selectClass}
             disabled={update.isPending}
             value={settings.work_end}
@@ -133,9 +154,9 @@ export function GeneralSettings() {
             ))}
           </select>
         </FieldRow>
-        <FieldRow label="Default event duration" description="Vale per il clic su una fascia vuota, il nuovo evento e Quick Add senza ora di fine.">
+        <FieldRow label={t("settings.general.defaultDuration")} description={t("settings.general.defaultDurationHint")}>
           <select
-            aria-label="Default event duration"
+            aria-label={t("settings.general.defaultDuration")}
             className={selectClass}
             disabled={update.isPending}
             value={settings.default_duration}
@@ -151,16 +172,9 @@ export function GeneralSettings() {
       </div>
       {update.isError && (
         <p role="alert" className="mt-3 text-sm text-destructive">
-          Impostazione non salvata: {message(update.error)}
+          {t("settings.general.saveFailed", { error: message(update.error) })}
         </p>
       )}
     </div>
   );
-}
-
-function message(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
-  return "errore sconosciuto";
 }

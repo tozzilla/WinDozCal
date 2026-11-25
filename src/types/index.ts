@@ -14,6 +14,8 @@ export interface Account {
   email: string;
   sync_status: string;
   last_sync: string | null;
+  /** URL del server CalDAV (ADR 023); `null` per gli altri provider. */
+  server_url: string | null;
 }
 
 export interface Calendar {
@@ -129,7 +131,14 @@ export interface Settings {
   default_duration: number;
   /** `null` = primo calendario scrivibile visibile. */
   default_calendar_id: string | null;
+  /** Lingua dell'interfaccia (ADR 022); `system` segue la lingua di Windows. */
+  language: LanguageSetting;
 }
+
+/** Lingue dell'interfaccia (ADR 022): `it` e `en` complete, `es`, `fr`, `de` secondarie. */
+export type Language = "it" | "en" | "es" | "fr" | "de";
+export type LanguageSetting = "system" | Language;
+export const LANGUAGES: readonly Language[] = ["it", "en", "es", "fr", "de"];
 
 /** Default di `Settings` (docs/CONTRACT.md), usati anche finché il backend non risponde. */
 export const DEFAULT_SETTINGS: Settings = {
@@ -141,6 +150,7 @@ export const DEFAULT_SETTINGS: Settings = {
   work_end: 18 * 60,
   default_duration: 60,
   default_calendar_id: null,
+  language: "system",
 };
 
 /** Durate ammesse per i nuovi eventi (docs/CONTRACT.md). */

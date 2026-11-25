@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, PanelLeft, Plus, Search } from "lucide-react";
 import { renderers, viewOrder } from "@/calendar/renderers";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -10,19 +11,20 @@ const iconButton =
 
 /** `<  >  Oggi  Ottobre 2026` + ricerca + selettore vista (PRD §6), nel linguaggio del Palinsesto. */
 export function Header() {
+  const t = useT();
   const { view, setView, currentDate, setCurrentDate, toggleSidebar, setSearchOpen } = useUiStore();
   const openNew = useEditorStore((s) => s.openNew);
   const { navigate } = renderers[view];
 
   return (
     <header className="flex h-15 shrink-0 items-center gap-2 border-b bg-card px-3 xl:px-5">
-      <button type="button" className={cn(iconButton, "mr-1 border-transparent")} aria-label="Mostra o nascondi la barra laterale" onClick={toggleSidebar}>
+      <button type="button" className={cn(iconButton, "mr-1 border-transparent")} aria-label={t("shell.header.toggleSidebar")} onClick={toggleSidebar}>
         <PanelLeft className="size-4" />
       </button>
-      <button type="button" className={iconButton} aria-label="Periodo precedente" onClick={() => setCurrentDate(navigate(currentDate, -1))}>
+      <button type="button" className={iconButton} aria-label={t("shell.header.previous")} onClick={() => setCurrentDate(navigate(currentDate, -1))}>
         <ChevronLeft className="size-4" />
       </button>
-      <button type="button" className={iconButton} aria-label="Periodo successivo" onClick={() => setCurrentDate(navigate(currentDate, 1))}>
+      <button type="button" className={iconButton} aria-label={t("shell.header.next")} onClick={() => setCurrentDate(navigate(currentDate, 1))}>
         <ChevronRight className="size-4" />
       </button>
       <button
@@ -30,7 +32,7 @@ export function Header() {
         className="h-8 rounded-md border bg-card px-3 text-[12px] font-semibold outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setCurrentDate(new Date())}
       >
-        Oggi
+        {t("shell.header.today")}
       </button>
       <h1 className="ml-3 text-[20px] leading-none font-bold tracking-[-0.01em] whitespace-nowrap xl:text-[25px]">{formatMonthYear(currentDate)}</h1>
 
@@ -38,14 +40,14 @@ export function Header() {
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          aria-label="Cerca eventi (Ctrl+K)"
+          aria-label={t("shell.header.searchAria")}
           className="flex h-8 items-center gap-2 rounded-md border bg-card px-2.5 text-[13px] xl:w-58 text-muted-foreground outline-none hover:border-muted-foreground/40 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Search className="size-3.5" />
-          <span className="hidden flex-1 text-left xl:inline">Cerca eventi</span>
+          <span className="hidden flex-1 text-left xl:inline">{t("shell.header.search")}</span>
           <kbd className="hidden font-sans text-[12px] xl:inline">Ctrl+K</kbd>
         </button>
-        <div role="tablist" aria-label="Vista" className="flex h-8 overflow-hidden rounded-md border bg-card">
+        <div role="tablist" aria-label={t("shell.header.views")} className="flex h-8 overflow-hidden rounded-md border bg-card">
           {viewOrder.map((v) => (
             <button
               key={v}
@@ -64,7 +66,7 @@ export function Header() {
         </div>
         <button
           type="button"
-          aria-label="Nuovo evento"
+          aria-label={t("shell.header.newEvent")}
           onClick={() => openNew()}
           className="grid h-8 w-9 place-items-center rounded-md bg-primary text-primary-foreground outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >

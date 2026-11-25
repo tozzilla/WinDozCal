@@ -88,6 +88,8 @@ pub struct Settings {
     pub default_duration: u16,
     /// Calendario dei nuovi eventi; `None` = primo calendario scrivibile visibile.
     pub default_calendar_id: Option<String>,
+    /// Lingua dell'interfaccia (ADR 022): `system`, `it`, `en`, `es`, `fr` o `de`.
+    pub language: String,
 }
 
 impl Default for Settings {
@@ -101,6 +103,7 @@ impl Default for Settings {
             work_end: 18 * 60,
             default_duration: 60,
             default_calendar_id: None,
+            language: "system".into(),
         }
     }
 }
@@ -121,6 +124,8 @@ pub struct Account {
     pub email: String,
     pub sync_status: AccountSyncStatus,
     pub last_sync: Option<String>,
+    /// URL del server CalDAV (ADR 023); `None` per gli altri provider.
+    pub server_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -345,6 +350,9 @@ pub struct SyncResult {
     /// `remote_id` delle serie riallineate per intero in questo round: le loro eccezioni locali
     /// `synced` che non compaiono negli `upserts` sono tornate occorrenze normali e si rimuovono.
     pub reconciled_series: Vec<String>,
+    /// Gli `upserts` sono l'elenco completo degli eventi del calendario (full sync CalDAV): le righe
+    /// `synced` assenti vanno rimosse. Google e Microsoft lo lasciano `false`.
+    pub full_snapshot: bool,
 }
 
 /// Identita' remota assegnata/aggiornata dal provider dopo create/update.

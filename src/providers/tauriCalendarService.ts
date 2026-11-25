@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, Calendar, Event, EventDetail, ProviderAvailability, Settings, UpdateInfo } from "@/types";
+import type { Account, Calendar, Event, EventDetail, Language, ProviderAvailability, Settings, UpdateInfo } from "@/types";
 import type { CalendarService } from "./calendarService";
 
 // Argomenti in camelCase lato JS (convenzione Tauri 2); i nomi dei comandi sono quelli di docs/CONTRACT.md.
@@ -10,6 +10,8 @@ export const tauriCalendarService: CalendarService = {
   providerAvailability: () => invoke<ProviderAvailability>("provider_availability"),
   connectMicrosoft: () => invoke<Account>("connect_microsoft"),
   connectGoogle: () => invoke<Account>("connect_google"),
+  connectCaldav: (serverUrl, username, password) => invoke<Account>("connect_caldav", { serverUrl, username, password }),
+  updateCaldavPassword: (accountId, password) => invoke<Account>("update_caldav_password", { accountId, password }),
   reconnectAccount: (accountId) => invoke<Account>("reconnect_account", { accountId }),
   disconnectAccount: (accountId) => invoke<void>("disconnect_account", { accountId }),
   createCalendar: (accountId, name, color) => invoke<Calendar>("create_calendar", { accountId, name, color }),
@@ -36,6 +38,7 @@ export const tauriCalendarService: CalendarService = {
   openLogFolder: () => invoke<void>("open_log_folder"),
   getSettings: () => invoke<Settings>("get_settings"),
   updateSettings: (settings) => invoke<Settings>("update_settings", { settings }),
+  setUiLanguage: (lang: Language) => invoke<void>("set_ui_language", { lang }),
   appVersion: () => getVersion(),
   checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
   installUpdate: () => invoke<void>("install_update"),

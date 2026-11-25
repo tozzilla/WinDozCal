@@ -37,12 +37,18 @@ Il 25 nov il proprietario ha risposto in pubblico confermando CalDAV come passo 
 
 ## Conseguenze
 - Il trait `CalendarProvider` (ADR 003) non cambia, se il sync-token o lo stato degli ETag entrano nel cursore opaco di `sync_state` come per Microsoft.
-- Serve un parser e generatore iCalendar nel backend. La scelta della crate (o di un'implementazione minima) si fa all'avvio del lavoro e si registra qui, con versione e data di verifica.
+- Crate scelte (verificate su crates.io il 25 nov 2026): `quick-xml` 0.42 per le risposte multistatus WebDAV, `icalendar` 0.17 (feature `parser`) per le risorse iCalendar.
+- Identità di un account CalDAV: `server_url` normalizzato (migrazione 012) più nome utente con confronto esatto; due account con lo stesso nome utente su server diversi restano distinti.
+- Ogni risorsa contiene master ed eccezioni con un'unica ETag: le scritture sono read-modify-write (GET, modifica del solo VEVENT interessato, PUT con `If-Match`) e conservano eccezioni sorelle, `VTIMEZONE` e proprietà sconosciute.
+- Il full sync restituisce l'elenco completo degli eventi (`SyncResult.full_snapshot`): le righe locali sincronizzate che il server non ha più vengono rimosse anche dopo un sync-token scaduto.
 - Il primo avvio e Impostazioni › Accounts acquistano un modulo con URL, nome utente e password: niente flusso nel browser, a differenza di Google e Microsoft.
 
-## Questioni aperte per il proprietario
-- **Certificati self-signed**: tipici dei NAS. Proposto: rifiutati per default; una conferma esplicita per account fissa l'impronta del certificato (pinning) invece di disattivare la verifica.
-- **HTTP in chiaro**: proposto di consentirlo solo verso indirizzi della rete locale, con un avviso; mai verso Internet.
+## Ipotesi applicate nell'implementazione (25 nov 2026), da confermare
+- **Certificati self-signed**: rifiutati. Il pinning proposto è escluso: con `reqwest` e native-tls l'impronta non si può verificare prima che le credenziali partano. Via d'uscita per un NAS: importare il suo certificato nell'archivio di Windows, che native-tls usa.
+- **HTTP in chiaro**: solo verso `localhost` o IP letterali loopback, privati (RFC 1918, `fc00::/7`) o link-local, mai per nome host, con un avviso nella UI e senza proxy. Restano esposte a chi osserva la rete locale: è il prezzo di accettare server senza TLS.
+- **Redirect e href del server**: stesso schema, host e porta, oppure HTTPS verso un sottodominio dello stesso dominio registrabile (caso iCloud); mai da HTTPS a HTTP. Le credenziali non partono verso altre origini.
+- **Inviti**: l'app non scrive mai `ORGANIZER` né `ATTENDEE`, perché i server con scheduling implicito invierebbero email ai partecipanti. Quelli già presenti sul server si conservano e a ogni PUT ricevono `SCHEDULE-AGENT=CLIENT` (RFC 6638 §7.1): il server non invia inviti né risposte per le modifiche fatte dall'app, come `sendUpdates=none` su Google (26 nov 2026).
+- **Partecipanti nell'editor**: per i calendari CalDAV la lista è in sola lettura con una nota; un evento nuovo si crea senza partecipanti; lo spostamento di un evento con partecipanti verso CalDAV è rifiutato (UI e `move_event`), come verso Microsoft (26 nov 2026).
 
 ## Stato
-Proposto (25 nov 2026). L'ordine dei lavori deriva dalla risposta del proprietario sulla issue #1; il perimetro tecnico attende la sua approvazione.
+Proposto (25 nov 2026), implementato sotto le ipotesi sopra su richiesta del proprietario ("implementa gli adr"), che ha anche anticipato CalDAV rispetto alla release 0.5.4. Le ipotesi attendono la sua conferma.

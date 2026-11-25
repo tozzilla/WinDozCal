@@ -2,7 +2,10 @@
 
 Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare dopo aver implementato.
 
-## Stato attuale (11 ott 2026)
+## Stato attuale (26 nov 2026)
+
+Non committati: release 0.5.4 (Google nell'app pubblica) e, sopra, localizzazione in cinque lingue e account CalDAV ([Tasks/i18n-caldav.md](Tasks/i18n-caldav.md)).
+
 
 Release v0.5.3 (preferenze di calendario PRD §34, ADR 018), dopo la v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google) con codice completo dal 12 ott 2026, in attesa della verifica con l'account reale; stage 6 e 8 dopo. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Redesign del frontend rilasciato.
 
@@ -28,6 +31,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | [Tasks/redesign-frontend.md](Tasks/redesign-frontend.md) | Redesign del frontend (Palinsesto) |
 | [Tasks/impostazioni-34.md](Tasks/impostazioni-34.md) | Impostazioni PRD §34: primo giorno, orario di lavoro, durata, calendario predefinito, compact mode |
 | [Tasks/release-0.5.4.md](Tasks/release-0.5.4.md) | Release 0.5.4: Google nell'app pubblica, decisioni, verifiche e comando di build |
+| [Tasks/i18n-caldav.md](Tasks/i18n-caldav.md) | Localizzazione it/en/es/fr/de (ADR 022) e account CalDAV (ADR 023): implementati e verificati il 26 nov 2026, non committati |
 | [Tasks/sposta-evento-calendario.md](Tasks/sposta-evento-calendario.md) | Spostare un evento tra calendari (bug stage 5) e UNTIL a data delle serie Google |
 | [../DESIGN.md](../DESIGN.md), [../PRODUCT.md](../PRODUCT.md) | Sistema visivo e verità di prodotto (skill impeccable) |
 

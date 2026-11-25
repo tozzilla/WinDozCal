@@ -20,7 +20,7 @@ Un utente straniero legge una presentazione in inglese e si trova un'app in ital
 
   Si aggiunge un'altra lingua con un dizionario nuovo, senza toccare i componenti.
 - **Scelta della lingua**: per default segue la lingua di visualizzazione di Windows. Se è una delle cinque si usa quella, altrimenti l'inglese, che fa da lingua di ripiego. In Impostazioni › General il campo "Lingua" offre Sistema più le cinque lingue, ciascuna col proprio nome (Italiano, English, Español, Français, Deutsch). Il cambio vale subito, senza riavvio.
-- **Contratto**: `Settings.language` vale `"system"`, `"it"`, `"en"`, `"es"`, `"fr"` oppure `"de"`. Si aggiunge con una migrazione con default `"system"` e si documenta in `docs/CONTRACT.md`, insieme alla validazione in `update_settings`.
+- **Contratto**: `Settings.language` vale `"system"`, `"it"`, `"en"`, `"es"`, `"fr"` oppure `"de"`, default `"system"`, validato in `update_settings` e documentato in `docs/CONTRACT.md`. Correzione del 25 nov 2026: `app_settings` è una tabella chiave/valore, quindi non serve una migrazione.
 - **Implementazione nel frontend**: nessuna dipendenza nuova.
   - Un modulo `src/i18n/` contiene un dizionario per lingua e una funzione `t(key, params)`.
   - Il dizionario italiano è la fonte delle chiavi. Il tipo TypeScript obbliga quello inglese ad averle tutte, quindi una traduzione mancante blocca il typecheck invece di comparire a runtime.
@@ -31,7 +31,7 @@ Un utente straniero legge una presentazione in inglese e si trova un'app in ital
 - **Date e ore**: ogni `Intl.DateTimeFormat` usa la lingua attiva invece di `"it-IT"`. Il primo giorno della settimana e l'orario di lavoro restano preferenze indipendenti (ADR 018), non derivano dalla lingua.
 - **Backend**:
   - il menu del tray e i testi delle notifiche usano la stessa lingua della UI;
-  - per risolvere "Sistema" il backend legge la lingua di Windows con le API già disponibili: se serve una crate nuova, si dichiara qui prima di aggiungerla;
+  - "Sistema" lo risolve il frontend con le lingue della WebView2 e lo comunica con `set_ui_language`; il backend lo salva come `resolved_language` e all'avvio riparte da lì, inglese se assente. Scartata la crate `sys-locale` 0.3.2 (25 nov 2026): avrebbe aggiunto una dipendenza per un dato che la WebView già espone;
   - quando la lingua cambia, il menu del tray viene ricostruito.
 - **Cosa non si traduce**:
   - `sync_error`, che resta il messaggio tecnico del provider (ADR 021);

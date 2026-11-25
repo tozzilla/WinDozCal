@@ -17,6 +17,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/009_event_appearance.sql"),
     include_str!("migrations/010_moved_to.sql"),
     include_str!("migrations/011_sync_error.sql"),
+    include_str!("migrations/012_caldav_server_url.sql"),
 ];
 
 pub fn run(conn: &mut Connection) -> AppResult<()> {

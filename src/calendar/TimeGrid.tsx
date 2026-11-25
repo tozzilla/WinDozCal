@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { Event } from "@/types";
 import { addDays, formatTime, formatWeekday, isSameDay, startOfDay, toIsoWithOffset } from "@/utils/date";
@@ -67,6 +68,7 @@ function allDayRows(events: Event[], days: Date[]) {
 
 /** Griglia oraria condivisa da Giorno e Settimana: palinsesto con banda IN ONDA, eventi affiancati, drag & drop. */
 export function TimeGrid({ days, prefs, events, calendars, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
+  const t = useT();
   const HOUR_HEIGHT = prefs.compact ? COMPACT_HOUR_HEIGHT : STANDARD_HOUR_HEIGHT;
   const now = useNow();
   const scroller = useRef<HTMLDivElement>(null);
@@ -313,7 +315,7 @@ export function TimeGrid({ days, prefs, events, calendars, onSelectSlot, onSelec
               <div className="absolute right-0 left-16 h-[3px] -translate-y-1/2 bg-onair" />
               <span className="absolute left-0.5 flex -translate-y-1/2 items-center gap-1 rounded-[3px] bg-onair px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em] whitespace-nowrap text-onair-foreground">
                 <span className="onair-tally size-1.5 rounded-full bg-onair-foreground" />
-                IN ONDA {formatTime(now)}
+                {t("calendar.nowMarker", { time: formatTime(now) })}
               </span>
             </div>
           )}

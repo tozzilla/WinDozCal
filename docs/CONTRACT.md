@@ -17,7 +17,7 @@ Regole: nessun import di provider o di `@tauri-apps/api` in `src/components` o `
 
 ## Entità (PRD §12 + §23), nomi campo identici in Rust (snake_case, serde) e TypeScript (snake_case, per evitare mapping)
 
-- `Account`: id, provider (`"local" | "google" | "microsoft" | "caldav"`), name, email (stringa vuota per `local`), sync_status, last_sync
+- `Account`: id, provider (`"local" | "google" | "microsoft" | "caldav"`), name, email (stringa vuota per `local`; nome utente per `caldav`), sync_status, last_sync, server_url (URL del server CalDAV, `null` per gli altri provider; migrazione 012, ADR 023)
 - `Calendar`: id, account_id, remote_id, name, color, visible, read_only
 - `Event`: id, calendar_id, remote_id, title, description, location, conference_url, start, end, timezone, all_day, recurrence_rule, status, etag, updated_at, sync_status, local_updated_at, remote_updated_at, series_id, original_start (eccezioni, ADR 013), color, icon, pattern (aspetto, ADR 017)
 - `Attendee`: id, event_id, email, name (nullable), status (`"needs_action" | "accepted" | "declined" | "tentative"`)
@@ -44,12 +44,14 @@ Valori:
 ```
 authenticate() / disconnect()
 get_calendars() -> Vec<RemoteCalendar>
-sync_events(calendar, cursor: Option<String>) -> SyncResult { upserts, deletions, next_cursor }
+sync_events(calendar, cursor: Option<String>) -> SyncResult { upserts, deletions, next_cursor, reconciled_series, full_snapshot }
 create_event(calendar, event) / update_event(calendar, event) / delete_event(calendar, event)
 get_sync_state()
 ```
 
-Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tutte stub (`unimplemented`/errore `NotImplemented`) nello scaffolding.
+Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` (ADR 023), `LocalProvider` (no-op).
+
+`full_snapshot = true` (25 nov 2026, piano `i18n-caldav`): gli `upserts` sono tutti gli eventi del calendario; le righe `synced` assenti si cancellano, una `pending_update` assente diventa conflitto, le `pending_create` restano. Lo imposta solo il full sync CalDAV.
 
 ## Comandi IPC (nomi esatti)
 
@@ -63,7 +65,7 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `get_event` | `eventId` | `EventDetail` |
 | `create_event` | `event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (sync_status=pending_create, `synced` su calendari local) |
 | `update_event` | `event: Event, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` (pending_update, `synced` su local); gli array sostituiscono interamente quelli esistenti |
-| `move_event` | `eventId, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` della copia nel calendario `event.calendar_id`, con id nuovo (ADR 020). Copia e cancellazione dell'originale in una transazione; un originale remoto resta `pending_delete` finché la copia non è sul server. Serie: si sposta con le eccezioni vive, quelle cancellate diventano `EXDATE`. Errore `invalid_input` per: eccezioni, stesso calendario, calendario di sola lettura, partecipanti da un calendario remoto o verso Microsoft, link di videoconferenza verso Google, ricorrenza non esprimibile su Microsoft. `update_event` continua a ignorare `calendar_id` |
+| `move_event` | `eventId, event: NewEvent, attendees: NewAttendee[], reminders: NewReminder[]` | `EventDetail` della copia nel calendario `event.calendar_id`, con id nuovo (ADR 020). Copia e cancellazione dell'originale in una transazione; un originale remoto resta `pending_delete` finché la copia non è sul server. Serie: si sposta con le eccezioni vive, quelle cancellate diventano `EXDATE`. Errore `invalid_input` per: eccezioni, stesso calendario, calendario di sola lettura, partecipanti da un calendario remoto o verso Microsoft o CalDAV (ADR 023), link di videoconferenza verso Google, ricorrenza non esprimibile su Microsoft. `update_event` continua a ignorare `calendar_id` |
 | `delete_event` | `eventId` | `void` (pending_delete) |
 | `failed_events` | — | `Event[]` con `sync_status = error`, dal più recente (ADR 021) |
 | `retry_failed_events` | `eventId?` | `number`: rimette in coda l'operazione rifiutata (`failed_op`; per le righe precedenti alla migrazione 011 `pending_create` senza `remote_id`, altrimenti `pending_update`) di un evento o di tutti, e chiede un sync |
@@ -71,7 +73,7 @@ Implementazioni: `GoogleProvider`, `MicrosoftProvider`, `CalDavProvider` — tut
 | `search_events` | `query` | `Event[]`: titolo, descrizione, luogo e partecipanti (email e nome), solo calendari visibili, max 200, dal più recente; le serie compaiono una volta (non espanse) |
 | `sync_now` | `accountId?` | `void` |
 | `open_log_folder` | — | `void` |
-| `create_local_account` | `name` | `Account` (provider=local) + calendario di default "Personale" |
+| `create_local_account` | `name` | `Account` (provider=local) + calendario di default nella lingua dell'interfaccia ("Personale", "Personal"…, ADR 022) |
 | `create_calendar` | `accountId, name, color` | `Calendar` (ammesso solo su account `local`) |
 
 Argomenti in camelCase lato JS (convenzione Tauri 2), snake_case lato Rust.
@@ -92,6 +94,8 @@ L'app deve funzionare senza alcun account esterno. Un account `local` ("Questo c
 | `provider_availability` | — | `{ google: boolean, microsoft: boolean }`: provider con client OAuth in questa build; la UI mostra solo i loro pulsanti |
 | `connect_google` | — | `Account` (provider=google): consenso nel browser di sistema (PKCE, redirect loopback su 127.0.0.1), profilo da userinfo; se esiste già un account Google con la stessa email ne rinnova le credenziali. Primo sync in background |
 | `reconnect_account` | `accountId` | `Account`: nuovo consenso per un account `auth_required`; errore `invalid_input` se si accede con un'altra email |
+| `connect_caldav` | `serverUrl, username, password` | `Account` (provider=caldav, ADR 023): verifica URL e credenziali con il discovery, salva la password solo in Credential Manager; identità = `server_url` normalizzato + nome utente (confronto esatto): se esiste la rinnova. HTTP in chiaro solo verso `localhost` o IP letterali privati/loopback/link-local; certificati non validi rifiutati. Primo sync in background |
+| `update_caldav_password` | `accountId, password` | `Account`: nuova password per un account CalDAV (`auth_required`), verificata prima di salvarla |
 | `disconnect_account` | `accountId` | `void`: cancella credenziali e dati locali dell'account (calendari, eventi, cursori); nulla sul server. Errore `invalid_input` per l'account `local` |
 
 - Errore `configuration` (`{ code: "configuration" }`) se la build non ha il client ID Microsoft (`WINDOZCAL_MS_CLIENT_ID`) o il client Google (`WINDOZCAL_GOOGLE_CLIENT_ID` e `WINDOZCAL_GOOGLE_CLIENT_SECRET`), iniettati in build o letti a runtime: la UI mostra il messaggio
@@ -145,9 +149,15 @@ Comandi:
 | `get_settings` | — | `Settings` |
 | `update_settings` | `settings: Settings` | `Settings` (applica subito: registra/rimuove l'avvio automatico) |
 
-`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean, week_start: 0 | 1, work_start: number, work_end: number, default_duration: number, default_calendar_id: string | null }`; default `false`, `false`, `true`, `1` (lunedì), `540`, `1080` (09:00-18:00), `60`, `null`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
+`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean, week_start: 0 | 1, work_start: number, work_end: number, default_duration: number, default_calendar_id: string | null, language: "system" | "it" | "en" | "es" | "fr" | "de" }`; default `false`, `false`, `true`, `1` (lunedì), `540`, `1080` (09:00-18:00), `60`, `null`, `"system"`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
 
 Limiti (11 ott 2026, ADR 018), validati da `update_settings` prima di scrivere: `week_start` 0 = domenica o 1 = lunedì; `work_start`/`work_end` in minuti dalla mezzanotte, multipli di 30, `work_start < work_end <= 1440`; `default_duration` tra 15, 30, 45, 60, 90, 120; `default_calendar_id` deve esistere e non essere di sola lettura. `get_settings` restituisce `null` se il calendario predefinito è stato rimosso o è diventato di sola lettura. L'avvio automatico di Windows si tocca solo se `start_on_login` cambia.
+
+Lingua (ADR 022, 25 nov 2026): `language` è validata da `update_settings`. Il frontend risolve `system` con le lingue della WebView (prima supportata, altrimenti `en`) e chiama `set_ui_language(lang)` con `lang` in `it | en | es | fr | de`: il backend la salva come `resolved_language` (chiave di `app_settings`), la usa per menu del tray e notifiche, e all'avvio successivo riparte da lì (inglese se assente).
+
+| Comando | Argomenti | Ritorno |
+|---|---|---|
+| `set_ui_language` | `lang` | `void`; errore `invalid_input` per `system` o una lingua non supportata |
 
 Eventi backend -> frontend (Tauri `emit`, nomi esatti):
 - `tray-new-event` (nessun payload): il frontend apre l'editor di un nuovo evento

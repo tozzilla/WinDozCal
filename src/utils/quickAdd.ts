@@ -1,4 +1,5 @@
 import * as chrono from "chrono-node";
+import { getLanguage } from "@/i18n";
 
 export interface QuickAddResult {
   title: string;
@@ -8,16 +9,23 @@ export interface QuickAddResult {
 }
 
 
-const parsers = [chrono.it, chrono.en];
+const SECONDARY = { es: chrono.es, fr: chrono.fr, de: chrono.de } as const;
+
+/** Il parser della lingua attiva (se secondaria) viene per primo, poi sempre italiano e inglese. */
+function activeParsers() {
+  const lang = getLanguage();
+  const extra = lang === "es" || lang === "fr" || lang === "de" ? [SECONDARY[lang]] : [];
+  return [...extra, chrono.it, chrono.en];
+}
 
 /**
- * Quick Add (PRD §8, ADR 012): estrae titolo, data e ora da testo libero in italiano o inglese, in locale.
+ * Quick Add (PRD §8, ADR 012): estrae titolo, data e ora da testo libero in italiano, inglese o nella lingua secondaria attiva (es/fr/de), in locale.
  * Si prova ogni lingua e si tiene il riconoscimento che copre più testo ("venerdì 9:30" batte "9:30").
  * Senza orario l'evento è "tutto il giorno"; senza fine dura `defaultMinutes` (Settings › default_duration);
  * senza data riconosciuta restituisce `null`.
  */
 export function parseQuickAdd(text: string, reference: Date = new Date(), defaultMinutes = 60): QuickAddResult | null {
-  const matches = parsers
+  const matches = activeParsers()
     .map((p) => p.parse(text, reference, { forwardDate: true })[0])
     .filter((m): m is chrono.ParsedResult => !!m);
   if (matches.length === 0) return null;

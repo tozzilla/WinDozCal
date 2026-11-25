@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { t, type TKey } from "@/i18n";
 import {
   Briefcase,
   Cake,
@@ -19,61 +20,89 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+/** Voce con etichetta tradotta: `label` è un getter, letto al render, così segue il cambio di lingua. */
+const colorEntry = (value: string, key: TKey) => ({
+  value,
+  get label() {
+    return t(key);
+  },
+});
+
 /**
  * Aspetto del singolo evento (ADR 017). I colori sono gli 11 colori evento di Google Calendar (`colorId` 1-11),
  * così la sincronizzazione futura li può mappare senza perdite; le chiavi di icone e pattern coincidono con
  * `EVENT_ICONS` / `EVENT_PATTERNS` del backend.
  */
 export const EVENT_COLORS: { value: string; label: string }[] = [
-  { value: "#7986CB", label: "Lavanda" },
-  { value: "#33B679", label: "Salvia" },
-  { value: "#8E24AA", label: "Uva" },
-  { value: "#E67C73", label: "Fenicottero" },
-  { value: "#F6BF26", label: "Banana" },
-  { value: "#F4511E", label: "Mandarino" },
-  { value: "#039BE5", label: "Pavone" },
-  { value: "#616161", label: "Grafite" },
-  { value: "#3F51B5", label: "Mirtillo" },
-  { value: "#0B8043", label: "Basilico" },
-  { value: "#D50000", label: "Pomodoro" },
+  colorEntry("#7986CB", "calendar.colors.lavender"),
+  colorEntry("#33B679", "calendar.colors.sage"),
+  colorEntry("#8E24AA", "calendar.colors.grape"),
+  colorEntry("#E67C73", "calendar.colors.flamingo"),
+  colorEntry("#F6BF26", "calendar.colors.banana"),
+  colorEntry("#F4511E", "calendar.colors.tangerine"),
+  colorEntry("#039BE5", "calendar.colors.peacock"),
+  colorEntry("#616161", "calendar.colors.graphite"),
+  colorEntry("#3F51B5", "calendar.colors.blueberry"),
+  colorEntry("#0B8043", "calendar.colors.basil"),
+  colorEntry("#D50000", "calendar.colors.tomato"),
 ];
 
 /** Colori proposti per i calendari: quelli dei canali del Palinsesto più la palette degli eventi. */
 export const CALENDAR_COLORS: { value: string; label: string }[] = [
-  { value: "#2F6BFF", label: "Blu canale" },
-  { value: "#1BA672", label: "Verde canale" },
-  { value: "#F2A900", label: "Ambra canale" },
+  colorEntry("#2F6BFF", "calendar.colors.channelBlue"),
+  colorEntry("#1BA672", "calendar.colors.channelGreen"),
+  colorEntry("#F2A900", "calendar.colors.channelAmber"),
   ...EVENT_COLORS,
 ];
 
+const iconEntry = (Icon: LucideIcon, key: TKey) => ({
+  Icon,
+  get label() {
+    return t(key);
+  },
+});
+
 export const EVENT_ICONS: Record<string, { Icon: LucideIcon; label: string }> = {
-  video: { Icon: Video, label: "Videochiamata" },
-  phone: { Icon: Phone, label: "Telefonata" },
-  users: { Icon: Users, label: "Riunione" },
-  briefcase: { Icon: Briefcase, label: "Lavoro" },
-  plane: { Icon: Plane, label: "Viaggio" },
-  car: { Icon: Car, label: "Spostamento" },
-  utensils: { Icon: Utensils, label: "Pasto" },
-  coffee: { Icon: Coffee, label: "Pausa" },
-  dumbbell: { Icon: Dumbbell, label: "Sport" },
-  "heart-pulse": { Icon: HeartPulse, label: "Salute" },
-  cake: { Icon: Cake, label: "Compleanno" },
-  "graduation-cap": { Icon: GraduationCap, label: "Studio" },
-  flag: { Icon: Flag, label: "Scadenza" },
-  home: { Icon: House, label: "Casa" },
-  "shopping-cart": { Icon: ShoppingCart, label: "Spesa" },
-  music: { Icon: Music, label: "Musica" },
+  video: iconEntry(Video, "calendar.icons.video"),
+  phone: iconEntry(Phone, "calendar.icons.phone"),
+  users: iconEntry(Users, "calendar.icons.users"),
+  briefcase: iconEntry(Briefcase, "calendar.icons.briefcase"),
+  plane: iconEntry(Plane, "calendar.icons.plane"),
+  car: iconEntry(Car, "calendar.icons.car"),
+  utensils: iconEntry(Utensils, "calendar.icons.utensils"),
+  coffee: iconEntry(Coffee, "calendar.icons.coffee"),
+  dumbbell: iconEntry(Dumbbell, "calendar.icons.dumbbell"),
+  "heart-pulse": iconEntry(HeartPulse, "calendar.icons.heartPulse"),
+  cake: iconEntry(Cake, "calendar.icons.cake"),
+  "graduation-cap": iconEntry(GraduationCap, "calendar.icons.graduationCap"),
+  flag: iconEntry(Flag, "calendar.icons.flag"),
+  home: iconEntry(House, "calendar.icons.home"),
+  "shopping-cart": iconEntry(ShoppingCart, "calendar.icons.shoppingCart"),
+  music: iconEntry(Music, "calendar.icons.music"),
 };
 
 /** Pattern di riempimento: disegnati con lo stesso inchiostro tenue del tratteggio del "libero". */
 export const EVENT_PATTERNS: Record<string, { label: string; image: string; size?: string }> = {
-  dots: { label: "Puntini", image: "radial-gradient(var(--hatch) 1.2px, transparent 1.4px)", size: "7px 7px" },
+  dots: {
+    get label() {
+      return t("calendar.patterns.dots");
+    },
+    image: "radial-gradient(var(--hatch) 1.2px, transparent 1.4px)",
+    size: "7px 7px",
+  },
   grid: {
-    label: "Quadretti",
+    get label() {
+      return t("calendar.patterns.grid");
+    },
     image: "linear-gradient(var(--hatch) 1px, transparent 1px), linear-gradient(90deg, var(--hatch) 1px, transparent 1px)",
     size: "8px 8px, 8px 8px",
   },
-  lines: { label: "Righe", image: "repeating-linear-gradient(0deg, transparent 0 5px, var(--hatch) 5px 6px)" },
+  lines: {
+    get label() {
+      return t("calendar.patterns.lines");
+    },
+    image: "repeating-linear-gradient(0deg, transparent 0 5px, var(--hatch) 5px 6px)",
+  },
 };
 
 const FREE_HATCH = "repeating-linear-gradient(135deg, transparent 0 5px, var(--hatch) 5px 6px)";

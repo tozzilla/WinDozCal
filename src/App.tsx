@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { EventEditor } from "@/events/EventEditor";
 import { QuickAdd } from "@/events/QuickAdd";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { useTheme } from "@/hooks/useTheme";
 import { useTrayEvents } from "@/hooks/useTrayEvents";
 import { queryClient, useAccounts } from "@/providers/queries";
@@ -17,6 +18,7 @@ import { useUiStore } from "@/stores/uiStore";
 
 function Shell() {
   useTheme();
+  useLanguageSync();
   useKeyboardShortcuts();
   useTrayEvents();
   const settingsOpen = useUiStore((s) => s.settingsOpen);

@@ -79,7 +79,7 @@ pub(crate) const CALENDAR_COLS: &str =
 
 pub fn list_accounts(conn: &Connection) -> AppResult<Vec<Account>> {
     let mut stmt = conn.prepare(
-        "SELECT id, provider, name, email, sync_status, last_sync
+        "SELECT id, provider, name, email, sync_status, last_sync, server_url
          FROM accounts ORDER BY name COLLATE NOCASE, id",
     )?;
     let rows = stmt.query_map([], |row| {
@@ -90,6 +90,7 @@ pub fn list_accounts(conn: &Connection) -> AppResult<Vec<Account>> {
             email: row.get(3)?,
             sync_status: row.get(4)?,
             last_sync: row.get(5)?,
+            server_url: row.get(6)?,
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -129,7 +130,6 @@ pub fn set_calendar_visibility(
 /// Colore di default dei calendari creati localmente.
 const DEFAULT_CALENDAR_COLOR: &str = "#4285f4";
 const LOCAL_ACCOUNT_NAME: &str = "Questo computer";
-const LOCAL_DEFAULT_CALENDAR: &str = "Personale";
 
 /// `true` se il calendario appartiene a un account `local` (eventi mai in coda di sync).
 fn is_local_calendar(conn: &Connection, calendar_id: &str) -> AppResult<bool> {
@@ -144,9 +144,14 @@ fn is_local_calendar(conn: &Connection, calendar_id: &str) -> AppResult<bool> {
     Ok(provider == Some(ProviderKind::Local))
 }
 
-/// Crea l'account `local` con il calendario "Personale". Idempotente: se esiste gia' un account
-/// local lo restituisce senza creare nulla.
-pub fn create_local_account(conn: &Connection, name: &str) -> AppResult<Account> {
+/// Crea l'account `local` con il primo calendario (`calendar_name`, nella lingua dell'interfaccia:
+/// "Personale", "Personal"...). Idempotente: se esiste gia' un account local lo restituisce senza
+/// creare nulla.
+pub fn create_local_account(
+    conn: &Connection,
+    name: &str,
+    calendar_name: &str,
+) -> AppResult<Account> {
     let existing = list_accounts(conn)?
         .into_iter()
         .find(|a| a.provider == ProviderKind::Local);
@@ -164,12 +169,7 @@ pub fn create_local_account(conn: &Connection, name: &str) -> AppResult<Account>
          VALUES (?1, 'local', ?2, '', ?3)",
         params![account_id, name, AccountSyncStatus::Idle],
     )?;
-    insert_calendar(
-        &tx,
-        &account_id,
-        LOCAL_DEFAULT_CALENDAR,
-        DEFAULT_CALENDAR_COLOR,
-    )?;
+    insert_calendar(&tx, &account_id, calendar_name, DEFAULT_CALENDAR_COLOR)?;
     tx.commit()?;
     list_accounts(conn)?
         .into_iter()
@@ -191,6 +191,9 @@ pub fn upsert_external_account(
     if provider == ProviderKind::Local {
         return Err(AppError::InvalidInput("use create_local_account".into()));
     }
+    if provider == ProviderKind::Caldav {
+        return Err(AppError::InvalidInput("use upsert_caldav_account".into()));
+    }
     let existing = list_accounts(conn)?
         .into_iter()
         .find(|a| a.provider == provider && a.email.eq_ignore_ascii_case(email));
@@ -208,6 +211,51 @@ pub fn upsert_external_account(
                 "INSERT INTO accounts (id, provider, name, email, sync_status, credential_ref)
                  VALUES (?1, ?2, ?3, ?4, 'idle', ?5)",
                 params![id, provider, name, email, credential_ref],
+            )?;
+            id
+        }
+    };
+    get_account(conn, &account_id)
+}
+
+/// Account CalDAV con quell'URL normalizzato e quel nome utente (confronto esatto, ADR 023).
+pub fn find_caldav_account(
+    conn: &Connection,
+    server_url: &str,
+    username: &str,
+) -> AppResult<Option<Account>> {
+    Ok(list_accounts(conn)?.into_iter().find(|a| {
+        a.provider == ProviderKind::Caldav
+            && a.email == username
+            && a.server_url.as_deref() == Some(server_url)
+    }))
+}
+
+/// Account CalDAV dopo il discovery: l'identita' e' `server_url` normalizzato + nome utente
+/// (esatto, a differenza dell'email di Google/Microsoft). Lo stesso utente su due server sono due
+/// account. Se esiste lo rinnova (nome, riferimento credenziale, stato `idle`), altrimenti lo crea.
+/// `credential_ref` e' il riferimento a Credential Manager, mai la password.
+pub fn upsert_caldav_account(
+    conn: &Connection,
+    name: &str,
+    username: &str,
+    server_url: &str,
+    credential_ref: &str,
+) -> AppResult<Account> {
+    let account_id = match find_caldav_account(conn, server_url, username)? {
+        Some(account) => {
+            conn.execute(
+                "UPDATE accounts SET name = ?1, credential_ref = ?2, sync_status = 'idle' WHERE id = ?3",
+                params![name, credential_ref, account.id],
+            )?;
+            account.id
+        }
+        None => {
+            let id = uuid::Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO accounts (id, provider, name, email, sync_status, credential_ref, server_url)
+                 VALUES (?1, 'caldav', ?2, ?3, 'idle', ?4, ?5)",
+                params![id, name, username, credential_ref, server_url],
             )?;
             id
         }
@@ -546,6 +594,11 @@ const KEY_WORK_START: &str = "work_start";
 const KEY_WORK_END: &str = "work_end";
 const KEY_DEFAULT_DURATION: &str = "default_duration";
 const KEY_DEFAULT_CALENDAR: &str = "default_calendar_id";
+const KEY_LANGUAGE: &str = "language";
+/// Lingua effettiva comunicata dal frontend (ADR 022), usata da tray e notifiche all'avvio.
+const KEY_RESOLVED_LANGUAGE: &str = "resolved_language";
+/// Valori ammessi per `Settings.language`.
+pub const LANGUAGES: [&str; 6] = ["system", "it", "en", "es", "fr", "de"];
 /// Durate ammesse per i nuovi eventi, in minuti.
 pub const DEFAULT_DURATIONS: [u16; 6] = [15, 30, 45, 60, 90, 120];
 /// Flag: la notifica "ancora attivo nel tray" e' gia' stata mostrata.
@@ -609,6 +662,9 @@ pub fn get_settings(conn: &Connection) -> AppResult<Settings> {
         work_end: get_u16(conn, KEY_WORK_END, default.work_end)?,
         default_duration: get_u16(conn, KEY_DEFAULT_DURATION, default.default_duration)?,
         default_calendar_id: get_value(conn, KEY_DEFAULT_CALENDAR)?.filter(|v| !v.is_empty()),
+        language: get_value(conn, KEY_LANGUAGE)?
+            .filter(|v| LANGUAGES.contains(&v.as_str()))
+            .unwrap_or(default.language),
     };
     if validate_preferences(&settings).is_err() {
         settings = Settings {
@@ -639,6 +695,9 @@ fn validate_preferences(s: &Settings) -> Result<(), String> {
         || s.work_end > 24 * 60
     {
         return Err("working hours must be 30-minute steps with start before end".into());
+    }
+    if !LANGUAGES.contains(&s.language.as_str()) {
+        return Err(format!("language must be one of {LANGUAGES:?}"));
     }
     if !DEFAULT_DURATIONS.contains(&s.default_duration) {
         return Err(format!(
@@ -689,8 +748,26 @@ pub fn set_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
         KEY_DEFAULT_CALENDAR,
         settings.default_calendar_id.as_deref().unwrap_or(""),
     )?;
+    set_value(&tx, KEY_LANGUAGE, &settings.language)?;
     tx.commit()?;
     Ok(())
+}
+
+/// Lingua effettiva dell'interfaccia (`it`, `en`, `es`, `fr`, `de`), salvata dal frontend con
+/// `set_ui_language`; `None` prima del primo avvio della UI.
+pub fn get_resolved_language(conn: &Connection) -> AppResult<Option<String>> {
+    Ok(get_value(conn, KEY_RESOLVED_LANGUAGE)?
+        .filter(|v| v != "system" && LANGUAGES.contains(&v.as_str())))
+}
+
+pub fn set_resolved_language(conn: &Connection, lang: &str) -> AppResult<()> {
+    if lang == "system" || !LANGUAGES.contains(&lang) {
+        return Err(AppError::InvalidInput(format!(
+            "language must be one of {:?}",
+            &LANGUAGES[1..]
+        )));
+    }
+    set_value(conn, KEY_RESOLVED_LANGUAGE, lang)
 }
 
 pub fn get_flag(conn: &Connection, key: &str) -> AppResult<bool> {
@@ -1390,6 +1467,13 @@ pub fn move_event(
     if has_attendees && target == ProviderKind::Microsoft {
         return Err(AppError::InvalidInput(
             "events with attendees cannot be moved to Microsoft: invitations would be sent".into(),
+        ));
+    }
+    // ADR 023: l'adapter CalDAV non scrive i partecipanti; spostati li perderebbero in silenzio.
+    if has_attendees && target == ProviderKind::Caldav {
+        return Err(AppError::InvalidInput(
+            "events with attendees cannot be moved to CalDAV: attendees are not written to the server"
+                .into(),
         ));
     }
     let has_conference = new

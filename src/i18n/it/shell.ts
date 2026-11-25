@@ -1,0 +1,47 @@
+export const shell = {
+  update: {
+    available: "È disponibile WinDozCal {version} (installata {current}).",
+    failed: "Aggiornamento non riuscito: {error}",
+    downloading: "Download in corso…",
+    install: "Installa e riavvia",
+    later: "Più tardi",
+  },
+  header: {
+    toggleSidebar: "Mostra o nascondi la barra laterale",
+    previous: "Periodo precedente",
+    next: "Periodo successivo",
+    today: "Oggi",
+    searchAria: "Cerca eventi (Ctrl+K)",
+    search: "Cerca eventi",
+    views: "Vista",
+    newEvent: "Nuovo evento",
+  },
+  sidebar: {
+    hideChannel: "Nascondi tutto il canale",
+    showChannel: "Mostra tutto il canale",
+    authRenewTitle: "Accesso da rinnovare: apri Impostazioni > Accounts",
+    authRenew: "Accesso da rinnovare",
+    syncError: "Errore di sincronizzazione",
+    addLocalCalendar: "Aggiungi calendario locale",
+    calendarNamePlaceholder: "Nome del calendario",
+    toggleHint: "Clic: mostra o nascondi · Clic destro: colore",
+    colorOf: "Colore di {name}",
+    colorHeading: "Colore · {name}",
+    settings: "Impostazioni",
+  },
+  search: {
+    title: "Cerca eventi",
+    placeholder: "Cerca per titolo, luogo, descrizione o partecipante",
+    untitled: "(senza titolo)",
+    empty: "Nessun evento trovato.",
+  },
+  colorPicker: {
+    hex: "Colore esadecimale",
+    use: "Usa",
+  },
+  move: {
+    failed: "Spostamento non riuscito: {error}",
+    question: "Spostare \"{title}\" alle {start}–{end}: applicare a",
+    note: "Spostando tutta la serie o i successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse.",
+  },
+};

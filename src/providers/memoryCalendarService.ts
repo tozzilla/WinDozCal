@@ -11,9 +11,9 @@ const DEFAULT_COLOR = "#2563eb";
 // Parte vuoto, così si vede la WelcomeScreen; i dati d'esempio si attivano con `?demo` nell'URL.
 
 const demoAccounts = (): Account[] => [
-  { id: "acc-local", provider: "local", name: "Questo computer", email: "", sync_status: "idle", last_sync: null },
-  { id: "acc-google", provider: "google", name: "Lavoro", email: "demo@example.com", sync_status: "idle", last_sync: null },
-  { id: "acc-ms", provider: "microsoft", name: "Studio Rossi", email: "demo@studiorossi.example", sync_status: "idle", last_sync: null },
+  { id: "acc-local", provider: "local", name: "Questo computer", email: "", sync_status: "idle", last_sync: null, server_url: null },
+  { id: "acc-google", provider: "google", name: "Lavoro", email: "demo@example.com", sync_status: "idle", last_sync: null, server_url: null },
+  { id: "acc-ms", provider: "microsoft", name: "Studio Rossi", email: "demo@studiorossi.example", sync_status: "idle", last_sync: null, server_url: null },
 ];
 
 const demoCalendars = (): Calendar[] => [
@@ -93,7 +93,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     async createLocalAccount(name) {
       let account = accounts.find((a) => a.provider === "local");
       if (!account) {
-        account = { id: newId("acc-local"), provider: "local", name, email: "", sync_status: "synced", last_sync: null };
+        account = { id: newId("acc-local"), provider: "local", name, email: "", sync_status: "synced", last_sync: null, server_url: null };
         accounts.push(account);
         calendars.push({
           id: newId("cal"), account_id: account.id, remote_id: "", name: "Personale",
@@ -110,6 +110,23 @@ export function createMemoryCalendarService(demo = false): CalendarService {
     },
     async connectGoogle() {
       throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
+    },
+    async connectCaldav(serverUrl, username, password) {
+      if (!serverUrl.trim() || !username.trim() || !password) throw new Error("URL, username and password are required.");
+      const existing = accounts.find((a) => a.provider === "caldav" && a.server_url === serverUrl && a.email === username);
+      if (existing) return structuredClone(existing);
+      const account: Account = {
+        id: newId("acc-caldav"), provider: "caldav", name: username, email: username,
+        sync_status: "idle", last_sync: null, server_url: serverUrl,
+      };
+      accounts.push(account);
+      return structuredClone(account);
+    },
+    async updateCaldavPassword(accountId, password) {
+      const account = accounts.find((a) => a.id === accountId && a.provider === "caldav");
+      if (!account || !password) throw new Error("CalDAV account not found.");
+      account.sync_status = "idle";
+      return structuredClone(account);
     },
     async reconnectAccount() {
       throw new Error("Il collegamento degli account è disponibile solo nell'app desktop.");
@@ -273,6 +290,7 @@ export function createMemoryCalendarService(demo = false): CalendarService {
       const valid = id && calendars.some((c) => c.id === id && !c.read_only);
       return { ...settings, default_calendar_id: valid ? id : null };
     },
+    async setUiLanguage() {},
     async appVersion() {
       return "dev";
     },

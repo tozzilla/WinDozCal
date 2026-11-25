@@ -175,16 +175,8 @@ pub fn conference_service(url: &str) -> Option<&'static str> {
 /// nome del servizio se c'e' un link di videoconferenza.
 pub fn notification_lines(r: &DueReminder, now: DateTime<FixedOffset>) -> (String, Option<String>) {
     let remaining = r.start_ts - now.timestamp();
-    let when = if remaining <= 0 {
-        "now".to_string()
-    } else {
-        let minutes = (remaining + 59) / 60;
-        if minutes == 1 {
-            "in 1 minute".to_string()
-        } else {
-            format!("in {minutes} minutes")
-        }
-    };
+    // Testo nella lingua dell'interfaccia (ADR 022): "ora", "tra 1 minuto", "tra N minuti".
+    let when = crate::i18n::reminder_when(((remaining + 59) / 60).max(0));
     let local = |ts: i64| {
         now.offset()
             .timestamp_opt(ts, 0)

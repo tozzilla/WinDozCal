@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 import type { NewAttendee } from "@/types";
 import { validateAttendees } from "@/utils/validation";
 
@@ -9,10 +10,13 @@ const inputClass = "w-full rounded-md border bg-background px-2 py-1.5 text-sm o
 interface Props {
   value: NewAttendee[];
   onChange: (value: NewAttendee[]) => void;
+  /** Se presente la lista è in sola lettura e la nota spiega perché (calendari CalDAV, ADR 023). */
+  readOnlyNote?: string;
 }
 
 /** Lista partecipanti: email obbligatoria, nome opzionale. Gli errori compaiono all'aggiunta. */
-export function AttendeesField({ value, onChange }: Props) {
+export function AttendeesField({ value, onChange, readOnlyNote }: Props) {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +34,7 @@ export function AttendeesField({ value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <span className="text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">Partecipanti</span>
+      <span className="text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">{t("events.attendees.title")}</span>
       {value.length > 0 && (
         <ul className="space-y-1">
           {value.map((a) => (
@@ -39,36 +43,42 @@ export function AttendeesField({ value, onChange }: Props) {
                 {a.name ? `${a.name} ` : ""}
                 <span className="text-muted-foreground">{a.name ? `<${a.email}>` : a.email}</span>
               </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="ml-auto"
-                aria-label={`Rimuovi ${a.email}`}
-                onClick={() => onChange(value.filter((x) => x !== a))}
-              >
-                <X />
-              </Button>
+              {!readOnlyNote && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-auto"
+                  aria-label={t("events.attendees.remove", { email: a.email })}
+                  onClick={() => onChange(value.filter((x) => x !== a))}
+                >
+                  <X />
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
-      <div
-        className="flex gap-2"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            add();
-          }
-        }}
-      >
-        <input type="email" placeholder="Email" aria-label="Email del partecipante" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        <input placeholder="Nome (opzionale)" aria-label="Nome del partecipante" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-        <Button type="button" variant="outline" onClick={add}>
-          Aggiungi
-        </Button>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {readOnlyNote ? (
+        <p className="text-xs text-muted-foreground">{readOnlyNote}</p>
+      ) : (
+        <div
+          className="flex gap-2"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+        >
+          <input type="email" placeholder={t("events.attendees.email")} aria-label={t("events.attendees.emailLabel")} value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+          <input placeholder={t("events.attendees.name")} aria-label={t("events.attendees.nameLabel")} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+          <Button type="button" variant="outline" onClick={add}>
+            {t("events.attendees.add")}
+          </Button>
+        </div>
+      )}
+      {!readOnlyNote && error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

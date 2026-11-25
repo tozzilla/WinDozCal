@@ -1,4 +1,4 @@
-import type { Account, Calendar, Event, EventDetail, NewAttendee, NewEvent, NewReminder, ProviderAvailability, Settings, UpdateInfo } from "@/types";
+import type { Account, Calendar, Event, EventDetail, Language, NewAttendee, NewEvent, NewReminder, ProviderAvailability, Settings, UpdateInfo } from "@/types";
 import { createMemoryCalendarService } from "./memoryCalendarService";
 import { tauriCalendarService } from "./tauriCalendarService";
 
@@ -17,6 +17,13 @@ export interface CalendarService {
   connectMicrosoft(): Promise<Account>;
   /** Collega un account Google: consenso nel browser di sistema, poi primo sync in background (ADR 019). */
   connectGoogle(): Promise<Account>;
+  /**
+   * Collega un account CalDAV (ADR 023): verifica URL e credenziali, salva la password solo in Credential
+   * Manager, crea o aggiorna l'account (identità: URL + nome utente). Primo sync in background.
+   */
+  connectCaldav(serverUrl: string, username: string, password: string): Promise<Account>;
+  /** Nuova password per un account CalDAV (riconnessione dopo `auth_required`). */
+  updateCaldavPassword(accountId: string, password: string): Promise<Account>;
   /** Rinnova il consenso di un account esterno (stato `auth_required`); deve essere la stessa identità. */
   reconnectAccount(accountId: string): Promise<Account>;
   /** Scollega un account esterno e cancella i suoi dati locali (nulla viene cancellato sul server). */
@@ -60,6 +67,8 @@ export interface CalendarService {
   getSettings(): Promise<Settings>;
   /** Applica subito (il backend registra o rimuove l'avvio automatico) e restituisce lo stato salvato. */
   updateSettings(settings: Settings): Promise<Settings>;
+  /** Lingua effettiva dell'interfaccia (ADR 022): il backend la usa per tray e notifiche. */
+  setUiLanguage(lang: Language): Promise<void>;
   /** Versione installata dell'app. */
   appVersion(): Promise<string>;
   /** Controlla gli aggiornamenti firmati (PRD §36); `null` se si è già all'ultima versione. */

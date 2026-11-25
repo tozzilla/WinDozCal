@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { calendarColor } from "@/calendar/colors";
+import { dateFormat, useT } from "@/i18n";
 import { useCalendars, useSearchEvents } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { Event } from "@/types";
 import { formatTime } from "@/utils/date";
 
-const dateFormat = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-
 function when(e: Event): string {
   const start = new Date(e.start);
-  return e.all_day ? dateFormat.format(start) : `${dateFormat.format(start)} · ${formatTime(start)}`;
+  const day = dateFormat({ weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(start);
+  return e.all_day ? day : `${day} · ${formatTime(start)}`;
 }
 
 /** Ricerca locale `Ctrl + K` (PRD §24): titolo, descrizione, luogo e partecipanti, senza rete. */
 export function SearchPanel() {
+  const t = useT();
   const { searchOpen, setSearchOpen, setCurrentDate } = useUiStore();
   const openExisting = useEditorStore((s) => s.openExisting);
   const [query, setQuery] = useState("");
@@ -25,8 +26,8 @@ export function SearchPanel() {
   const { data: calendars = [] } = useCalendars();
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(query), 120);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(query), 120);
+    return () => clearTimeout(timer);
   }, [query]);
   useEffect(() => {
     setActive(0);
@@ -53,7 +54,7 @@ export function SearchPanel() {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center bg-rail/35 p-4 pt-[12vh]" onClick={(e) => e.target === e.currentTarget && setSearchOpen(false)}>
-      <div role="dialog" aria-label="Cerca eventi" className="h-fit w-full max-w-xl overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
+      <div role="dialog" aria-label={t("shell.search.title")} className="h-fit w-full max-w-xl overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
         <div className="flex items-center gap-2 border-b px-3">
           <Search className="size-4 text-muted-foreground" />
           <input
@@ -61,7 +62,7 @@ export function SearchPanel() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Cerca per titolo, luogo, descrizione o partecipante"
+            placeholder={t("shell.search.placeholder")}
             className="w-full bg-transparent py-3.5 text-[16px] outline-none placeholder:text-muted-foreground/80"
           />
         </div>
@@ -77,14 +78,14 @@ export function SearchPanel() {
                 >
                   <span className="h-8 w-1.5 shrink-0 rounded-[1px]" style={{ background: calendarColor(calendars, e.calendar_id) }} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{e.title || "(senza titolo)"}</span>
+                    <span className="block truncate font-semibold">{e.title || t("shell.search.untitled")}</span>
                     {e.location && <span className="block truncate text-xs text-muted-foreground">{e.location}</span>}
                   </span>
                   <span className="shrink-0 text-[12px] font-semibold text-muted-foreground">{when(e)}</span>
                 </button>
               </li>
             ))}
-            {results.length === 0 && !isFetching && <li className="px-3 py-2 text-sm text-muted-foreground">Nessun evento trovato.</li>}
+            {results.length === 0 && !isFetching && <li className="px-3 py-2 text-sm text-muted-foreground">{t("shell.search.empty")}</li>}
           </ul>
         )}
       </div>

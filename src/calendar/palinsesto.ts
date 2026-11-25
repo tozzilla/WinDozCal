@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import type { Calendar, Event } from "@/types";
 import { isSameDay } from "@/utils/date";
 import { eventInterval, eventKey } from "@/utils/events";
@@ -5,10 +6,17 @@ import { eventInterval, eventKey } from "@/utils/events";
 /** Segni del palinsesto su un evento: in onda adesso, il prossimo di oggi, sovrapposto a un altro canale. */
 export type BroadcastMark = "onair" | "next" | "conflict";
 
+/** Testi dei segni nella lingua attiva: getter, letti al render, non a livello di modulo. */
 export const MARK_LABEL: Record<BroadcastMark, string> = {
-  onair: "IN ONDA",
-  next: "A SEGUIRE",
-  conflict: "CONFLITTO",
+  get onair() {
+    return t("calendar.marks.onair");
+  },
+  get next() {
+    return t("calendar.marks.next");
+  },
+  get conflict() {
+    return t("calendar.marks.conflict");
+  },
 };
 
 /**

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLanguage } from "@/i18n";
 import { parseQuickAdd } from "./quickAdd";
 
 // Mercoledì 7 ottobre 2026, 21:00 ora locale.
@@ -37,5 +38,30 @@ describe("parseQuickAdd", () => {
 
   it("senza data restituisce null", () => {
     expect(parseQuickAdd("Comprare il latte", ref)).toBeNull();
+  });
+});
+
+describe("parseQuickAdd con lingue secondarie", () => {
+  afterEach(() => setLanguage("it"));
+
+  it("riconosce lo spagnolo", () => {
+    setLanguage("es");
+    const r = parseQuickAdd("Dentista viernes 9:30", ref)!;
+    expect(r.title).toBe("Dentista");
+    expect(local(r.start)).toEqual([2026, 10, 9, 9, 30]);
+  });
+
+  it("riconosce il francese", () => {
+    setLanguage("fr");
+    const r = parseQuickAdd("Dentiste vendredi 9:30", ref)!;
+    expect(r.title).toBe("Dentiste");
+    expect(local(r.start)).toEqual([2026, 10, 9, 9, 30]);
+  });
+
+  it("riconosce il tedesco", () => {
+    setLanguage("de");
+    const r = parseQuickAdd("Zahnarzt Freitag 9:30", ref)!;
+    expect(r.title).toBe("Zahnarzt");
+    expect(local(r.start)).toEqual([2026, 10, 9, 9, 30]);
   });
 });

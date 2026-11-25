@@ -1,3 +1,5 @@
+import { dateFormat } from "@/i18n";
+
 /** Primo giorno della settimana: 0 = domenica, 1 = lunedì (default PRD, locale IT). */
 export type WeekStart = 0 | 1;
 
@@ -41,15 +43,15 @@ export function isSameDay(a: Date, b: Date): boolean {
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function formatMonthYear(d: Date): string {
-  return capitalize(new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(d));
+  return capitalize(dateFormat({ month: "long", year: "numeric" }).format(d));
 }
 
 export function formatWeekday(d: Date, style: "short" | "long" = "short"): string {
-  return capitalize(new Intl.DateTimeFormat("it-IT", { weekday: style }).format(d));
+  return capitalize(dateFormat({ weekday: style }).format(d));
 }
 
 export function formatTime(d: Date): string {
-  return new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(d);
+  return dateFormat({ hour: "2-digit", minute: "2-digit" }).format(d);
 }
 
 export function localTimezone(): string {

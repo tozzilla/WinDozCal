@@ -117,6 +117,10 @@ npm run tauri dev
 
 Other scripts: `npm run dev` (frontend only, in the browser with an in-memory store; add `?demo` to the URL for sample data), `npm run typecheck`, `npm test`, `npm run build`.
 
+## Languages
+
+The interface follows the Windows display language, or the one chosen in Settings › General. Italian and English are complete. Spanish, French and German are community translations, machine-translated as a starting point: corrections are welcome as pull requests to `src/i18n/es`, `src/i18n/fr` and `src/i18n/de`. A missing text falls back to English.
+
 ## Contributing
 
 The project is at a very early stage. Issues with ideas, provider quirks and Windows integration details are welcome; please open an issue before starting a larger pull request so we can agree on the approach.

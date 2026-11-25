@@ -129,7 +129,55 @@ pub fn mark_pushed(
             event_id,
         ],
     )?;
+    propagate_resource_etag(conn, event_id, remote)?;
     Ok(())
+}
+
+/// CalDAV: una risorsa (master + eccezioni) ha un'unica ETag. Dopo un push riuscito la nuova ETag
+/// vale per tutte le righe della stessa risorsa nello stesso calendario (`remote_id` uguale
+/// all'href o `href#...`), altrimenti una sorella `pending_*` risulterebbe modificata sul server
+/// al pull successivo (falso conflitto). Google e Microsoft non sono toccati.
+fn propagate_resource_etag(
+    conn: &Connection,
+    event_id: &str,
+    remote: &RemoteEventRef,
+) -> AppResult<()> {
+    let Some(etag) = remote.etag.as_deref() else {
+        return Ok(());
+    };
+    let href = resource_href(&remote.remote_id);
+    conn.execute(
+        "UPDATE events SET etag = ?1
+         WHERE id != ?2
+           AND calendar_id = (SELECT calendar_id FROM events WHERE id = ?2)
+           AND (remote_id = ?3 OR substr(remote_id, 1, length(?3) + 1) = ?3 || '#')
+           AND EXISTS (SELECT 1 FROM events e
+                       JOIN calendars c ON c.id = e.calendar_id
+                       JOIN accounts a ON a.id = c.account_id
+                       WHERE e.id = ?2 AND a.provider = 'caldav')",
+        params![etag, event_id, href],
+    )?;
+    Ok(())
+}
+
+/// Href della risorsa CalDAV: il `remote_id` senza il suffisso `#RECURRENCE-ID` delle eccezioni.
+fn resource_href(remote_id: &str) -> &str {
+    remote_id
+        .split_once('#')
+        .map_or(remote_id, |(href, _)| href)
+}
+
+/// `true` se il calendario appartiene a un account CalDAV.
+fn is_caldav_calendar(conn: &Connection, calendar_id: &str) -> AppResult<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM calendars c JOIN accounts a ON a.id = c.account_id
+             WHERE c.id = ?1 AND a.provider = 'caldav'",
+            params![calendar_id],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
 }
 
 /// Il server ha rifiutato la modifica (errore non transitorio, ADR 021): l'evento passa a
@@ -280,6 +328,9 @@ pub fn apply_sync_result(
             params![calendar.id, remote_id],
         )?;
     }
+    if result.full_snapshot {
+        apply_full_snapshot(&tx, &calendar.id, result, &mut stats)?;
+    }
     set_cursor(
         &tx,
         &calendar.account_id,
@@ -289,6 +340,55 @@ pub fn apply_sync_result(
 
     tx.commit()?;
     Ok(stats)
+}
+
+/// Snapshot completo (CalDAV, full sync): gli `upserts` sono tutti gli eventi del calendario, quindi
+/// le righe con `remote_id` assente dal server sono state cancellate. `synced` e `pending_delete`
+/// si eliminano; `pending_update` finisce prima in `event_conflicts` (server wins, ADR 007);
+/// `pending_create` e `error` non hanno (o non sono) una versione remota certa e restano.
+/// I conflitti si registrano tutti prima di cancellare: l'eliminazione di una serie porta via le
+/// sue eccezioni (ON DELETE CASCADE).
+fn apply_full_snapshot(
+    conn: &Connection,
+    calendar_id: &str,
+    result: &SyncResult,
+    stats: &mut ApplyStats,
+) -> AppResult<()> {
+    let present: std::collections::HashSet<&str> = result
+        .upserts
+        .iter()
+        .map(|r| r.remote_id.as_str())
+        .collect();
+    let mut stmt = conn.prepare(
+        "SELECT id, remote_id, sync_status FROM events
+         WHERE calendar_id = ?1 AND remote_id IS NOT NULL
+           AND sync_status IN ('synced', 'pending_update', 'pending_delete')",
+    )?;
+    let missing: Vec<(String, EventSyncStatus)> = stmt
+        .query_map(params![calendar_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, EventSyncStatus>(2)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .into_iter()
+        .filter(|(_, remote_id, _)| !present.contains(remote_id.as_str()))
+        .map(|(id, _, status)| (id, status))
+        .collect();
+    drop(stmt);
+    for (id, status) in &missing {
+        if *status == EventSyncStatus::PendingUpdate {
+            record_conflict(conn, id, "remote_deleted")?;
+            stats.conflicts += 1;
+        }
+    }
+    for (id, _) in &missing {
+        // Puo' essere gia' sparita per cascade dalla sua serie.
+        stats.deleted += conn.execute("DELETE FROM events WHERE id = ?1", params![id])?;
+    }
+    Ok(())
 }
 
 /// Id locale dell'evento con quel `remote_id` nel calendario.
@@ -401,6 +501,20 @@ fn apply_remote_event(
                 stats.kept_local += 1;
                 return Ok(());
             }
+            // CalDAV: master ed eccezioni condividono l'ETag della risorsa, che cambia anche
+            // quando il server tocca solo una sorella. Se il contenuto remoto coincide con quello
+            // locale la modifica pending resta (nessun conflitto) e si allinea solo l'ETag.
+            if status == EventSyncStatus::PendingUpdate
+                && is_caldav_calendar(conn, calendar_id)?
+                && same_content(&crate::db::repo::get_event(conn, &id)?, remote)
+            {
+                conn.execute(
+                    "UPDATE events SET etag = ?1 WHERE id = ?2",
+                    params![remote.etag, id],
+                )?;
+                stats.kept_local += 1;
+                return Ok(());
+            }
             // Server wins (anche su pending_update/pending_delete con etag diverso), ma la
             // versione locale scartata viene prima salvata in `event_conflicts`.
             if has_local_changes {
@@ -439,6 +553,20 @@ fn apply_remote_event(
     };
 
     replace_attendees_and_reminders(conn, &event_id, remote)
+}
+
+/// Campi di contenuto modellati: uguali tra la riga locale e la versione remota.
+fn same_content(local: &Event, remote: &RemoteEvent) -> bool {
+    local.title == remote.title
+        && local.description == remote.description
+        && local.location == remote.location
+        && local.start == remote.start
+        && local.end == remote.end
+        && local.timezone == remote.timezone
+        && local.all_day == remote.all_day
+        && local.recurrence_rule == remote.recurrence_rule
+        && local.status == remote.status
+        && local.conference_url == remote.conference_url
 }
 
 fn replace_attendees_and_reminders(

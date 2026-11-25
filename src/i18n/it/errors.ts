@@ -1,0 +1,16 @@
+export const errors = {
+  database: "Errore del database locale",
+  io: "Errore di lettura o scrittura su disco",
+  tauri: "Errore dell'applicazione",
+  not_found: "Elemento non trovato",
+  invalid_input: "Dati non validi",
+  not_implemented: "Funzione non ancora disponibile",
+  credentials: "Errore nell'accesso alle credenziali di Windows",
+  configuration: "Configurazione mancante in questa build",
+  provider: "Il server ha rifiutato la richiesta",
+  auth_required: "Serve un nuovo accesso all'account",
+  network: "Errore di rete",
+  rate_limited: "Troppe richieste al server, riprova tra poco",
+  sync_cursor_expired: "Sincronizzazione da ripetere da capo",
+  internal: "Errore interno",
+};

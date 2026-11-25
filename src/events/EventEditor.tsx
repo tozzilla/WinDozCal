@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { dateFormat, errorText, useT } from "@/i18n";
 import { openExternal } from "@/providers/externalLinks";
 import {
   usePreferences,
@@ -27,7 +28,11 @@ import { RemindersField } from "./RemindersField";
 import { ScopeChoice } from "./ScopeChoice";
 import type { SeriesScope } from "./seriesEdit";
 
-const WEEKDAY_LABEL: Record<Weekday, string> = { MO: "Lun", TU: "Mar", WE: "Mer", TH: "Gio", FR: "Ven", SA: "Sab", SU: "Dom" };
+/** Nome breve del giorno nella lingua attiva ("Lun", "Mon"); 1 gennaio 2024 era un lunedì. */
+function weekdayLabel(d: Weekday): string {
+  const name = dateFormat({ weekday: "short" }).format(new Date(2024, 0, 1 + WEEKDAYS.indexOf(d)));
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
 
 const inputClass = "w-full rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
 
@@ -40,15 +45,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
-  return "Errore sconosciuto.";
-}
-
 /** Editor evento minimo (PRD §7). Esc lo chiude (gestito da useKeyboardShortcuts). */
 export function EventEditor() {
+  const t = useT();
   const { open, openedAt, event, slot, preset, close } = useEditorStore();
   const { data: calendars = [] } = useCalendars();
   const { data: accounts = [] } = useAccounts();
@@ -118,13 +117,13 @@ export function EventEditor() {
         <div className="rounded-lg border bg-popover p-5 text-sm shadow-[0_18px_48px_rgb(16_20_42/0.28)]">
           {detail.isError ? (
             <>
-              <p className="mb-3 text-destructive">Impossibile caricare l&apos;evento: {errorMessage(detail.error)}</p>
+              <p className="mb-3 text-destructive">{t("events.editor.loadFailed", { error: errorText(detail.error) })}</p>
               <Button variant="outline" onClick={close}>
-                Chiudi
+                {t("events.editor.close")}
               </Button>
             </>
           ) : (
-            "Caricamento dell'evento…"
+            t("events.editor.loading")
           )}
         </div>
       </div>
@@ -144,6 +143,10 @@ export function EventEditor() {
   // Modifica rifiutata dal server (ADR 021): l'editor offre Riprova o Ripristina dal server.
   const failedId = detail.data?.event.sync_status === "error" ? detail.data.event.id : null;
   const moving = !!event && !!currentCalendarId && draft.calendarId !== currentCalendarId;
+  // CalDAV (ADR 023): l'app non scrive mai i partecipanti, perché i server con scheduling implicito
+  // invierebbero gli inviti; quelli che arrivano dal server si vedono in sola lettura.
+  const targetAccountId = calendars.find((c) => c.id === draft.calendarId)?.account_id;
+  const caldavTarget = accounts.find((a) => a.id === targetAccountId)?.provider === "caldav";
   const moveBlocked = moving
     ? moveBlockReason(
         calendars.find((c) => c.id === currentCalendarId),
@@ -168,11 +171,11 @@ export function EventEditor() {
       } else if (event && detail.data) {
         await update.mutateAsync({ event: { ...detail.data.event, ...fields }, attendees: draft.attendees, reminders: draft.reminders });
       } else {
-        await create.mutateAsync({ event: fields, attendees: draft.attendees, reminders: draft.reminders });
+        await create.mutateAsync({ event: fields, attendees: caldavTarget ? [] : draft.attendees, reminders: draft.reminders });
       }
       close();
     } catch (err) {
-      setErrors([errorMessage(err)]);
+      setErrors([errorText(err)]);
     }
   };
 
@@ -190,7 +193,7 @@ export function EventEditor() {
       close();
     } catch (err) {
       setChoosingScope(false);
-      setErrors([errorMessage(err)]);
+      setErrors([errorText(err)]);
     }
   };
 
@@ -201,7 +204,7 @@ export function EventEditor() {
       close();
     } catch (err) {
       setConfirmDelete(false);
-      setErrors([errorMessage(err)]);
+      setErrors([errorText(err)]);
     }
   };
 
@@ -215,7 +218,7 @@ export function EventEditor() {
         {failedId && (
           <div role="alert" className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
             <p>
-              Il server ha rifiutato l&apos;ultima modifica di questo evento, che quindi non è sincronizzata.
+              {t("events.editor.rejected")}
               {detail.data?.sync_error && <span className="block text-xs text-muted-foreground">{detail.data.sync_error}</span>}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -223,17 +226,17 @@ export function EventEditor() {
                 type="button"
                 variant="outline"
                 disabled={retryFailed.isPending}
-                onClick={() => retryFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorMessage(err)]))}
+                onClick={() => retryFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorText(err)]))}
               >
-                Riprova
+                {t("events.editor.retry")}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 disabled={discardFailed.isPending}
-                onClick={() => discardFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorMessage(err)]))}
+                onClick={() => discardFailed.mutateAsync(failedId).then(close, (err) => setErrors([errorText(err)]))}
               >
-                Ripristina dal server
+                {t("events.editor.discard")}
               </Button>
             </div>
           </div>
@@ -241,30 +244,30 @@ export function EventEditor() {
         <fieldset disabled={readOnly} className="min-w-0 space-y-3">
           <input
             autoFocus
-            placeholder="Titolo"
+            placeholder={t("events.editor.title")}
             value={draft.title}
             onChange={(e) => set("title", e.target.value)}
             className="w-full border-b bg-transparent pb-1.5 text-[22px] font-bold tracking-[-0.01em] outline-none placeholder:font-semibold placeholder:text-muted-foreground/70"
           />
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Data">
+            <Field label={t("events.editor.date")}>
               <input type="date" required value={draft.date} onChange={(e) => set("date", e.target.value)} className={inputClass} />
             </Field>
-            <Field label="Ora inizio">
+            <Field label={t("events.editor.startTime")}>
               <input type="time" disabled={draft.allDay} value={draft.startTime} onChange={(e) => set("startTime", e.target.value)} className={inputClass} />
             </Field>
-            <Field label="Ora fine">
+            <Field label={t("events.editor.endTime")}>
               <input type="time" disabled={draft.allDay} value={draft.endTime} onChange={(e) => set("endTime", e.target.value)} className={inputClass} />
             </Field>
           </div>
 
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={draft.allDay} onChange={(e) => set("allDay", e.target.checked)} />
-            Tutto il giorno
+            {t("events.editor.allDay")}
           </label>
 
-          <Field label="Calendario">
+          <Field label={t("events.editor.calendar")}>
             {readOnly ? (
               <input readOnly value={sourceCalendar?.name ?? ""} className={inputClass} />
             ) : (
@@ -279,22 +282,20 @@ export function EventEditor() {
             {moving && (
               <span className={`block text-xs ${moveBlocked ? "text-destructive" : "text-muted-foreground"}`}>
                 {moveBlocked ??
-                  (ref
-                    ? "La serie intera passa nel nuovo calendario."
-                    : "L'evento passa nel nuovo calendario; nel calendario di origine viene cancellato.")}
+                  (ref ? t("events.editor.moveSeries") : t("events.editor.moveEvent"))}
               </span>
             )}
           </Field>
 
-          <Field label="Luogo">
+          <Field label={t("events.editor.location")}>
             <input value={draft.location} onChange={(e) => set("location", e.target.value)} className={inputClass} />
           </Field>
-          <Field label="Descrizione / note">
+          <Field label={t("events.editor.description")}>
             <textarea rows={3} value={draft.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
           </Field>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Ricorrenza">
+            <Field label={t("events.editor.recurrence")}>
               <select
                 value={draft.recurrence}
                 onChange={(e) => {
@@ -304,24 +305,24 @@ export function EventEditor() {
                 }}
                 className={inputClass}
               >
-                <option value="none">Non si ripete</option>
-                <option value="daily">Ogni giorno</option>
-                <option value="weekly">Ogni settimana</option>
-                <option value="monthly">Ogni mese</option>
-                <option value="yearly">Ogni anno</option>
-                {draft.recurrence === "custom" && <option value="custom">Personalizzata (non modificabile qui)</option>}
+                <option value="none">{t("events.recurrence.none")}</option>
+                <option value="daily">{t("events.recurrence.daily")}</option>
+                <option value="weekly">{t("events.recurrence.weekly")}</option>
+                <option value="monthly">{t("events.recurrence.monthly")}</option>
+                <option value="yearly">{t("events.recurrence.yearly")}</option>
+                {draft.recurrence === "custom" && <option value="custom">{t("events.recurrence.custom")}</option>}
               </select>
             </Field>
-            <Field label="Stato">
+            <Field label={t("events.editor.status")}>
               <select value={draft.status} onChange={(e) => set("status", e.target.value as EventDraft["status"])} className={inputClass}>
-                <option value="busy">Occupato</option>
-                <option value="free">Libero</option>
+                <option value="busy">{t("events.editor.busy")}</option>
+                <option value="free">{t("events.editor.free")}</option>
               </select>
             </Field>
           </div>
 
           {draft.recurrence === "weekly" && (
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Giorni della settimana">
+            <div className="flex flex-wrap gap-1" role="group" aria-label={t("events.editor.weekdays")}>
               {WEEKDAYS.map((d) => {
                 const on = draft.recurrenceDays.includes(d);
                 return (
@@ -332,7 +333,7 @@ export function EventEditor() {
                     onClick={() => set("recurrenceDays", on ? draft.recurrenceDays.filter((x) => x !== d) : [...draft.recurrenceDays, d])}
                     className={`rounded-md border px-2.5 py-1 text-xs ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent"}`}
                   >
-                    {WEEKDAY_LABEL[d]}
+                    {weekdayLabel(d)}
                   </button>
                 );
               })}
@@ -340,12 +341,12 @@ export function EventEditor() {
           )}
           {ref && !readOnly && (
             <p className="text-xs text-muted-foreground">
-              Occorrenza di una serie: al salvataggio scegli se modificare solo questo evento, anche i successivi o tutta la serie.
+              {t("events.editor.occurrenceNote")}
             </p>
           )}
-          {event && !ref && !readOnly && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">Stai modificando l&apos;intera serie.</p>}
+          {event && !ref && !readOnly && draft.recurrence !== "none" && <p className="text-xs text-muted-foreground">{t("events.editor.editingSeries")}</p>}
 
-          <Field label="Videoconferenza (link)">
+          <Field label={t("events.editor.conference")}>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -356,7 +357,7 @@ export function EventEditor() {
               />
               {isValidConferenceUrl(draft.conferenceUrl) && (
                 <Button type="button" variant="outline" className="shrink-0" onClick={() => void openExternal(draft.conferenceUrl)}>
-                  Join meeting
+                  {t("events.editor.joinMeeting")}
                 </Button>
               )}
             </div>
@@ -366,7 +367,11 @@ export function EventEditor() {
             calendarColor={calendars.find((c) => c.id === draft.calendarId)?.color ?? "#9AA1BD"}
             onChange={(v) => setDraft({ ...draft, ...v })}
           />
-          <AttendeesField value={draft.attendees} onChange={(v) => set("attendees", v)} />
+          <AttendeesField
+            value={draft.attendees}
+            onChange={(v) => set("attendees", v)}
+            readOnlyNote={caldavTarget ? t("events.attendees.caldavNote") : undefined}
+          />
           <RemindersField value={draft.reminders} onChange={(v) => set("reminders", v)} />
         </fieldset>
 
@@ -380,11 +385,11 @@ export function EventEditor() {
 
         {choosingScope && (
           <ScopeChoice
-            question="Applicare la modifica a"
+            question={t("events.editor.applyTo")}
             note={
               moving
-                ? "Cambiando calendario si sposta tutta la serie."
-                : "Se cambi data, orari o ricorrenza di tutta la serie o dei successivi, le modifiche già fatte alle singole occorrenze interessate vanno perse."
+                ? t("events.editor.applyNoteMove")
+                : t("events.editor.applyNote")
             }
             scopes={moving ? ["all"] : undefined}
             disabled={saveOccurrence.isPending}
@@ -394,7 +399,7 @@ export function EventEditor() {
         )}
         {confirmDelete && ref && (
           <ScopeChoice
-            question="Eliminare"
+            question={t("events.editor.deleteQuestion")}
             destructive
             disabled={removeScoped.isPending}
             onChoose={(scope) => void deleteWithScope(scope)}
@@ -404,15 +409,15 @@ export function EventEditor() {
 
         {readOnly && (
           <div className="flex items-center justify-between gap-3 pt-1">
-            <p className="text-xs text-muted-foreground">Calendario di sola lettura: l&apos;evento si può solo consultare.</p>
+            <p className="text-xs text-muted-foreground">{t("events.editor.readOnly")}</p>
             <div className="flex shrink-0 gap-2">
               {isValidConferenceUrl(draft.conferenceUrl) && (
                 <Button type="button" variant="outline" onClick={() => void openExternal(draft.conferenceUrl)}>
-                  Join meeting
+                  {t("events.editor.joinMeeting")}
                 </Button>
               )}
               <Button type="button" onClick={close}>
-                Chiudi
+                {t("events.editor.close")}
               </Button>
             </div>
           </div>
@@ -429,17 +434,17 @@ export function EventEditor() {
                   close();
                 }}
               >
-                Elimina
+                {t("events.editor.delete")}
               </Button>
             ) : (
               <span />
             )}
             <div className="flex gap-2">
               <Button type="button" variant="ghost" onClick={close}>
-                Annulla
+                {t("events.editor.cancel")}
               </Button>
               <Button type="submit" disabled={create.isPending || update.isPending}>
-                Salva
+                {t("events.editor.save")}
               </Button>
             </div>
           </div>
@@ -454,10 +459,10 @@ export function EventEditor() {
                 close();
               }}
             >
-              Elimina tutta la serie
+              {t("events.editor.deleteSeries")}
             </Button>
             <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>
-              Indietro
+              {t("events.editor.back")}
             </Button>
           </div>
         )}

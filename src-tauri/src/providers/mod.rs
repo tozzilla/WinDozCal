@@ -3,7 +3,7 @@
 //! Il Sync Engine parla solo con `CalendarProvider`; nessun'altra parte dell'app conosce le
 //! API remote (PRD 47). Provider futuri (ICS, locale, Exchange) implementano lo stesso trait.
 //!
-//! Google e Microsoft sono implementati; CalDAV e' ancora uno stub (`AppError::NotImplemented`).
+//! Google, Microsoft e CalDAV (ADR 023) sono implementati; `LocalProvider` e' un no-op.
 
 pub mod caldav;
 pub mod google;
@@ -71,7 +71,11 @@ pub fn provider_for(account: &Account) -> Arc<dyn CalendarProvider> {
         ProviderKind::Google => Arc::new(google::GoogleProvider::new(account.id.clone())),
         ProviderKind::Microsoft => Arc::new(microsoft::MicrosoftProvider::new(account.id.clone())),
         ProviderKind::Local => Arc::new(local::LocalProvider),
-        ProviderKind::Caldav => Arc::new(caldav::CalDavProvider::new(account.id.clone())),
+        ProviderKind::Caldav => Arc::new(caldav::CalDavProvider::new(
+            account.id.clone(),
+            account.server_url.clone().unwrap_or_default(),
+            account.email.clone(),
+        )),
     }
 }
 

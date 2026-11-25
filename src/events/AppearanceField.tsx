@@ -1,5 +1,6 @@
 import { Ban, Check } from "lucide-react";
 import { EVENT_COLORS, EVENT_ICONS, EVENT_PATTERNS } from "@/calendar/appearance";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 interface Appearance {
@@ -14,15 +15,16 @@ const choice =
 
 /** Aspetto del singolo evento (ADR 017): colore, icona e pattern. "Nessuno" torna al colore del calendario. */
 export function AppearanceField({ value, calendarColor, onChange }: { value: Appearance; calendarColor: string; onChange: (v: Appearance) => void }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <fieldset className="space-y-1">
-        <legend className={legend}>Colore</legend>
+        <legend className={legend}>{t("events.appearance.color")}</legend>
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
-            title="Colore del calendario"
-            aria-label="Colore del calendario"
+            title={t("events.appearance.calendarColor")}
+            aria-label={t("events.appearance.calendarColor")}
             aria-pressed={value.color === null}
             onClick={() => onChange({ ...value, color: null })}
             className={cn(choice, "rounded-full")}
@@ -48,9 +50,9 @@ export function AppearanceField({ value, calendarColor, onChange }: { value: App
       </fieldset>
 
       <fieldset className="space-y-1">
-        <legend className={legend}>Icona</legend>
+        <legend className={legend}>{t("events.appearance.icon")}</legend>
         <div className="flex flex-wrap gap-1.5">
-          <button type="button" title="Nessuna icona" aria-label="Nessuna icona" aria-pressed={value.icon === null} onClick={() => onChange({ ...value, icon: null })} className={choice}>
+          <button type="button" title={t("events.appearance.noIcon")} aria-label={t("events.appearance.noIcon")} aria-pressed={value.icon === null} onClick={() => onChange({ ...value, icon: null })} className={choice}>
             <Ban className="size-4 text-muted-foreground" />
           </button>
           {Object.entries(EVENT_ICONS).map(([key, { Icon, label }]) => (
@@ -62,9 +64,9 @@ export function AppearanceField({ value, calendarColor, onChange }: { value: App
       </fieldset>
 
       <fieldset className="space-y-1">
-        <legend className={legend}>Riempimento</legend>
+        <legend className={legend}>{t("events.appearance.fill")}</legend>
         <div className="flex flex-wrap gap-1.5">
-          {[{ key: null, label: "Pieno" }, ...Object.entries(EVENT_PATTERNS).map(([key, p]) => ({ key, label: p.label }))].map(({ key, label }) => {
+          {[{ key: null, label: t("events.appearance.solid") }, ...Object.entries(EVENT_PATTERNS).map(([key, p]) => ({ key, label: p.label }))].map(({ key, label }) => {
             const p = key ? EVENT_PATTERNS[key] : undefined;
             return (
               <button

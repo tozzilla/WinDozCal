@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import type { Attendee, Calendar, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
 import { addDays, localTimezone, toIsoWithOffset } from "@/utils/date";
 import { isValidConferenceUrl, validateAttendees, validateReminders } from "@/utils/validation";
@@ -130,11 +131,11 @@ export function draftToFields(d: EventDraft): NewEvent {
 /** Messaggi di validazione da mostrare prima dell'invio; lista vuota = form valido. */
 export function validateDraft(d: EventDraft): string[] {
   const errors: string[] = [];
-  if (!d.title.trim()) errors.push("Il titolo è obbligatorio.");
-  if (!d.calendarId) errors.push("Scegli un calendario.");
-  if (d.recurrence === "weekly" && d.recurrenceDays.length === 0) errors.push("Scegli almeno un giorno della settimana per la ricorrenza.");
+  if (!d.title.trim()) errors.push(t("events.validation.titleRequired"));
+  if (!d.calendarId) errors.push(t("events.validation.calendarRequired"));
+  if (d.recurrence === "weekly" && d.recurrenceDays.length === 0) errors.push(t("events.validation.weekdayRequired"));
   if (d.conferenceUrl.trim() && !isValidConferenceUrl(d.conferenceUrl)) {
-    errors.push("Il link della videoconferenza deve iniziare con http:// o https://.");
+    errors.push(t("events.validation.conferenceUrl"));
   }
   return [...errors, ...validateAttendees(d.attendees), ...validateReminders(d.reminders)];
 }

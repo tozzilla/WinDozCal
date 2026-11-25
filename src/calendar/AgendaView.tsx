@@ -1,3 +1,4 @@
+import { dateFormat, useT } from "@/i18n";
 import { addDays, formatTime, isSameDay, startOfDay } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { cn } from "@/lib/utils";
@@ -8,17 +9,16 @@ import type { CalendarRendererProps } from "./types";
 
 export const AGENDA_DAYS = 30;
 
-const dateFormat = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" });
-
 /** OGGI / DOMANI / data estesa (PRD §5); il maiuscolo è reso via CSS. */
-function dayLabel(day: Date, today: Date): string {
-  if (isSameDay(day, today)) return "Oggi";
-  if (isSameDay(day, addDays(today, 1))) return "Domani";
-  return dateFormat.format(day);
+function dayLabel(day: Date, today: Date, t: ReturnType<typeof useT>): string {
+  if (isSameDay(day, today)) return t("calendar.agenda.today");
+  if (isSameDay(day, addDays(today, 1))) return t("calendar.agenda.tomorrow");
+  return dateFormat({ weekday: "long", day: "numeric", month: "long" }).format(day);
 }
 
 /** Lista cronologica degli eventi futuri, raggruppati per giorno (PRD §5). Oggi mostra solo ciò che non è finito. */
 export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarRendererProps) {
+  const t = useT();
   const now = new Date();
   const first = startOfDay(date);
   const groups = Array.from({ length: AGENDA_DAYS }, (_, i) => addDays(first, i))
@@ -29,7 +29,7 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
     .filter((g) => g.items.length > 0);
 
   if (groups.length === 0) {
-    return <div className="h-full bg-grid p-8 text-[15px] text-muted-foreground">Nessun evento nei prossimi {AGENDA_DAYS} giorni.</div>;
+    return <div className="h-full bg-grid p-8 text-[15px] text-muted-foreground">{t("calendar.agenda.empty", { days: AGENDA_DAYS })}</div>;
   }
 
   const marks = broadcastMarks(events, calendars, now);
@@ -39,7 +39,7 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
       {groups.map(({ day, items }) => (
         <section key={day.toISOString()} className="mb-6 max-w-3xl">
           <h3 className={cn("mb-1 border-b pb-1.5 text-[12px] font-bold tracking-[0.14em] uppercase", isSameDay(day, now) ? "text-onair" : "text-muted-foreground")}>
-            {dayLabel(day, now)}
+            {dayLabel(day, now, t)}
           </h3>
           {items.map((e) => (
             <button
@@ -49,7 +49,7 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
               className="flex w-full items-center gap-4 border-b border-grid-line px-1 py-2.5 text-left outline-none hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className={cn("w-28 shrink-0 font-bold", e.all_day ? "text-[13px] text-muted-foreground" : "text-[17px]")}>
-                {e.all_day ? "Tutto il giorno" : formatTime(eventInterval(e).start)}
+                {e.all_day ? t("calendar.agenda.allDay") : formatTime(eventInterval(e).start)}
               </span>
               <span aria-hidden className="h-5 w-1.5 shrink-0 rounded-[1px]" style={{ backgroundColor: e.color ?? calendarColor(calendars, e.calendar_id) }} />
               <EventIcon name={e.icon} className="size-4 shrink-0 text-muted-foreground" />

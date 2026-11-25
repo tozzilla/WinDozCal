@@ -30,12 +30,17 @@ pub async fn list_accounts(state: State<'_, AppState>) -> AppResult<Vec<Account>
     state.db.with(|conn| repo::list_accounts(conn))
 }
 
-/// Crea (o restituisce, se esiste gia') l'account `local` con il calendario "Personale".
+/// Crea (o restituisce, se esiste gia') l'account `local` con il calendario "Personale" nella
+/// lingua dell'interfaccia (ADR 022).
 #[tauri::command]
 pub async fn create_local_account(state: State<'_, AppState>, name: String) -> AppResult<Account> {
-    state
-        .db
-        .with(|conn| repo::create_local_account(conn, &name))
+    state.db.with(|conn| {
+        repo::create_local_account(
+            conn,
+            &name,
+            crate::i18n::text(crate::i18n::Key::LocalCalendar),
+        )
+    })
 }
 
 /// Collega un account Microsoft (PRD 14, ADR 014): consenso nel browser di sistema con PKCE,
@@ -153,6 +158,11 @@ pub async fn reconnect_account(
             let email = GoogleProvider::profile(&tokens.access_token).await?.email;
             (tokens, email)
         }
+        ProviderKind::Caldav => {
+            return Err(AppError::InvalidInput(
+                "CalDAV accounts have no consent flow: use update_caldav_password".into(),
+            ))
+        }
         _ => return Err(AppError::NotImplemented("reconnect for this provider")),
     };
     if !email.eq_ignore_ascii_case(&account.email) {
@@ -195,6 +205,7 @@ pub async fn disconnect_account(
     }
     credentials::delete_secret(&account.id, SecretKind::AccessToken)?;
     credentials::delete_secret(&account.id, SecretKind::RefreshToken)?;
+    credentials::delete_secret(&account.id, SecretKind::Password)?;
     state
         .db
         .with(|conn| repo::delete_account(conn, &account.id))?;
@@ -524,6 +535,98 @@ pub async fn update_settings(
     }
     state.db.with(|conn| repo::set_settings(conn, &settings))?;
     state.db.with(|conn| repo::get_settings(conn))
+}
+
+/// Lingua effettiva dell'interfaccia risolta dal frontend (ADR 022): la salva per l'avvio
+/// successivo e la applica a tray e notifiche.
+#[tauri::command]
+pub async fn set_ui_language(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    lang: String,
+) -> AppResult<()> {
+    state
+        .db
+        .with(|conn| repo::set_resolved_language(conn, &lang))?;
+    crate::i18n::apply_ui_language(&app, &lang)
+}
+
+/// Collega un account CalDAV (ADR 023): verifica URL e credenziali con il discovery, salva la
+/// password solo in Credential Manager e crea o aggiorna l'account (identita': URL normalizzato +
+/// nome utente, confronto esatto). In caso di errore non si salva nulla. Primo sync in background.
+#[tauri::command]
+pub async fn connect_caldav(
+    state: State<'_, AppState>,
+    server_url: String,
+    username: String,
+    password: String,
+) -> AppResult<Account> {
+    let discovery = crate::providers::caldav::discover(&server_url, &username, &password).await?;
+    let name = if discovery.account_name.trim().is_empty() {
+        username.clone()
+    } else {
+        discovery.account_name.clone()
+    };
+    let is_new = state
+        .db
+        .with(|conn| repo::find_caldav_account(conn, &discovery.server_url, &username))?
+        .is_none();
+    let account = state.db.with(|conn| {
+        repo::upsert_caldav_account(conn, &name, &username, &discovery.server_url, "")
+    })?;
+    if let Err(err) = credentials::store_secret(&account.id, SecretKind::Password, &password) {
+        // Niente account senza credenziale: un account nuovo si ritira, uno esistente resta
+        // com'era (con la password precedente, se c'e').
+        if is_new {
+            let _ = state
+                .db
+                .with(|conn| repo::delete_account(conn, &account.id));
+        }
+        return Err(err);
+    }
+    let credential_ref = credentials::credential_ref(&account.id, SecretKind::Password);
+    let account = state.db.with(|conn| {
+        repo::upsert_caldav_account(
+            conn,
+            &name,
+            &username,
+            &discovery.server_url,
+            &credential_ref,
+        )
+    })?;
+    tracing::info!(account_id = %account.id, "caldav account connected");
+    state.sync.request(Some(account.id.clone()));
+    Ok(account)
+}
+
+/// Aggiorna la password di un account CalDAV (riconnessione dopo `auth_required`). La nuova
+/// password si verifica con il discovery sull'URL e sul nome utente dell'account prima di salvarla.
+#[tauri::command]
+pub async fn update_caldav_password(
+    state: State<'_, AppState>,
+    account_id: String,
+    password: String,
+) -> AppResult<Account> {
+    let account = state.db.with(|conn| repo::get_account(conn, &account_id))?;
+    if account.provider != ProviderKind::Caldav {
+        return Err(AppError::InvalidInput(
+            "update_caldav_password is only for CalDAV accounts".into(),
+        ));
+    }
+    let server_url = account.server_url.clone().unwrap_or_default();
+    crate::providers::caldav::discover(&server_url, &account.email, &password).await?;
+    credentials::store_secret(&account.id, SecretKind::Password, &password)?;
+    state.db.with(|conn| {
+        crate::db::sync_repo::set_account_status(
+            conn,
+            &account.id,
+            crate::models::AccountSyncStatus::Idle,
+            None,
+        )
+    })?;
+    tracing::info!(account_id = %account.id, "caldav password updated");
+    state.sync.request(Some(account.id.clone()));
+    state.db.with(|conn| repo::get_account(conn, &account.id))
 }
 
 /// Aggiornamento disponibile (PRD 36, ADR 015).

@@ -214,9 +214,9 @@ fn update_synced_event_becomes_pending_update() {
 #[test]
 fn local_account_is_idempotent_and_events_stay_synced() {
     let conn = setup();
-    let account = create_local_account(&conn, "Questo computer").unwrap();
+    let account = create_local_account(&conn, "Questo computer", "Personale").unwrap();
     assert_eq!(account.provider, ProviderKind::Local);
-    let again = create_local_account(&conn, "Altro nome").unwrap();
+    let again = create_local_account(&conn, "Altro nome", "Personale").unwrap();
     assert_eq!(again.id, account.id);
 
     let calendars: Vec<_> = list_calendars(&conn)
@@ -297,6 +297,7 @@ fn apply_sync_result_upserts_and_deletes() {
     let cal = get_calendar(&conn, "c1").unwrap();
 
     let result = SyncResult {
+        full_snapshot: false,
         upserts: vec![
             remote_event("r-1", "Remoto", "e1"),
             remote_event("r-2", "Altro", "e1"),
@@ -323,6 +324,7 @@ fn apply_sync_result_upserts_and_deletes() {
 
     // Upsert di un evento esistente + cancellazione dell'altro.
     let result = SyncResult {
+        full_snapshot: false,
         upserts: vec![remote_event("r-1", "Remoto v2", "e2")],
         deletions: vec!["r-2".into()],
         next_cursor: Some("cur-2".into()),
@@ -774,6 +776,7 @@ fn settings_default_and_roundtrip() {
         work_end: 1050,
         default_duration: 30,
         default_calendar_id: Some("c2".into()),
+        language: "fr".into(),
     };
     set_settings(&conn, &changed).unwrap();
     assert_eq!(get_settings(&conn).unwrap(), changed);
@@ -782,7 +785,7 @@ fn settings_default_and_roundtrip() {
     let rows: i64 = conn
         .query_row("SELECT COUNT(*) FROM app_settings", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(rows, 8);
+    assert_eq!(rows, 9);
 
     // Flag di stato indipendente dalle impostazioni.
     assert!(!get_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap());
@@ -1202,7 +1205,7 @@ fn invalid_rule_falls_back_to_base_event() {
 #[test]
 fn delete_occurrence_adds_exdate() {
     let conn = setup();
-    let account = create_local_account(&conn, "PC").unwrap();
+    let account = create_local_account(&conn, "PC", "Personale").unwrap();
     let cal = list_calendars(&conn)
         .unwrap()
         .into_iter()
@@ -1862,6 +1865,7 @@ fn event_appearance_is_validated_saved_and_kept_by_sync() {
         &mut conn,
         &cal,
         &SyncResult {
+            full_snapshot: false,
             upserts: vec![remote],
             deletions: vec![],
             next_cursor: None,
@@ -1888,7 +1892,7 @@ fn event_appearance_is_validated_saved_and_kept_by_sync() {
 /// Calendario "Personale" dell'account locale e calendario di un account Microsoft.
 fn move_setup() -> (Connection, String) {
     let conn = setup();
-    let account = create_local_account(&conn, "PC").unwrap();
+    let account = create_local_account(&conn, "PC", "Personale").unwrap();
     let personal: String = conn
         .query_row(
             "SELECT id FROM calendars WHERE account_id = ?1",
@@ -1898,7 +1902,10 @@ fn move_setup() -> (Connection, String) {
         .unwrap();
     conn.execute_batch(
         "INSERT INTO accounts (id, provider, name, email) VALUES ('m1', 'microsoft', 'M', 'm@x.it');
-         INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('ms', 'm1', 'rm', 'Outlook');",
+         INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('ms', 'm1', 'rm', 'Outlook');
+         INSERT INTO accounts (id, provider, name, email, server_url)
+           VALUES ('d1', 'caldav', 'NAS', 'u', 'https://nas.example/dav/');
+         INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('dav', 'd1', 'rd', 'NAS');",
     )
     .unwrap();
     (conn, personal)
@@ -2175,6 +2182,12 @@ fn move_rejects_attendees_from_remote_or_to_microsoft_and_meet_links_to_google()
         &to_calendar(&local, "ms"),
         &[attendee("a@b.it")]
     ));
+    // Partecipanti verso CalDAV: l'adapter non li scrive (ADR 023), andrebbero persi.
+    assert!(rejected(
+        &local.id,
+        &to_calendar(&local, "dav"),
+        &[attendee("a@b.it")]
+    ));
     // Link di videoconferenza verso Google: andrebbe perso.
     let mut with_link = to_calendar(&local, "c1");
     with_link.conference_url = Some("https://zoom.us/j/1".into());
@@ -2354,6 +2367,7 @@ fn server_change_over_a_rejected_edit_is_kept_as_conflict() {
     mark_event_error(&conn, &ev.id, EventSyncStatus::PendingUpdate, "rejected").unwrap();
 
     let result = SyncResult {
+        full_snapshot: false,
         upserts: vec![remote_event("r-1", "Dal server", "e2")],
         deletions: vec![],
         next_cursor: Some("cur-2".into()),
@@ -2367,4 +2381,340 @@ fn server_change_over_a_rejected_edit_is_kept_as_conflict() {
         ("Dal server", EventSyncStatus::Synced)
     );
     assert!(failed_op(&conn, &ev.id).is_none());
+}
+
+#[test]
+fn language_setting_and_resolved_language() {
+    let conn = setup();
+    assert_eq!(get_settings(&conn).unwrap().language, "system");
+
+    let bad = Settings {
+        language: "pt".into(),
+        ..Settings::default()
+    };
+    assert!(matches!(
+        set_settings(&conn, &bad),
+        Err(AppError::InvalidInput(_))
+    ));
+    assert_eq!(get_settings(&conn).unwrap().language, "system");
+
+    assert_eq!(get_resolved_language(&conn).unwrap(), None);
+    assert!(set_resolved_language(&conn, "system").is_err());
+    assert!(set_resolved_language(&conn, "pt").is_err());
+    set_resolved_language(&conn, "de").unwrap();
+    assert_eq!(get_resolved_language(&conn).unwrap().as_deref(), Some("de"));
+}
+
+// ---------------------------------------------------------------------------
+// CalDAV (ADR 023): identita dell'account, full_snapshot, ETag condivisa
+// ---------------------------------------------------------------------------
+
+const DAV_A: &str = "https://dav.example.org/dav/";
+const DAV_B: &str = "https://nas.example.net/dav/";
+
+fn caldav_setup() -> (Connection, crate::models::Calendar) {
+    let conn = setup();
+    let account = upsert_caldav_account(&conn, "Dav", "user", DAV_A, "").unwrap();
+    conn.execute(
+        "INSERT INTO calendars (id, account_id, remote_id, name) VALUES ('dc1', ?1, 'https://dav.example.org/dav/cal/', 'Dav')",
+        [&account.id],
+    )
+    .unwrap();
+    let cal = get_calendar(&conn, "dc1").unwrap();
+    (conn, cal)
+}
+
+fn snapshot(upserts: Vec<RemoteEvent>, full: bool) -> SyncResult {
+    SyncResult {
+        full_snapshot: full,
+        upserts,
+        deletions: vec![],
+        next_cursor: Some("tok".into()),
+        reconciled_series: vec![],
+    }
+}
+
+fn status_of(conn: &Connection, calendar_id: &str, remote_id: &str) -> Option<EventSyncStatus> {
+    conn.query_row(
+        "SELECT sync_status FROM events WHERE calendar_id = ?1 AND remote_id = ?2",
+        rusqlite::params![calendar_id, remote_id],
+        |r| r.get(0),
+    )
+    .ok()
+}
+
+fn id_by_remote(conn: &Connection, remote_id: &str) -> String {
+    conn.query_row(
+        "SELECT id FROM events WHERE remote_id = ?1",
+        [remote_id],
+        |r| r.get(0),
+    )
+    .unwrap()
+}
+
+fn etag_of(conn: &Connection, id: &str) -> Option<String> {
+    conn.query_row("SELECT etag FROM events WHERE id = ?1", [id], |r| r.get(0))
+        .unwrap()
+}
+
+fn series_pair(etag: &str) -> (RemoteEvent, RemoteEvent) {
+    let mut master = remote_event("/cal/s.ics", "Serie", etag);
+    master.recurrence_rule = Some("FREQ=WEEKLY".into());
+    let mut exc = remote_event("/cal/s.ics#20261007T080000Z", "Eccezione", etag);
+    exc.series_remote_id = Some("/cal/s.ics".into());
+    exc.original_start = Some("2026-10-07T10:00:00+02:00".into());
+    (master, exc)
+}
+
+#[test]
+fn caldav_identity_is_server_url_plus_exact_username() {
+    let conn = setup();
+    let a = upsert_caldav_account(&conn, "Dav A", "user", DAV_A, "").unwrap();
+    let b = upsert_caldav_account(&conn, "Dav B", "user", DAV_B, "").unwrap();
+    assert_ne!(a.id, b.id, "stesso utente su due server = due account");
+    assert_eq!(a.server_url.as_deref(), Some(DAV_A));
+    assert_eq!(a.provider, ProviderKind::Caldav);
+
+    let again = upsert_caldav_account(&conn, "Nuovo nome", "user", DAV_A, "ref").unwrap();
+    assert_eq!(again.id, a.id, "stesso server + utente = stesso account");
+    assert_eq!(again.name, "Nuovo nome");
+
+    // Il nome utente e esatto, non case-insensitive.
+    let upper = upsert_caldav_account(&conn, "Dav", "User", DAV_A, "").unwrap();
+    assert_ne!(upper.id, a.id);
+    assert_eq!(
+        find_caldav_account(&conn, DAV_A, "user")
+            .unwrap()
+            .unwrap()
+            .id,
+        a.id
+    );
+    assert!(find_caldav_account(&conn, DAV_A, "other")
+        .unwrap()
+        .is_none());
+
+    // La via generica non vale per CalDAV; Google resta case-insensitive.
+    assert!(upsert_external_account(&conn, ProviderKind::Caldav, "x", "user", "").is_err());
+    let g1 = upsert_external_account(&conn, ProviderKind::Google, "G", "Me@x.it", "").unwrap();
+    let g2 = upsert_external_account(&conn, ProviderKind::Google, "G", "me@x.it", "").unwrap();
+    assert_eq!(g1.id, g2.id);
+    assert_eq!(g1.server_url, None);
+}
+
+#[test]
+fn full_snapshot_removes_missing_synced_keeps_pending_create_conflicts_pending_update() {
+    let (mut conn, cal) = caldav_setup();
+    let first = snapshot(
+        vec![
+            remote_event("/cal/a.ics", "A", "e1"),
+            remote_event("/cal/b.ics", "B", "e1"),
+            remote_event("/cal/c.ics", "C", "e1"),
+        ],
+        true,
+    );
+    apply_sync_result(&mut conn, &cal, &first).unwrap();
+
+    // b: modifica locale pending; nuovo evento locale mai inviato.
+    let b_id = id_by_remote(&conn, "/cal/b.ics");
+    conn.execute(
+        "UPDATE events SET sync_status = 'pending_update', title = 'B locale' WHERE id = ?1",
+        [&b_id],
+    )
+    .unwrap();
+    let mut local = new_event("Locale");
+    local.calendar_id = "dc1".into();
+    let created = insert_event(&conn, &local, &[], &[]).unwrap().event;
+
+    // Il server ora ha solo "a": b e c sono spariti.
+    let second = snapshot(vec![remote_event("/cal/a.ics", "A", "e1")], true);
+    let stats = apply_sync_result(&mut conn, &cal, &second).unwrap();
+    assert_eq!(stats.deleted, 2);
+    assert_eq!(stats.conflicts, 1);
+    assert_eq!(
+        status_of(&conn, "dc1", "/cal/a.ics"),
+        Some(EventSyncStatus::Synced)
+    );
+    assert_eq!(status_of(&conn, "dc1", "/cal/b.ics"), None);
+    assert_eq!(status_of(&conn, "dc1", "/cal/c.ics"), None);
+    assert_eq!(
+        get_event(&conn, &created.id).unwrap().sync_status,
+        EventSyncStatus::PendingCreate
+    );
+    let reason: String = conn
+        .query_row(
+            "SELECT reason FROM event_conflicts WHERE event_id = ?1",
+            [&b_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(reason, "remote_deleted");
+}
+
+#[test]
+fn full_snapshot_keeps_present_exceptions_and_drops_missing_ones() {
+    let (mut conn, cal) = caldav_setup();
+    let (master, exc) = series_pair("e1");
+    apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(vec![master.clone(), exc.clone()], true),
+    )
+    .unwrap();
+    // Stesso snapshot: nulla viene cancellato.
+    let stats = apply_sync_result(&mut conn, &cal, &snapshot(vec![master, exc], true)).unwrap();
+    assert_eq!(stats.deleted, 0);
+
+    // Resta la serie, l'eccezione sparisce: si cancella solo quella.
+    let (master, _) = series_pair("e2");
+    let stats = apply_sync_result(&mut conn, &cal, &snapshot(vec![master], true)).unwrap();
+    assert_eq!(stats.deleted, 1);
+    assert!(status_of(&conn, "dc1", "/cal/s.ics").is_some());
+    assert!(status_of(&conn, "dc1", "/cal/s.ics#20261007T080000Z").is_none());
+}
+
+#[test]
+fn non_snapshot_result_deletes_nothing_extra() {
+    let mut conn = setup();
+    let cal = get_calendar(&conn, "c1").unwrap();
+    apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(
+            vec![
+                remote_event("g-1", "Uno", "e1"),
+                remote_event("g-2", "Due", "e1"),
+            ],
+            false,
+        ),
+    )
+    .unwrap();
+    let stats = apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(vec![remote_event("g-1", "Uno", "e2")], false),
+    )
+    .unwrap();
+    assert_eq!(stats.deleted, 0);
+    assert!(status_of(&conn, "c1", "g-2").is_some());
+}
+
+#[test]
+fn caldav_push_propagates_etag_to_sibling_rows_of_the_same_resource_only() {
+    let (mut conn, cal) = caldav_setup();
+    let (master, exc) = series_pair("e1");
+    let other = remote_event("/cal/s.ics2.ics", "Altra risorsa", "e9");
+    apply_sync_result(&mut conn, &cal, &snapshot(vec![master, exc, other], true)).unwrap();
+
+    let master_id = id_by_remote(&conn, "/cal/s.ics");
+    let exc_id = id_by_remote(&conn, "/cal/s.ics#20261007T080000Z");
+    conn.execute(
+        "UPDATE events SET sync_status = 'pending_update', title = 'Eccezione locale' WHERE id = ?1",
+        [&exc_id],
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE events SET sync_status = 'pending_update', local_updated_at = 't1' WHERE id = ?1",
+        [&master_id],
+    )
+    .unwrap();
+
+    mark_pushed(
+        &conn,
+        &master_id,
+        Some("t1"),
+        &RemoteEventRef {
+            remote_id: "/cal/s.ics".into(),
+            etag: Some("e2".into()),
+            remote_updated_at: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(etag_of(&conn, &exc_id).as_deref(), Some("e2"));
+    assert_eq!(
+        etag_of(&conn, &id_by_remote(&conn, "/cal/s.ics2.ics")).as_deref(),
+        Some("e9"),
+        "una risorsa con href che inizia allo stesso modo non va toccata"
+    );
+    assert_eq!(
+        get_event(&conn, &exc_id).unwrap().sync_status,
+        EventSyncStatus::PendingUpdate
+    );
+
+    // Il pull successivo vede l'ETag nuova: la sorella pending non genera conflitto.
+    let (master_remote, exc_remote) = series_pair("e2");
+    let stats = apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(
+            vec![
+                master_remote,
+                exc_remote,
+                remote_event("/cal/s.ics2.ics", "Altra risorsa", "e9"),
+            ],
+            true,
+        ),
+    )
+    .unwrap();
+    assert_eq!(stats.conflicts, 0);
+    let kept = get_event(&conn, &exc_id).unwrap();
+    assert_eq!(kept.sync_status, EventSyncStatus::PendingUpdate);
+    assert_eq!(kept.title, "Eccezione locale");
+}
+
+#[test]
+fn caldav_pending_row_with_same_content_and_new_etag_is_not_a_conflict() {
+    let (mut conn, cal) = caldav_setup();
+    apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(vec![remote_event("/cal/a.ics", "A", "e1")], true),
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE events SET sync_status = 'pending_update' WHERE remote_id = '/cal/a.ics'",
+        [],
+    )
+    .unwrap();
+    // ETag cambiata sul server, contenuto identico a quello locale.
+    let stats = apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(vec![remote_event("/cal/a.ics", "A", "e2")], false),
+    )
+    .unwrap();
+    assert_eq!(stats.conflicts, 0);
+    assert_eq!(
+        status_of(&conn, "dc1", "/cal/a.ics"),
+        Some(EventSyncStatus::PendingUpdate)
+    );
+
+    // Contenuto diverso: vale ancora server wins con conflitto registrato.
+    let stats = apply_sync_result(
+        &mut conn,
+        &cal,
+        &snapshot(vec![remote_event("/cal/a.ics", "A remoto", "e3")], false),
+    )
+    .unwrap();
+    assert_eq!(stats.conflicts, 1);
+}
+
+#[test]
+fn etag_propagation_does_not_touch_google_siblings() {
+    let conn = setup();
+    let e1 = create(&conn, "Uno");
+    let e2 = create(&conn, "Due");
+    make_synced(&conn, &e1.id, "g-1", "x1");
+    make_synced(&conn, &e2.id, "g-1#abc", "x1");
+    mark_pushed(
+        &conn,
+        &e1.id,
+        e1.local_updated_at.as_deref(),
+        &RemoteEventRef {
+            remote_id: "g-1".into(),
+            etag: Some("x2".into()),
+            remote_updated_at: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(etag_of(&conn, &e2.id).as_deref(), Some("x1"));
 }

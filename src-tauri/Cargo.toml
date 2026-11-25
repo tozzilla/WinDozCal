@@ -46,6 +46,9 @@ chrono-tz = "0.10"
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "json", "form", "query", "charset", "http2", "system-proxy"] }
 # SHA-256 per il code_challenge PKCE (RFC 7636).
 sha2 = "0.11"
+# CalDAV (PRD 15, ADR 023): risposte multistatus WebDAV. Versione verificata su crates.io il
+# 25 nov 2026. Le risorse iCalendar usano un parser interno che conserva le proprieta' sconosciute.
+quick-xml = "0.42"
 
 # Plugin solo desktop (come nel template ufficiale Tauri).
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]

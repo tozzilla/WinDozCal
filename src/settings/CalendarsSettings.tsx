@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { CalendarColorPicker } from "@/components/CalendarColorPicker";
+import { useT } from "@/i18n";
 import { pickCalendar } from "@/events/draft";
 import { useAccounts, useCalendars, useSetCalendarColor, useSetCalendarVisibility, useSettings, useUpdateSettings } from "@/providers/queries";
 
 /** Sezione Calendars (PRD §34): colore, visibilità e calendario predefinito dei nuovi eventi, raggruppati per account. */
 export function CalendarsSettings() {
+  const t = useT();
   const { data: accounts = [] } = useAccounts();
   const { data: calendars = [] } = useCalendars();
   const { data: settings } = useSettings();
@@ -19,7 +21,7 @@ export function CalendarsSettings() {
     <div className="max-w-2xl space-y-6">
       {updateSettings.isError && (
         <p role="alert" className="text-sm text-destructive">
-          Calendario predefinito non salvato.
+          {t("settings.calendars.defaultNotSaved")}
         </p>
       )}
       {accounts.map((a) => (
@@ -34,14 +36,14 @@ export function CalendarsSettings() {
                     <button
                       type="button"
                       aria-expanded={open === c.id}
-                      aria-label={`Cambia colore di ${c.name}`}
+                      aria-label={t("settings.calendars.changeColor", { name: c.name })}
                       onClick={() => setOpen(open === c.id ? null : c.id)}
                       className="size-6 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       style={{ background: c.color }}
                     />
                     <span className="flex-1 truncate text-[15px] font-semibold">{c.name}</span>
                     {c.read_only ? (
-                      <span className="text-[12px] text-muted-foreground">Sola lettura</span>
+                      <span className="text-[12px] text-muted-foreground">{t("settings.calendars.readOnly")}</span>
                     ) : (
                       <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
                         <input
@@ -51,12 +53,12 @@ export function CalendarsSettings() {
                           disabled={!settings || updateSettings.isPending}
                           onChange={() => settings && updateSettings.mutate({ ...settings, default_calendar_id: c.id })}
                         />
-                        Predefinito
+                        {t("settings.calendars.default")}
                       </label>
                     )}
                     <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
                       <input type="checkbox" checked={c.visible} onChange={(e) => setVisibility.mutate({ calendarId: c.id, visible: e.target.checked })} />
-                      Visibile
+                      {t("settings.calendars.visible")}
                     </label>
                   </div>
                   {open === c.id && (

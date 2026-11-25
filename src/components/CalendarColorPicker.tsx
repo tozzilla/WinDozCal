@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { CALENDAR_COLORS } from "@/calendar/appearance";
+import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 /** Palette dei colori dei calendari (PRD §34) con campo esadecimale per un colore libero. */
 export function CalendarColorPicker({ value, onPick, className }: { value: string; onPick: (color: string) => void; className?: string }) {
+  const t = useT();
   const [hex, setHex] = useState(value);
   const valid = /^#[0-9a-fA-F]{6}$/.test(hex);
   return (
@@ -36,11 +38,11 @@ export function CalendarColorPicker({ value, onPick, className }: { value: strin
         <input
           value={hex}
           onChange={(e) => setHex(e.target.value.trim())}
-          aria-label="Colore esadecimale"
+          aria-label={t("shell.colorPicker.hex")}
           className="h-7 w-24 rounded-md border bg-card px-2 font-sans text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <button type="submit" disabled={!valid} className="h-7 rounded-md bg-primary px-2.5 text-[12px] font-semibold text-primary-foreground disabled:opacity-40">
-          Usa
+          {t("shell.colorPicker.use")}
         </button>
       </form>
     </div>

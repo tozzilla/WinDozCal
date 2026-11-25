@@ -94,6 +94,22 @@ export function useConnectGoogle() {
   return useMutation({ mutationFn: () => calendarService.connectGoogle(), onSuccess: () => void qc.invalidateQueries() });
 }
 
+export function useConnectCaldav() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { serverUrl: string; username: string; password: string }) => calendarService.connectCaldav(v.serverUrl, v.username, v.password),
+    onSuccess: () => void qc.invalidateQueries(),
+  });
+}
+
+export function useUpdateCaldavPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { accountId: string; password: string }) => calendarService.updateCaldavPassword(v.accountId, v.password),
+    onSuccess: () => void qc.invalidateQueries(),
+  });
+}
+
 export function useReconnectAccount() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (accountId: string) => calendarService.reconnectAccount(accountId), onSuccess: () => void qc.invalidateQueries() });
