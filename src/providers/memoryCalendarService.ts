@@ -3,6 +3,7 @@ import { validateAttendees, validateReminders } from "@/utils/validation";
 import { rruleParams, splitLines } from "@/events/recurrence";
 import { expandEvent, exdateValue, utcStamp } from "./memoryRecurrence";
 import { addDays, localTimezone, startOfWeek, toIsoWithOffset } from "@/utils/date";
+import { t } from "@/i18n";
 import type { CalendarService } from "./calendarService";
 
 const DEFAULT_COLOR = "#2563eb";
@@ -11,9 +12,10 @@ const DEFAULT_COLOR = "#2563eb";
 // Parte vuoto, così si vede la WelcomeScreen; i dati d'esempio si attivano con `?demo` nell'URL.
 
 const demoAccounts = (): Account[] => [
-  { id: "acc-local", provider: "local", name: "Questo computer", email: "", sync_status: "idle", last_sync: null, server_url: null },
+  { id: "acc-local", provider: "local", name: t("accounts.localName"), email: "", sync_status: "idle", last_sync: null, server_url: null },
   { id: "acc-google", provider: "google", name: "Lavoro", email: "demo@example.com", sync_status: "idle", last_sync: null, server_url: null },
   { id: "acc-ms", provider: "microsoft", name: "Studio Rossi", email: "demo@studiorossi.example", sync_status: "idle", last_sync: null, server_url: null },
+  { id: "acc-dav", provider: "caldav", name: "Nextcloud", email: "demo", sync_status: "idle", last_sync: null, server_url: "https://cloud.example.com/remote.php/dav/" },
 ];
 
 const demoCalendars = (): Calendar[] => [
@@ -21,6 +23,7 @@ const demoCalendars = (): Calendar[] => [
   { id: "cal-riunioni", account_id: "acc-google", remote_id: "riunioni", name: "Riunioni", color: "#2F6BFF", visible: true, read_only: false },
   { id: "cal-commerciale", account_id: "acc-google", remote_id: "commerciale", name: "Commerciale", color: "#5B8CFF", visible: true, read_only: false },
   { id: "cal-cliente", account_id: "acc-ms", remote_id: "cliente", name: "Cliente", color: "#1BA672", visible: true, read_only: false },
+  { id: "cal-famiglia", account_id: "acc-dav", remote_id: "famiglia", name: "Famiglia", color: "#8E63CE", visible: true, read_only: false },
 ];
 
 /** Settimana d'esempio (`?demo`), relativa al lunedì corrente: gli stessi contenuti del comp approvato del Palinsesto. */
@@ -56,6 +59,8 @@ function seedEvents(): Event[] {
     make("ev-11", "cal-personale", "Pranzo con Giulia", 4, 12, 30, 60, { status: "free", icon: "utensils" }),
     make("ev-12", "cal-personale", "Mercato", 5, 10, 0, 120, { icon: "shopping-cart", color: "#33B679", pattern: "dots" }),
     allDay("ev-13", "cal-personale", "Weekend fuori porta", 5, 2),
+    make("ev-14", "cal-famiglia", "Calcetto", 3, 18, 0, 90, { icon: "dumbbell" }),
+    make("ev-15", "cal-famiglia", "Colloquio scuola", 1, 16, 30, 45, { icon: "graduation-cap" }),
   ];
 }
 

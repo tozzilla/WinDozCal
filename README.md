@@ -8,11 +8,28 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/tozzilla/WinDozCal/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/tozzilla/WinDozCal?label=download&color=2F6BFF"></a>
   <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha-orange">
   <img alt="Platform: Windows 11" src="https://img.shields.io/badge/platform-Windows%2011-0078D4">
+  <img alt="Languages: EN IT ES FR DE" src="https://img.shields.io/badge/languages-EN%20%C2%B7%20IT%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20DE-8E63CE">
   <img alt="Built with Tauri 2" src="https://img.shields.io/badge/built%20with-Tauri%202-24C8DB">
   <img alt="Vibecoded" src="https://img.shields.io/badge/vibecoded-by%20Andrea%20Tozzi-ff69b4">
   <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/week-dark.png">
+    <img src="docs/assets/screenshots/week-light.png" alt="WinDozCal week view with local, Google, Microsoft 365 and CalDAV calendars side by side" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://github.com/tozzilla/WinDozCal/releases/latest"><strong>Download for Windows</strong></a> ·
+  <a href="#what-it-does">Features</a> ·
+  <a href="#privacy">Privacy</a> ·
+  <a href="#status">Status</a> ·
+  <a href="#building-from-source-windows-11">Build from source</a>
 </p>
 
 ---
@@ -27,17 +44,23 @@ Today you pick between a calendar buried inside an email client, a browser tab, 
 
 > The calendar should open instantly and show what I have to do today, without distractions.
 
-## What it will do
+## What it does
 
 | | |
 |---|---|
 | **All your calendars, one view** | Personal Google, company Workspace, a client's Microsoft 365 and your Nextcloud — side by side, each with its own colour and visibility toggle. |
+| **CalDAV, natively** | Nextcloud, Radicale, Baïkal, Synology, Fastmail or iCloud (with an app-specific password) — no PWA, no browser tab. Plain HTTP is accepted only on your local network, and WinDozCal never sends invitations on your behalf. |
+| **Speaks your language** | English, Italian, Spanish, French and German, following your Windows display language. Quick add understands the active language too. |
 | **Works without an account** | Start with a purely local calendar on your PC — no sign-in, no network. Add Google, Microsoft or CalDAV accounts later and they sit alongside it. |
 | **Local-first** | Events live in a local SQLite database. The app opens from disk, works offline and syncs in the background. Changes made offline are queued and pushed when you reconnect. |
-| **Fast to use** | Day, Week, Month and Agenda views. Drag to move or resize events. `Ctrl+N` quick add understands *"Dentist Friday 9:30"* or *"Pranzo domani alle 13"* — parsed locally, no AI required. |
+| **Fast to use** | Day, Week, Month and Agenda views. Drag to move or resize events. `Ctrl+N` quick add understands *"Dentist Friday 9:30"*, *"Pranzo domani alle 13"* or *"Zahnarzt Freitag 9:30"* — parsed locally, no AI required. |
 | **Feels at home on Windows** | System tray with your next event, native notifications with a **Join** button for Meet, Teams, Zoom and Webex links, light / dark / system theme. |
 | **Keyboard-driven** | `Ctrl+N` new event · `Ctrl+K` search · `Ctrl+T` today · `D` `W` `M` `A` switch view · `←` `→` navigate. |
 | **Light by design** | Built on Tauri 2 and Rust instead of a bundled browser. |
+
+<p align="center">
+  <img src="docs/assets/screenshots/quick-add.png" alt="Quick add turning &quot;Dentist Friday 9:30&quot; into an event" width="80%">
+</p>
 
 ## Privacy
 
@@ -57,12 +80,12 @@ Today you pick between a calendar buried inside an email client, a browser tab, 
 
 ## Providers
 
-| Provider | Protocol | Planned phase |
+| Provider | Protocol | Status |
 |---|---|---|
-| Local calendar — no account, stays on this PC | SQLite only, never synced | Phase 1 |
-| Google Calendar / Google Workspace | Google Calendar API, OAuth 2.0 desktop flow, incremental sync tokens | Phase 1 |
-| Microsoft 365 / Outlook.com | Microsoft Graph, OAuth + PKCE, delta queries | Phase 2 |
-| CalDAV (Nextcloud, Fastmail, Synology, Radicale, Baïkal, iCloud where possible) | CalDAV with ETag and sync-token | Phase 3 |
+| Local calendar — no account, stays on this PC | SQLite only, never synced | Released |
+| Google Calendar / Google Workspace | Google Calendar API, OAuth 2.0 desktop flow, incremental sync tokens | Next release |
+| CalDAV (Nextcloud, Radicale, Baïkal, Synology, Fastmail, iCloud) | CalDAV with sync-token, ETag fallback and conditional writes | Next release |
+| Microsoft 365 / Outlook.com | Microsoft Graph, OAuth + PKCE, delta queries | Implemented, waiting for a public app registration |
 
 Every provider sits behind a single `CalendarProvider` interface, so adding ICS feeds later does not touch the UI. The local calendar is just another provider that happens to do nothing remote.
 
@@ -80,7 +103,9 @@ These are design targets to be measured during development, not results yet: per
 
 ## Status
 
-**Pre-alpha.** Releases 0.1.0 and 0.2.0 are available as unsigned installers. You can already use WinDozCal with local calendars only (no account): events, system tray and settings work; recurrence and reminder notifications are in progress. No external provider syncs yet — Google is the next step. Expect rough edges and breaking changes. Star or watch the repo to follow along.
+**Pre-alpha, moving fast.** The latest [release](https://github.com/tozzilla/WinDozCal/releases/latest) is a Windows installer with signed automatic updates: local calendars, Day / Week / Month / Agenda views, recurring events, reminders with native notifications, system tray, search and quick add.
+
+Already on `master` and coming in the next release: Google Calendar sync, CalDAV accounts and the interface in five languages. Expect rough edges and breaking changes — and please [open an issue](https://github.com/tozzilla/WinDozCal/issues) when something does not work with your calendar server. Star or watch the repo to follow along.
 
 ## Architecture
 

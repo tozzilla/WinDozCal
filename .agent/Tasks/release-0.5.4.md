@@ -90,6 +90,10 @@ Prima di pubblicare: verificare che l'eseguibile di release contenga il client (
 - creati: `.agent/Tasks/release-0.5.4.md`, `.agent/System/decisions/021-modifiche-rifiutate-dal-server.md`, `src-tauri/src/db/migrations/011_sync_error.sql`;
 - modificati: `.agent/README.md`, ADR 014 e 019, `docs/CONTRACT.md`, `src-tauri/src/{commands,lib,models}.rs`, `src-tauri/src/db/{migrations,repo,sync_repo,tests}.rs`, `src-tauri/src/providers/{google,microsoft}/tests.rs`, `src-tauri/src/sync/mod.rs`, `src/accounts/WelcomeScreen.tsx`, `src/events/EventEditor.tsx`, `src/providers/{calendarService,memoryCalendarService,queries,tauriCalendarService}.ts`, `src/settings/AccountsSettings.tsx`, `src/types/index.ts`.
 
+## Nota (26 nov 2026): 0.5.4 installata sul PC del proprietario
+
+Su sua richiesta ("aggiorna l'app sul computer"): versione 0.5.4 in `package.json`, `package-lock.json`, `Cargo.toml`, `tauri.conf.json` (non committata); build firmata con il client Google incorporato (verificato senza stamparlo; client Microsoft assente come da decisione 3); backup del DB 0.5.3 in `C:/Developer/_snapshot/WinDozCal-db-backup-0.5.3-2026-11-26/` (schema 9, 1 account locale, 1 calendario, 6 eventi, integrità ok); installazione NSIS silenziosa sopra la 0.5.3. Verificato: eseguibile 0.5.4, migrazioni 10-12 applicate (schema 12), stessi dati, avvio automatico invariato, pulsanti "Aggiungi account Google" e "Aggiungi account CalDAV", interfaccia in italiano. Nessuna release GitHub pubblicata.
+
 ## Nota (26 nov 2026): lavoro sopra la 0.5.4
 
 Sopra il lavoro non committato della 0.5.4 ci sono ora la localizzazione e CalDAV (`i18n-caldav.md`): lo schema è v12 (migrazione 012), non v11 come nelle verifiche del lavoro 5. Il diff della sola 0.5.4 è salvato in `C:/Developer/_snapshot/WinDozCal-0.5.4-prima-di-i18n-caldav-2026-11-25/` (`tracked.patch` più i file non tracciati).
