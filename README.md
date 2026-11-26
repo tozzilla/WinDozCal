@@ -83,8 +83,8 @@ Today you pick between a calendar buried inside an email client, a browser tab, 
 | Provider | Protocol | Status |
 |---|---|---|
 | Local calendar — no account, stays on this PC | SQLite only, never synced | Released |
-| Google Calendar / Google Workspace | Google Calendar API, OAuth 2.0 desktop flow, incremental sync tokens | Next release |
-| CalDAV (Nextcloud, Radicale, Baïkal, Synology, Fastmail, iCloud) | CalDAV with sync-token, ETag fallback and conditional writes | Next release |
+| Google Calendar / Google Workspace | Google Calendar API, OAuth 2.0 desktop flow, incremental sync tokens | Released |
+| CalDAV (Nextcloud, Radicale, Baïkal, Synology, Fastmail, iCloud) | CalDAV with sync-token, ETag fallback and conditional writes | Released |
 | Microsoft 365 / Outlook.com | Microsoft Graph, OAuth + PKCE, delta queries | Implemented, waiting for a public app registration |
 
 Every provider sits behind a single `CalendarProvider` interface, so adding ICS feeds later does not touch the UI. The local calendar is just another provider that happens to do nothing remote.
@@ -103,9 +103,9 @@ These are design targets to be measured during development, not results yet: per
 
 ## Status
 
-**Pre-alpha, moving fast.** The latest [release](https://github.com/tozzilla/WinDozCal/releases/latest) is a Windows installer with signed automatic updates: local calendars, Day / Week / Month / Agenda views, recurring events, reminders with native notifications, system tray, search and quick add.
+**Pre-alpha, moving fast.** The latest [release](https://github.com/tozzilla/WinDozCal/releases/latest) is a Windows installer with signed automatic updates: local calendars, Google Calendar sync, CalDAV accounts (Nextcloud, Radicale, Baïkal and other standard servers), the interface in five languages, Day / Week / Month / Agenda views, recurring events, reminders with native notifications, system tray, search and quick add.
 
-Already on `master` and coming in the next release: Google Calendar sync, CalDAV accounts and the interface in five languages. Expect rough edges and breaking changes — and please [open an issue](https://github.com/tozzilla/WinDozCal/issues) when something does not work with your calendar server. Star or watch the repo to follow along.
+Microsoft 365 sync is implemented and waiting for a public app registration. Expect rough edges and breaking changes — and please [open an issue](https://github.com/tozzilla/WinDozCal/issues) when something does not work with your calendar server. Star or watch the repo to follow along.
 
 ## Architecture
 
