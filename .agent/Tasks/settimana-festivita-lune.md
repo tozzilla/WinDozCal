@@ -153,6 +153,11 @@ Oggi l'Agenda scarta i giorni senza eventi (`AgendaView.tsx`, `.filter((g) => g.
   - `parseEventDate` in `src/utils/date.ts`: una data senza ora (`2026-12-08`, come la salvano Google e CalDAV, `caldav/ical.rs`) vale la mezzanotte locale, non UTC. Usata in `eventInterval`, `draft.ts`, `EventEditor.tsx`, `seriesEdit.ts`, `SearchPanel.tsx`, `useTrayEvents.ts`; test di regressione in `date.test.ts`.
   - Verificato nell'app: Immacolata, Natale, Capodanno e le fasi lunari di Google su un solo giorno nel Mese; luna piena del 22 gen 2027 su una sola colonna in Settimana; Epifania aperta nell'editor con data 6 gen 2027 e "tutto il giorno".
   - Test: frontend 101/101, typecheck pulito.
+- 26 nov 2026 (5): release v0.6.0 su richiesta del proprietario ("commit & push, fai una build e pubblica release 0.6").
+  - Commit 2c0ec4e pushato su master, tag v0.6.0. Build firmata dall'albero pulito, client Google incorporato (verificato senza stamparlo).
+  - Release GitHub non prerelease con installer NSIS e MSI, i due `.sig`, `latest.json` e `SHA256SUMS.txt`. SHA-256 del setup: b41060a5…eed0c.
+  - Verifiche dopo la pubblicazione: l'endpoint `releases/latest/download/latest.json` riporta 0.6.0; l'URL dell'installer risponde 200; il setup scaricato ha lo stesso hash; la firma in `latest.json` coincide con il suo `.sig`.
+  - L'eseguibile di release non è stato avviato né installato sul PC del proprietario (non richiesto). La 0.5.4 installata riceverà l'aggiornamento dall'updater.
 
 ## Seguiti
 
