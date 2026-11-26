@@ -162,12 +162,17 @@ Oggi l'Agenda scarta i giorni senza eventi (`AgendaView.tsx`, `.filter((g) => g.
   - `src-tauri/src/tray_icon.rs`: foglio di calendario 32x32 RGBA disegnato in memoria (intestazione `--onair`, cifre bitmap 5x7 a scala 2 su coordinate pari, nitide anche a 16 px), nessuna dipendenza. `tray.rs`: tray con id `main`, icona del giorno all'avvio, ridisegnata dal ciclo di 60 secondi quando cambia la data.
   - Test: 2 nuovi (icona e 31 giorni distinti), Rust 143/145 (i due Microsoft noti), clippy e fmt puliti. Anteprima a 32 e 16 px controllata a vista.
   - Verificato nell'app di sviluppo (devtest): l'icona con "26" compare nel pannello delle icone nascoste. Il cambio a mezzanotte non è stato osservato dal vivo.
-  - Non committato, non rilasciato.
+  - Rilasciato con la 0.6.1 (vedi sotto).
 - 26 nov 2026 (7): visibilità.
   - README con H1 e posizionamento come sostituto di Posta e Calendario (commit bce1916).
   - Descrizione e topic della repo aggiornati; Discussions attive, Wiki spenta.
   - PR winget https://github.com/microsoft/winget-pkgs/pull/490535 (Tozzilla.WinDozCal 0.6.0, `winget validate` riuscito, installazione con `--manifest` non provata per non sovrascrivere la 0.5.4 installata): in attesa della firma del CLA da parte del proprietario.
   - Testi per AlternativeTo, Show HN, r/Windows11 e r/selfhosted in bozza, non pubblicati.
+- 26 nov 2026 (8): release v0.6.1 su richiesta del proprietario ("committa l'icona e pubblica release 0.6.1 - aggiorna la home con la procedura winget").
+  - Commit 3bd5675 (icona del tray, sezione Install del README con winget "coming soon"), tag v0.6.1.
+  - Build firmata dall'albero pulito, client Google incorporato.
+  - Release pubblicata con i 6 asset; `latest.json` dell'endpoint riporta 0.6.1, installer 200, hash e firma coincidenti. SHA-256 del setup: 6f546249…802fd.
+  - CLA firmato dal proprietario sulla PR winget #490535 (etichetta `Needs-CLA` rimossa); la PR resta su 0.6.0, l'aggiornamento a 0.6.1 si propone dopo il merge.
 
 ## Seguiti
 
