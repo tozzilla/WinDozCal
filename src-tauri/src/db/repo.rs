@@ -595,6 +595,9 @@ const KEY_WORK_END: &str = "work_end";
 const KEY_DEFAULT_DURATION: &str = "default_duration";
 const KEY_DEFAULT_CALENDAR: &str = "default_calendar_id";
 const KEY_LANGUAGE: &str = "language";
+const KEY_SHOW_WEEK_NUMBERS: &str = "show_week_numbers";
+const KEY_HOLIDAY_COUNTRY: &str = "holiday_country";
+const KEY_SHOW_MOON_PHASES: &str = "show_moon_phases";
 /// Lingua effettiva comunicata dal frontend (ADR 022), usata da tray e notifiche all'avvio.
 const KEY_RESOLVED_LANGUAGE: &str = "resolved_language";
 /// Valori ammessi per `Settings.language`.
@@ -665,6 +668,9 @@ pub fn get_settings(conn: &Connection) -> AppResult<Settings> {
         language: get_value(conn, KEY_LANGUAGE)?
             .filter(|v| LANGUAGES.contains(&v.as_str()))
             .unwrap_or(default.language),
+        show_week_numbers: get_bool(conn, KEY_SHOW_WEEK_NUMBERS, default.show_week_numbers)?,
+        holiday_country: get_value(conn, KEY_HOLIDAY_COUNTRY)?.filter(|v| is_country_code(v)),
+        show_moon_phases: get_bool(conn, KEY_SHOW_MOON_PHASES, default.show_moon_phases)?,
     };
     if validate_preferences(&settings).is_err() {
         settings = Settings {
@@ -683,6 +689,12 @@ pub fn get_settings(conn: &Connection) -> AppResult<Settings> {
     Ok(settings)
 }
 
+/// Forma di un codice paese ISO 3166-1 alpha-2. L'elenco dei paesi supportati sta nel frontend
+/// (ADR 024): un codice valido ma non supportato vale "nessuna festivita'".
+fn is_country_code(code: &str) -> bool {
+    code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase())
+}
+
 /// Limiti delle preferenze di calendario: settimana da domenica o lunedi', orario di lavoro a passi
 /// di 30 minuti con inizio prima della fine, durata tra `DEFAULT_DURATIONS`.
 fn validate_preferences(s: &Settings) -> Result<(), String> {
@@ -698,6 +710,12 @@ fn validate_preferences(s: &Settings) -> Result<(), String> {
     }
     if !LANGUAGES.contains(&s.language.as_str()) {
         return Err(format!("language must be one of {LANGUAGES:?}"));
+    }
+    if s.holiday_country
+        .as_deref()
+        .is_some_and(|c| !is_country_code(c))
+    {
+        return Err("holiday_country must be a two-letter uppercase country code".into());
     }
     if !DEFAULT_DURATIONS.contains(&s.default_duration) {
         return Err(format!(
@@ -749,6 +767,21 @@ pub fn set_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
         settings.default_calendar_id.as_deref().unwrap_or(""),
     )?;
     set_value(&tx, KEY_LANGUAGE, &settings.language)?;
+    set_value(
+        &tx,
+        KEY_SHOW_WEEK_NUMBERS,
+        &settings.show_week_numbers.to_string(),
+    )?;
+    set_value(
+        &tx,
+        KEY_HOLIDAY_COUNTRY,
+        settings.holiday_country.as_deref().unwrap_or(""),
+    )?;
+    set_value(
+        &tx,
+        KEY_SHOW_MOON_PHASES,
+        &settings.show_moon_phases.to_string(),
+    )?;
     tx.commit()?;
     Ok(())
 }

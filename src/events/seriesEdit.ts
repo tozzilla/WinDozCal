@@ -1,6 +1,6 @@
 import { t } from "@/i18n";
 import type { Event, NewEvent } from "@/types";
-import { addDays, startOfDay, toIsoWithOffset } from "@/utils/date";
+import { addDays, parseEventDate, startOfDay, toIsoWithOffset } from "@/utils/date";
 
 /** Portata di una modifica su un'occorrenza di serie (PRD §10, ADR 013). */
 export type SeriesScope = "this" | "following" | "all";
@@ -53,11 +53,11 @@ export function applyToSeries(series: Event, occurrenceStart: string, edited: Ne
   };
   if (fromException) return base;
 
-  const occ = new Date(occurrenceStart);
-  const newStart = new Date(edited.start);
-  const duration = new Date(edited.end).getTime() - newStart.getTime();
+  const occ = parseEventDate(occurrenceStart);
+  const newStart = parseEventDate(edited.start);
+  const duration = parseEventDate(edited.end).getTime() - newStart.getTime();
   const dayDelta = Math.round((startOfDay(newStart).getTime() - startOfDay(occ).getTime()) / 86_400_000);
-  const seriesStart = new Date(series.start);
+  const seriesStart = parseEventDate(series.start);
   const shifted = addDays(seriesStart, dayDelta);
   const start = edited.all_day
     ? startOfDay(shifted)

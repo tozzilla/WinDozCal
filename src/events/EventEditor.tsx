@@ -17,6 +17,7 @@ import {
   useUpdateEvent,
 } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
+import { parseEventDate } from "@/utils/date";
 import { occurrenceRef } from "@/utils/events";
 import { isValidConferenceUrl } from "@/utils/validation";
 import { AppearanceField } from "./AppearanceField";
@@ -96,8 +97,8 @@ export function EventEditor() {
       let d = eventToDraft(detail.data.event, detail.data.attendees, detail.data.reminders);
       if (ref && !ref.isException) {
         // Occorrenza espansa: data e orari sono quelli dell'occorrenza cliccata, il resto della serie.
-        const start = new Date(event.start);
-        d = { ...d, date: toDateInput(start), startTime: toTimeInput(start), endTime: toTimeInput(new Date(event.end)) };
+        const start = parseEventDate(event.start);
+        d = { ...d, date: toDateInput(start), startTime: toTimeInput(start), endTime: toTimeInput(parseEventDate(event.end)) };
       } else if (ref?.isException && seriesDetail.data) {
         const rule = eventToDraft(seriesDetail.data.event);
         d = { ...d, recurrence: rule.recurrence, recurrenceDays: rule.recurrenceDays, existingRule: rule.existingRule };

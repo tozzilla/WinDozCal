@@ -133,6 +133,12 @@ export interface Settings {
   default_calendar_id: string | null;
   /** Lingua dell'interfaccia (ADR 022); `system` segue la lingua di Windows. */
   language: LanguageSetting;
+  /** Numero della settimana ISO in header e vista mese (ADR 024). */
+  show_week_numbers: boolean;
+  /** Paese delle festività nazionali (ISO 3166-1 alpha-2); `null` = nessuna (ADR 024). */
+  holiday_country: string | null;
+  /** Fasi lunari sui giorni (ADR 024). */
+  show_moon_phases: boolean;
 }
 
 /** Lingue dell'interfaccia (ADR 022): `it` e `en` complete, `es`, `fr`, `de` secondarie. */
@@ -151,6 +157,9 @@ export const DEFAULT_SETTINGS: Settings = {
   default_duration: 60,
   default_calendar_id: null,
   language: "system",
+  show_week_numbers: true,
+  holiday_country: null,
+  show_moon_phases: false,
 };
 
 /** Durate ammesse per i nuovi eventi (docs/CONTRACT.md). */

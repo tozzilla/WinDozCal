@@ -1,6 +1,6 @@
 import { t } from "@/i18n";
 import type { Attendee, Calendar, Event, EventStatus, NewAttendee, NewEvent, NewReminder, Reminder } from "@/types";
-import { addDays, localTimezone, toIsoWithOffset } from "@/utils/date";
+import { addDays, localTimezone, parseEventDate, toIsoWithOffset } from "@/utils/date";
 import { isValidConferenceUrl, validateAttendees, validateReminders } from "@/utils/validation";
 import { buildRecurrenceRule, parseRecurrence, type RecurrenceFreq, type Weekday } from "./recurrence";
 
@@ -79,8 +79,8 @@ export function emptyDraft(calendarId: string, slot?: { start: Date; end: Date }
 }
 
 export function eventToDraft(e: Event, attendees: Attendee[] = [], reminders: Reminder[] = []): EventDraft {
-  const start = new Date(e.start);
-  const end = new Date(e.end);
+  const start = parseEventDate(e.start);
+  const end = parseEventDate(e.end);
   const spec = parseRecurrence(e.recurrence_rule);
   return {
     ...emptyDraft(e.calendar_id, { start, end }),

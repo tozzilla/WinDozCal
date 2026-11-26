@@ -6,10 +6,10 @@ import { useCalendars, useSearchEvents } from "@/providers/queries";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { Event } from "@/types";
-import { formatTime } from "@/utils/date";
+import { formatTime, parseEventDate } from "@/utils/date";
 
 function when(e: Event): string {
-  const start = new Date(e.start);
+  const start = parseEventDate(e.start);
   const day = dateFormat({ weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(start);
   return e.all_day ? day : `${day} · ${formatTime(start)}`;
 }
@@ -40,7 +40,7 @@ export function SearchPanel() {
 
   const choose = (e: Event) => {
     setSearchOpen(false);
-    setCurrentDate(new Date(e.start));
+    setCurrentDate(parseEventDate(e.start));
     openExisting(e);
   };
 

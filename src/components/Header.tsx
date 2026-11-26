@@ -4,10 +4,31 @@ import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUiStore } from "@/stores/uiStore";
-import { formatMonthYear } from "@/utils/date";
+import { useToday } from "@/hooks/useToday";
+import { usePreferences } from "@/providers/queries";
+import type { CalendarView } from "@/types";
+import { addDays, formatMonthYear, startOfWeek, type WeekStart } from "@/utils/date";
+import { isoWeek } from "@/utils/isoWeek";
 
 const iconButton =
   "grid size-8 place-items-center rounded-md border bg-card text-foreground outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * Settimana ISO da mostrare accanto al mese (ADR 024): Giorno e Agenda quella della data, Settimana quella
+ * del lunedì della settimana mostrata (come le righe del Mese), Mese quella di oggi se oggi è nel mese.
+ */
+export function headerWeek(view: CalendarView, date: Date, today: Date, weekStartsOn: WeekStart): number | null {
+  switch (view) {
+    case "week": {
+      const start = startOfWeek(date, weekStartsOn);
+      return isoWeek(weekStartsOn === 0 ? addDays(start, 1) : start).week;
+    }
+    case "month":
+      return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() ? isoWeek(today).week : null;
+    default:
+      return isoWeek(date).week;
+  }
+}
 
 /** `<  >  Oggi  Ottobre 2026` + ricerca + selettore vista (PRD §6), nel linguaggio del Palinsesto. */
 export function Header() {
@@ -15,6 +36,9 @@ export function Header() {
   const { view, setView, currentDate, setCurrentDate, toggleSidebar, setSearchOpen } = useUiStore();
   const openNew = useEditorStore((s) => s.openNew);
   const { navigate } = renderers[view];
+  const settings = usePreferences();
+  const today = useToday();
+  const week = settings.show_week_numbers ? headerWeek(view, currentDate, today, settings.week_start) : null;
 
   return (
     <header className="flex h-15 shrink-0 items-center gap-2 border-b bg-card px-3 xl:px-5">
@@ -35,6 +59,14 @@ export function Header() {
         {t("shell.header.today")}
       </button>
       <h1 className="ml-3 text-[20px] leading-none font-bold tracking-[-0.01em] whitespace-nowrap xl:text-[25px]">{formatMonthYear(currentDate)}</h1>
+      {week !== null && (
+        <span
+          title={t("calendar.weekNumberTitle", { week })}
+          className="shrink-0 rounded-[3px] border px-1.5 py-0.5 text-[12px] font-semibold whitespace-nowrap text-muted-foreground tabular-nums"
+        >
+          {t("calendar.weekNumber", { week })}
+        </span>
+      )}
 
       <div className="ml-auto flex items-center gap-2 xl:gap-2.5">
         <button

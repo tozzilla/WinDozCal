@@ -149,9 +149,11 @@ Comandi:
 | `get_settings` | — | `Settings` |
 | `update_settings` | `settings: Settings` | `Settings` (applica subito: registra/rimuove l'avvio automatico) |
 
-`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean, week_start: 0 | 1, work_start: number, work_end: number, default_duration: number, default_calendar_id: string | null, language: "system" | "it" | "en" | "es" | "fr" | "de" }`; default `false`, `false`, `true`, `1` (lunedì), `540`, `1080` (09:00-18:00), `60`, `null`, `"system"`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
+`Settings` = `{ start_on_login: boolean, start_minimized: boolean, close_to_tray: boolean, week_start: 0 | 1, work_start: number, work_end: number, default_duration: number, default_calendar_id: string | null, language: "system" | "it" | "en" | "es" | "fr" | "de", show_week_numbers: boolean, holiday_country: string | null, show_moon_phases: boolean }`; default `false`, `false`, `true`, `1` (lunedì), `540`, `1080` (09:00-18:00), `60`, `null`, `"system"`, `true`, `null`, `false`. Salvate in SQLite (tabella chiave/valore), mai credenziali.
 
 Limiti (11 ott 2026, ADR 018), validati da `update_settings` prima di scrivere: `week_start` 0 = domenica o 1 = lunedì; `work_start`/`work_end` in minuti dalla mezzanotte, multipli di 30, `work_start < work_end <= 1440`; `default_duration` tra 15, 30, 45, 60, 90, 120; `default_calendar_id` deve esistere e non essere di sola lettura. `get_settings` restituisce `null` se il calendario predefinito è stato rimosso o è diventato di sola lettura. L'avvio automatico di Windows si tocca solo se `start_on_login` cambia.
+
+Settimana, festività, fasi lunari (ADR 024, 26 nov 2026): `update_settings` valida solo la forma di `holiday_country` (due lettere maiuscole, ISO 3166-1 alpha-2); l'elenco dei paesi supportati è `HOLIDAY_COUNTRIES` in `src/utils/holidays.ts` e un codice non in elenco vale "nessuna festività". Le tre chiavi sono facoltative nel JSON in ingresso (default sopra). Festività e fasi lunari sono calcolate nel frontend e non passano dall'IPC.
 
 Lingua (ADR 022, 25 nov 2026): `language` è validata da `update_settings`. Il frontend risolve `system` con le lingue della WebView (prima supportata, altrimenti `en`) e chiama `set_ui_language(lang)` con `lang` in `it | en | es | fr | de`: il backend la salva come `resolved_language` (chiave di `app_settings`), la usa per menu del tray e notifiche, e all'avvio successivo riparte da lì (inglese se assente).
 

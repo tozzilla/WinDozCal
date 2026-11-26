@@ -1,9 +1,10 @@
 import { dateFormat, useT } from "@/i18n";
-import { addDays, formatTime, isSameDay, startOfDay } from "@/utils/date";
+import { addDays, dayKey, formatTime, isSameDay, startOfDay } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { cn } from "@/lib/utils";
 import { calendarColor } from "./colors";
 import { EventIcon } from "./appearance";
+import { HolidayLabel, MoonMark } from "./DayMarks";
 import { broadcastMarks, MARK_LABEL } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 
@@ -17,7 +18,7 @@ function dayLabel(day: Date, today: Date, t: ReturnType<typeof useT>): string {
 }
 
 /** Lista cronologica degli eventi futuri, raggruppati per giorno (PRD §5). Oggi mostra solo ciò che non è finito. */
-export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarRendererProps) {
+export function AgendaView({ date, events, calendars, annotations, onSelectEvent }: CalendarRendererProps) {
   const t = useT();
   const now = new Date();
   const first = startOfDay(date);
@@ -25,8 +26,10 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
     .map((day) => ({
       day,
       items: eventsOnDay(events, day).filter((e) => !isSameDay(day, now) || e.all_day || eventInterval(e).end > now),
+      annotation: annotations.get(dayKey(day)),
     }))
-    .filter((g) => g.items.length > 0);
+    // Un giorno con la sola festività o la sola fase lunare compare comunque (ADR 024).
+    .filter((g) => g.items.length > 0 || g.annotation);
 
   if (groups.length === 0) {
     return <div className="h-full bg-grid p-8 text-[15px] text-muted-foreground">{t("calendar.agenda.empty", { days: AGENDA_DAYS })}</div>;
@@ -36,11 +39,15 @@ export function AgendaView({ date, events, calendars, onSelectEvent }: CalendarR
 
   return (
     <div className="h-full overflow-y-auto bg-grid px-8 py-5">
-      {groups.map(({ day, items }) => (
+      {groups.map(({ day, items, annotation }) => (
         <section key={day.toISOString()} className="mb-6 max-w-3xl">
-          <h3 className={cn("mb-1 border-b pb-1.5 text-[12px] font-bold tracking-[0.14em] uppercase", isSameDay(day, now) ? "text-onair" : "text-muted-foreground")}>
-            {dayLabel(day, now, t)}
-          </h3>
+          <div className="mb-1 flex items-baseline gap-3 border-b pb-1.5">
+            <h3 className={cn("shrink-0 text-[12px] font-bold tracking-[0.14em] uppercase", isSameDay(day, now) ? "text-onair" : "text-muted-foreground")}>
+              {dayLabel(day, now, t)}
+            </h3>
+            <HolidayLabel annotation={annotation} className="min-w-0 text-[12px]" />
+            <MoonMark annotation={annotation} className="ml-auto self-center" />
+          </div>
           {items.map((e) => (
             <button
               key={eventKey(e)}

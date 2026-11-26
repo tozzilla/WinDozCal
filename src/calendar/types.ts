@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { Calendar, CalendarView, Event } from "@/types";
+import type { Annotations } from "@/utils/annotations";
 import type { WeekStart } from "@/utils/date";
 
 export interface DateRange {
@@ -18,6 +19,8 @@ export interface ViewPrefs {
   defaultDuration: number;
   /** Scala oraria ridotta (Appearance › compact mode). */
   compact: boolean;
+  /** Colonna del numero di settimana ISO nella vista Mese (ADR 024). */
+  showWeekNumbers: boolean;
 }
 
 export interface CalendarRendererProps {
@@ -25,6 +28,8 @@ export interface CalendarRendererProps {
   prefs: ViewPrefs;
   events: Event[];
   calendars: Calendar[];
+  /** Festività e fasi lunari per giorno (ADR 024): dati derivati, calcolati fuori dal renderer. */
+  annotations: Annotations;
   onSelectSlot: (start: Date, end: Date) => void;
   onSelectEvent: (event: Event) => void;
   /** Spostamento o ridimensionamento da drag & drop (per le occorrenze di serie il chiamante chiede la portata). */

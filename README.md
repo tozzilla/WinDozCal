@@ -53,6 +53,7 @@ Today you pick between a calendar buried inside an email client, a browser tab, 
 | **Speaks your language** | English, Italian, Spanish, French and German, following your Windows display language. Quick add understands the active language too. |
 | **Works without an account** | Start with a purely local calendar on your PC — no sign-in, no network. Add Google, Microsoft or CalDAV accounts later and they sit alongside it. |
 | **Local-first** | Events live in a local SQLite database. The app opens from disk, works offline and syncs in the background. Changes made offline are queued and pushed when you reconnect. |
+| **Week numbers, holidays, moon phases** | ISO week numbers next to the month and in Month view, Italian public holidays and the four main moon phases on each day — all computed on your PC, no subscription calendar needed. |
 | **Fast to use** | Day, Week, Month and Agenda views. Drag to move or resize events. `Ctrl+N` quick add understands *"Dentist Friday 9:30"*, *"Pranzo domani alle 13"* or *"Zahnarzt Freitag 9:30"* — parsed locally, no AI required. |
 | **Feels at home on Windows** | System tray with your next event, native notifications with a **Join** button for Meet, Teams, Zoom and Webex links, light / dark / system theme. |
 | **Keyboard-driven** | `Ctrl+N` new event · `Ctrl+K` search · `Ctrl+T` today · `D` `W` `M` `A` switch view · `←` `→` navigate. |
@@ -103,7 +104,7 @@ These are design targets to be measured during development, not results yet: per
 
 ## Status
 
-**Pre-alpha, moving fast.** The latest [release](https://github.com/tozzilla/WinDozCal/releases/latest) is a Windows installer with signed automatic updates: local calendars, Google Calendar sync, CalDAV accounts (Nextcloud, Radicale, Baïkal and other standard servers), the interface in five languages, Day / Week / Month / Agenda views, recurring events, reminders with native notifications, system tray, search and quick add.
+**Pre-alpha, moving fast.** The latest [release](https://github.com/tozzilla/WinDozCal/releases/latest) is a Windows installer with signed automatic updates: local calendars, Google Calendar sync, CalDAV accounts (Nextcloud, Radicale, Baïkal and other standard servers), the interface in five languages, week numbers, Italian public holidays and moon phases, Day / Week / Month / Agenda views, recurring events, reminders with native notifications, system tray, search and quick add.
 
 Microsoft 365 sync is implemented and waiting for a public app registration. Expect rough edges and breaking changes — and please [open an issue](https://github.com/tozzilla/WinDozCal/issues) when something does not work with your calendar server. Star or watch the repo to follow along.
 

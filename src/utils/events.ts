@@ -1,9 +1,9 @@
 import type { Event } from "@/types";
-import { addDays, startOfDay } from "./date";
+import { addDays, parseEventDate, startOfDay } from "./date";
 
 export function eventInterval(e: Event): { start: Date; end: Date } {
-  const start = new Date(e.start);
-  const end = new Date(e.end);
+  const start = parseEventDate(e.start);
+  const end = parseEventDate(e.end);
   return { start, end: end > start ? end : new Date(start.getTime() + 30 * 60_000) };
 }
 

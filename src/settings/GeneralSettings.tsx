@@ -2,6 +2,7 @@ import { COMPLETE_LANGUAGES, LANGUAGE_NAMES, errorText, useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useSettings, useUpdateSettings } from "@/providers/queries";
 import { DEFAULT_DURATIONS, LANGUAGES, type LanguageSetting, type Settings } from "@/types";
+import { HOLIDAY_COUNTRIES, isHolidayCountry } from "@/utils/holidays";
 
 const selectClass = "rounded-md border bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50";
 
@@ -169,6 +170,36 @@ export function GeneralSettings() {
             ))}
           </select>
         </FieldRow>
+        <SwitchRow
+          label={t("settings.general.showWeekNumbers")}
+          description={t("settings.general.showWeekNumbersHint")}
+          checked={settings.show_week_numbers}
+          disabled={update.isPending}
+          onChange={(v) => save({ show_week_numbers: v })}
+        />
+        <FieldRow label={t("settings.general.holidayCountry")} description={t("settings.general.holidayCountryHint")}>
+          <select
+            aria-label={t("settings.general.holidayCountry")}
+            className={selectClass}
+            disabled={update.isPending}
+            value={isHolidayCountry(settings.holiday_country) ? settings.holiday_country : ""}
+            onChange={(e) => save({ holiday_country: e.target.value || null })}
+          >
+            <option value="">{t("settings.general.holidayNone")}</option>
+            {HOLIDAY_COUNTRIES.map((c) => (
+              <option key={c} value={c}>
+                {t(`settings.general.countries.${c}`)}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
+        <SwitchRow
+          label={t("settings.general.showMoonPhases")}
+          description={t("settings.general.showMoonPhasesHint")}
+          checked={settings.show_moon_phases}
+          disabled={update.isPending}
+          onChange={(v) => save({ show_moon_phases: v })}
+        />
       </div>
       {update.isError && (
         <p role="alert" className="mt-3 text-sm text-destructive">

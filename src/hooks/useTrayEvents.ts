@@ -1,3 +1,4 @@
+import { parseEventDate } from "@/utils/date";
 import { useEffect } from "react";
 import { fetchEventDetail } from "@/providers/queries";
 import { listenTrayEvents } from "@/providers/trayEvents";
@@ -18,7 +19,7 @@ export function useTrayEvents() {
             .then(({ event }) => {
               const ui = useUiStore.getState();
               ui.setSettingsOpen(false);
-              ui.setCurrentDate(new Date(event.start));
+              ui.setCurrentDate(parseEventDate(event.start));
               useEditorStore.getState().openExisting(event);
             })
             // Evento cancellato nel frattempo: la finestra resta com'è.

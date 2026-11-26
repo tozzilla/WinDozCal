@@ -60,6 +60,11 @@ export const settings: PartialDictionary["settings"] = {
     oneHour: "1 heure",
     hours: "{n} heures",
     decimal: ",",
+    showWeekNumbers: "Numéro de semaine",
+    holidayCountry: "Jours fériés nationaux",
+    holidayNone: "Aucun",
+    showMoonPhases: "Phases de la lune",
+    countries: { IT: "Italie" },
   },
   calendars: {
     defaultNotSaved: "Calendrier par défaut non enregistré.",

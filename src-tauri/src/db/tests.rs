@@ -766,6 +766,15 @@ fn settings_default_and_roundtrip() {
         (1, 540, 1080, 60)
     );
     assert_eq!(defaults.default_calendar_id, None);
+    // ADR 024: numero della settimana attivo, festivita' e fasi lunari spente.
+    assert_eq!(
+        (
+            defaults.show_week_numbers,
+            defaults.holiday_country.clone(),
+            defaults.show_moon_phases
+        ),
+        (true, None, false)
+    );
 
     let changed = Settings {
         start_on_login: true,
@@ -777,6 +786,9 @@ fn settings_default_and_roundtrip() {
         default_duration: 30,
         default_calendar_id: Some("c2".into()),
         language: "fr".into(),
+        show_week_numbers: false,
+        holiday_country: Some("IT".into()),
+        show_moon_phases: true,
     };
     set_settings(&conn, &changed).unwrap();
     assert_eq!(get_settings(&conn).unwrap(), changed);
@@ -785,7 +797,7 @@ fn settings_default_and_roundtrip() {
     let rows: i64 = conn
         .query_row("SELECT COUNT(*) FROM app_settings", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(rows, 9);
+    assert_eq!(rows, 12);
 
     // Flag di stato indipendente dalle impostazioni.
     assert!(!get_flag(&conn, FLAG_TRAY_NOTICE_SHOWN).unwrap());
@@ -797,6 +809,16 @@ fn settings_default_and_roundtrip() {
     let json = serde_json::to_value(&defaults).unwrap();
     assert_eq!(json["close_to_tray"], true);
     assert_eq!(json["start_on_login"], false);
+    assert_eq!(json["show_week_numbers"], true);
+    assert!(json["holiday_country"].is_null());
+
+    // Un JSON senza le chiavi di ADR 024 (frontend precedente) prende i default.
+    let mut legacy = serde_json::to_value(&defaults).unwrap();
+    for key in ["show_week_numbers", "holiday_country", "show_moon_phases"] {
+        legacy.as_object_mut().unwrap().remove(key);
+    }
+    let parsed: Settings = serde_json::from_value(legacy).unwrap();
+    assert_eq!(parsed, defaults);
 }
 
 fn event_at(conn: &Connection, title: &str, calendar: &str, start: &str, end: &str) -> Event {
@@ -835,6 +857,14 @@ fn settings_reject_out_of_range_and_drop_stale_default_calendar() {
         },
         Settings {
             default_calendar_id: Some("missing".into()),
+            ..base.clone()
+        },
+        Settings {
+            holiday_country: Some("it".into()),
+            ..base.clone()
+        },
+        Settings {
+            holiday_country: Some("ITA".into()),
             ..base.clone()
         },
     ];

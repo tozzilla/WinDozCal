@@ -40,3 +40,16 @@ describe("toIsoWithOffset", () => {
     expect(new Date(iso).getTime()).toBe(d.getTime());
   });
 });
+
+describe("eventi tutto il giorno con data senza ora (Google, CalDAV)", () => {
+  it("restano sul loro giorno e non invadono il successivo", async () => {
+    const { parseEventDate } = await import("./date");
+    const { eventsOnDay } = await import("./events");
+    expect(ymd(parseEventDate("2026-12-08"))).toEqual([2026, 12, 8]);
+    expect(parseEventDate("2026-12-08").getHours()).toBe(0);
+    const e = { id: "h", start: "2026-12-08", end: "2026-12-09", all_day: true, title: "Immacolata" } as unknown as import("@/types").Event;
+    expect(eventsOnDay([e], new Date(2026, 11, 8))).toHaveLength(1);
+    expect(eventsOnDay([e], new Date(2026, 11, 9))).toHaveLength(0);
+    expect(eventsOnDay([e], new Date(2026, 11, 7))).toHaveLength(0);
+  });
+});

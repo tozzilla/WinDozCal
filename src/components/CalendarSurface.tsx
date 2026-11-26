@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { errorText, useT } from "@/i18n";
 import { renderers } from "@/calendar/renderers";
 import { ScopeChoice } from "@/events/ScopeChoice";
@@ -10,6 +10,7 @@ import { useUiStore } from "@/stores/uiStore";
 import type { Event } from "@/types";
 import { formatTime, toIsoWithOffset } from "@/utils/date";
 import { occurrenceRef } from "@/utils/events";
+import { buildAnnotations } from "@/utils/annotations";
 
 /** Collega store, Calendar Service e renderer: conosce solo l'interfaccia `CalendarRenderer`. */
 export function CalendarSurface() {
@@ -23,9 +24,17 @@ export function CalendarSurface() {
     workEnd: settings.work_end,
     defaultDuration: settings.default_duration,
     compact,
+    showWeekNumbers: settings.show_week_numbers,
   };
   const renderer = renderers[view];
   const range = renderer.getRange(currentDate, prefs);
+  const startMs = range.start.getTime();
+  const endMs = range.end.getTime();
+  // Festività e fasi lunari (ADR 024): calcolate in locale sul range della vista, non sono eventi.
+  const annotations = useMemo(
+    () => buildAnnotations(new Date(startMs), new Date(endMs), { holidayCountry: settings.holiday_country, moonPhases: settings.show_moon_phases }),
+    [startMs, endMs, settings.holiday_country, settings.show_moon_phases],
+  );
   const { data: events = [] } = useEvents(toIsoWithOffset(range.start), toIsoWithOffset(range.end));
   const { data: calendars = [] } = useCalendars();
   const changeTime = useChangeEventTime();
@@ -60,6 +69,7 @@ export function CalendarSurface() {
         prefs={prefs}
         events={events}
         calendars={calendars}
+        annotations={annotations}
         onSelectSlot={(start, end) => openNew({ start, end })}
         onSelectEvent={openExisting}
         onChangeEventTime={(event, start, end) => {

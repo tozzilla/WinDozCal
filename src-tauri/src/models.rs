@@ -90,6 +90,19 @@ pub struct Settings {
     pub default_calendar_id: Option<String>,
     /// Lingua dell'interfaccia (ADR 022): `system`, `it`, `en`, `es`, `fr` o `de`.
     pub language: String,
+    /// Numero della settimana ISO in header e vista mese (ADR 024).
+    #[serde(default = "default_true")]
+    pub show_week_numbers: bool,
+    /// Paese delle festivita' nazionali (ISO 3166-1 alpha-2); `None` = nessuna (ADR 024).
+    #[serde(default)]
+    pub holiday_country: Option<String>,
+    /// Fasi lunari sui giorni (ADR 024).
+    #[serde(default)]
+    pub show_moon_phases: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -104,6 +117,9 @@ impl Default for Settings {
             default_duration: 60,
             default_calendar_id: None,
             language: "system".into(),
+            show_week_numbers: true,
+            holiday_country: None,
+            show_moon_phases: false,
         }
     }
 }

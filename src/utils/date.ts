@@ -71,3 +71,18 @@ export function toIsoWithOffset(d: Date): string {
     `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
   );
 }
+
+/** Chiave della data civile locale, `yyyy-mm-dd` (mai `toISOString`, che è in UTC). */
+export function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Istante di `start`/`end` di un evento. Gli eventi tutto il giorno di Google e CalDAV arrivano come data
+ * senza ora (`2026-12-08`), che `new Date` leggerebbe come mezzanotte UTC (l'01:00 a Roma): così l'evento
+ * invadeva anche il giorno dopo. Una data senza ora vale la mezzanotte locale di quel giorno.
+ */
+export function parseEventDate(s: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
+}

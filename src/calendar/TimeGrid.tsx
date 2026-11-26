@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { Event } from "@/types";
-import { addDays, formatTime, formatWeekday, isSameDay, startOfDay, toIsoWithOffset } from "@/utils/date";
+import { addDays, dayKey, formatTime, formatWeekday, isSameDay, startOfDay, toIsoWithOffset } from "@/utils/date";
 import { eventInterval, eventKey, eventsOnDay } from "@/utils/events";
 import { calendarColor } from "./colors";
 import { clickRange, slotRange } from "./drag";
 import { layoutOverlaps } from "./layout";
 import { EventIcon, eventSurface } from "./appearance";
+import { HolidayLabel, isHoliday, MoonMark } from "./DayMarks";
 import { broadcastMarks, MARK_LABEL, type BroadcastMark } from "./palinsesto";
 import type { CalendarRendererProps } from "./types";
 import { useEventDrag } from "./useEventDrag";
@@ -67,7 +68,7 @@ function allDayRows(events: Event[], days: Date[]) {
 }
 
 /** Griglia oraria condivisa da Giorno e Settimana: palinsesto con banda IN ONDA, eventi affiancati, drag & drop. */
-export function TimeGrid({ days, prefs, events, calendars, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
+export function TimeGrid({ days, prefs, events, calendars, annotations, onSelectSlot, onSelectEvent, onChangeEventTime, onNotice }: TimeGridProps) {
   const t = useT();
   const HOUR_HEIGHT = prefs.compact ? COMPACT_HOUR_HEIGHT : STANDARD_HOUR_HEIGHT;
   const now = useNow();
@@ -153,12 +154,20 @@ export function TimeGrid({ days, prefs, events, calendars, onSelectSlot, onSelec
           <div className="grid flex-1" style={cols}>
             {days.map((day) => {
               const today = isSameDay(day, now);
+              const annotation = annotations.get(dayKey(day));
               return (
-                <div key={day.toISOString()} className="flex items-baseline gap-1.5 px-2.5 pt-2.5 pb-2">
-                  <span className="text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">{formatWeekday(day)}</span>
-                  <span className={cn("text-[24px] leading-none font-bold tracking-[-0.02em]", today && "text-onair")} aria-current={today ? "date" : undefined}>
-                    {day.getDate()}
-                  </span>
+                <div key={day.toISOString()} className="min-w-0 px-2.5 pt-2.5 pb-2">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[12px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">{formatWeekday(day)}</span>
+                    <span
+                      className={cn("text-[24px] leading-none font-bold tracking-[-0.02em]", isHoliday(annotation) && "text-holiday", today && "text-onair")}
+                      aria-current={today ? "date" : undefined}
+                    >
+                      {day.getDate()}
+                    </span>
+                    <MoonMark annotation={annotation} className="self-center" />
+                  </div>
+                  <HolidayLabel annotation={annotation} className="mt-1" />
                 </div>
               );
             })}

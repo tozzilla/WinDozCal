@@ -1,3 +1,4 @@
+import { NO_ANNOTATIONS } from "@/utils/annotations";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -15,7 +16,7 @@ const ev = (id: string, h: number, rule: string | null = null): Event => ({
   local_updated_at: null, remote_updated_at: null, occurrence_start: null, series_id: null, original_start: null, color: null, icon: null, pattern: null,
 });
 
-const PREFS: ViewPrefs = { weekStartsOn: 1, workStart: 540, workEnd: 1080, defaultDuration: 60, compact: false };
+const PREFS: ViewPrefs = { weekStartsOn: 1, workStart: 540, workEnd: 1080, defaultDuration: 60, compact: false, showWeekNumbers: false };
 
 describe("TimeGrid", () => {
   it("rende eventi sovrapposti affiancati e gestisce drag e clic", async () => {
@@ -31,6 +32,7 @@ describe("TimeGrid", () => {
           prefs={PREFS}
           events={[ev("a", 10), ev("b", 11), ev("r", 15, "RRULE:FREQ=DAILY")]}
           calendars={[]}
+          annotations={NO_ANNOTATIONS}
           onSelectSlot={() => {}}
           onSelectEvent={onSelectEvent}
           onChangeEventTime={onChangeEventTime}
@@ -75,6 +77,7 @@ describe("TimeGrid", () => {
           prefs={PREFS}
           events={[]}
           calendars={[]}
+          annotations={NO_ANNOTATIONS}
           onSelectSlot={onSelectSlot}
           onSelectEvent={() => {}}
           onChangeEventTime={() => {}}
@@ -107,9 +110,10 @@ describe("TimeGrid", () => {
       createRoot(host).render(
         <WeekView
           date={new Date(2026, 9, 6)}
-          prefs={{ weekStartsOn: 0, workStart: 480, workEnd: 1020, defaultDuration: 30, compact: true }}
+          prefs={{ weekStartsOn: 0, workStart: 480, workEnd: 1020, defaultDuration: 30, compact: true, showWeekNumbers: false }}
           events={[]}
           calendars={[]}
+          annotations={NO_ANNOTATIONS}
           onSelectSlot={onSelectSlot}
           onSelectEvent={() => {}}
           onChangeEventTime={() => {}}

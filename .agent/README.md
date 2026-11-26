@@ -4,10 +4,7 @@ Punto di ingresso per ogni sessione. Leggere prima di pianificare; aggiornare do
 
 ## Stato attuale (26 nov 2026)
 
-Non committati: release 0.5.4 (Google nell'app pubblica) e, sopra, localizzazione in cinque lingue e account CalDAV ([Tasks/i18n-caldav.md](Tasks/i18n-caldav.md)).
-
-
-Release v0.5.3 (preferenze di calendario PRD §34, ADR 018), dopo la v0.5.2 (redesign Palinsesto, creazione col mouse, aspetto degli eventi). Fase 1: completati calendari locali, viste, CRUD, ricorrenze, tray e notifiche; stage 3 (Google) con codice completo dal 12 ott 2026, in attesa della verifica con l'account reale; stage 6 e 8 dopo. Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Redesign del frontend rilasciato.
+Release v0.6.0: numero della settimana ISO, festività nazionali italiane e fasi lunari calcolate in locale (ADR 024, [Tasks/settimana-festivita-lune.md](Tasks/settimana-festivita-lune.md)); eventi tutto il giorno di Google e CalDAV su un solo giorno. Prima, v0.5.4: Google Calendar, CalDAV (ADR 023, Proposto) e interfaccia in cinque lingue (ADR 022). Fase 2 completata con v0.4.0 (aperta la verifica Microsoft con account reale). Rust: 141/143, i due test Microsoft dipendenti dalla data falliscono.
 
 ## Gerarchia documenti
 
@@ -24,7 +21,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | Documento | Contenuto |
 |---|---|
 | [System/architecture.md](System/architecture.md) | Layering, flusso dati local-first, mappa directory |
-| [System/decisions/](System/decisions/) | ADR 001-023 (stato in ciascun file) |
+| [System/decisions/](System/decisions/) | ADR 001-024 (stato in ciascun file) |
 | [Tasks/fase-1.md](Tasks/fase-1.md) | Piano a stage Fase 1 (PRD §42) |
 | [Tasks/completed/fase-2.md](Tasks/completed/fase-2.md) | Fase 2 (PRD §43), completata con v0.4.0 (aperta la verifica Microsoft con account reale) |
 | [Tasks/fase-3.md](Tasks/fase-3.md) | Bozza Fase 3 (§44) |
@@ -32,6 +29,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | [Tasks/impostazioni-34.md](Tasks/impostazioni-34.md) | Impostazioni PRD §34: primo giorno, orario di lavoro, durata, calendario predefinito, compact mode |
 | [Tasks/release-0.5.4.md](Tasks/release-0.5.4.md) | Release 0.5.4: Google nell'app pubblica, decisioni, verifiche e comando di build |
 | [Tasks/i18n-caldav.md](Tasks/i18n-caldav.md) | Localizzazione it/en/es/fr/de (ADR 022) e account CalDAV (ADR 023): implementati e verificati il 26 nov 2026, non committati |
+| [Tasks/settimana-festivita-lune.md](Tasks/settimana-festivita-lune.md) | Numero della settimana, festività nazionali, fasi lunari (ADR 024) e fix degli eventi tutto il giorno: rilasciati con la 0.6.0 (26 nov 2026) |
 | [Tasks/sposta-evento-calendario.md](Tasks/sposta-evento-calendario.md) | Spostare un evento tra calendari (bug stage 5) e UNTIL a data delle serie Google |
 | [../DESIGN.md](../DESIGN.md), [../PRODUCT.md](../PRODUCT.md) | Sistema visivo e verità di prodotto (skill impeccable) |
 
@@ -62,6 +60,7 @@ In caso di conflitto prevale il livello più alto. Un livello inferiore non può
 | 021 | Modifiche rifiutate dal server | Accettato |
 | 022 | Localizzazione dell'interfaccia: it, en complete; es, fr, de secondarie (estende il PRD) | Accettato |
 | 023 | CalDAV: priorità e perimetro | Proposto |
+| 024 | Numero della settimana, festività nazionali, fasi lunari (estende il PRD) | Accettato |
 
 "Accettato" = deriva direttamente dal PRD. Nuovo ADR: numero successivo, formato Contesto / Decisione / Conseguenze / Stato.
 
