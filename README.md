@@ -2,9 +2,12 @@
   <img src="docs/assets/banner.svg" alt="WinDozCal — the Windows calendar that was missing" width="100%">
 </p>
 
+<h1 align="center">WinDozCal: desktop calendar app for Windows 11</h1>
+
 <p align="center">
   <strong>A fast, modern, open source desktop calendar for Windows 11.</strong><br>
-  Google Calendar, Microsoft 365 / Outlook.com and CalDAV in one window — without another cloud platform in between.
+  Google Calendar and CalDAV in one window, with Microsoft 365 / Outlook.com coming — without another cloud platform in between.<br>
+  A replacement for the Windows Mail and Calendar app that Microsoft retired at the end of 2024.
 </p>
 
 <p align="center">
