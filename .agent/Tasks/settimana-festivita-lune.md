@@ -173,6 +173,12 @@ Oggi l'Agenda scarta i giorni senza eventi (`AgendaView.tsx`, `.filter((g) => g.
   - Build firmata dall'albero pulito, client Google incorporato.
   - Release pubblicata con i 6 asset; `latest.json` dell'endpoint riporta 0.6.1, installer 200, hash e firma coincidenti. SHA-256 del setup: 6f546249…802fd.
   - CLA firmato dal proprietario sulla PR winget #490535 (etichetta `Needs-CLA` rimossa); la PR resta su 0.6.0, l'aggiornamento a 0.6.1 si propone dopo il merge.
+- 27 nov 2026 (9): nuova icona dell'app al posto di quella predefinita di Tauri.
+  - Dieci proposte in una pagina di confronto (artifact "Icone WinDozCal"); scelta del proprietario: I "Lancetta" (orologio su una griglia di giorni, oggi in rosso, fondo `#2F6BFF`).
+  - Sorgente `src-tauri/icons/app-icon.svg`; formati rigenerati con `npx tauri icon` (le cartelle android e ios e `64x64.png` non servono e sono state tolte).
+  - Verificata nella barra delle applicazioni con l'app di sviluppo.
+  - Varianti con il logo di Windows non disegnate: marchio Microsoft, il proprietario ha confermato la Lancetta ("va bene così, pubblica").
+  - Release v0.6.2.
 
 ## Seguiti
 
