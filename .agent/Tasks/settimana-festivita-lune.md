@@ -158,6 +158,16 @@ Oggi l'Agenda scarta i giorni senza eventi (`AgendaView.tsx`, `.filter((g) => g.
   - Release GitHub non prerelease con installer NSIS e MSI, i due `.sig`, `latest.json` e `SHA256SUMS.txt`. SHA-256 del setup: b41060a5…eed0c.
   - Verifiche dopo la pubblicazione: l'endpoint `releases/latest/download/latest.json` riporta 0.6.0; l'URL dell'installer risponde 200; il setup scaricato ha lo stesso hash; la firma in `latest.json` coincide con il suo `.sig`.
   - L'eseguibile di release non è stato avviato né installato sul PC del proprietario (non richiesto). La 0.5.4 installata riceverà l'aggiornamento dall'updater.
+- 26 nov 2026 (6): icona del tray con il numero del giorno, su richiesta del proprietario ("più parlante, magari facendo vedere il numero del giorno").
+  - `src-tauri/src/tray_icon.rs`: foglio di calendario 32x32 RGBA disegnato in memoria (intestazione `--onair`, cifre bitmap 5x7 a scala 2 su coordinate pari, nitide anche a 16 px), nessuna dipendenza. `tray.rs`: tray con id `main`, icona del giorno all'avvio, ridisegnata dal ciclo di 60 secondi quando cambia la data.
+  - Test: 2 nuovi (icona e 31 giorni distinti), Rust 143/145 (i due Microsoft noti), clippy e fmt puliti. Anteprima a 32 e 16 px controllata a vista.
+  - Verificato nell'app di sviluppo (devtest): l'icona con "26" compare nel pannello delle icone nascoste. Il cambio a mezzanotte non è stato osservato dal vivo.
+  - Non committato, non rilasciato.
+- 26 nov 2026 (7): visibilità.
+  - README con H1 e posizionamento come sostituto di Posta e Calendario (commit bce1916).
+  - Descrizione e topic della repo aggiornati; Discussions attive, Wiki spenta.
+  - PR winget https://github.com/microsoft/winget-pkgs/pull/490535 (Tozzilla.WinDozCal 0.6.0, `winget validate` riuscito, installazione con `--manifest` non provata per non sovrascrivere la 0.5.4 installata): in attesa della firma del CLA da parte del proprietario.
+  - Testi per AlternativeTo, Show HN, r/Windows11 e r/selfhosted in bozza, non pubblicati.
 
 ## Seguiti
 

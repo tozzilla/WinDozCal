@@ -23,6 +23,7 @@ mod state;
 mod sync;
 pub mod timeutil;
 mod tray;
+mod tray_icon;
 
 use tauri::Manager;
 

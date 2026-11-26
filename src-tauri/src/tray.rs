@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Datelike, FixedOffset, Local, Month, TimeZone};
 use serde_json::json;
+use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, Wry};
@@ -25,6 +26,7 @@ use crate::i18n::{self, Key};
 use crate::models::Event;
 use crate::state::AppState;
 use crate::timeutil::parse_ts;
+use crate::tray_icon::{self, day_icon_rgba};
 
 const MENU_OPEN: &str = "open";
 const MENU_NEXT_EVENT: &str = "next_event";
@@ -37,6 +39,7 @@ pub const TRAY_NEW_EVENT: &str = "tray-new-event";
 pub const TRAY_OPEN_EVENT: &str = "tray-open-event";
 
 const MAX_TITLE_CHARS: usize = 40;
+const TRAY_ID: &str = "main";
 const REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Stato del tray condiviso con i comandi: handle della voce "Next event" e id dell'evento mostrato.
@@ -46,6 +49,8 @@ pub struct TrayState {
     /// Voci statiche del menu, per rietichettarle al cambio di lingua (ADR 022).
     items: Mutex<Option<StaticItems>>,
     next_event_id: Mutex<Option<String>>,
+    /// Giorno del mese disegnato nell'icona: si ridisegna solo quando cambia.
+    icon_day: Mutex<Option<u32>>,
 }
 
 struct StaticItems {
@@ -120,7 +125,7 @@ pub fn init(app: &AppHandle) -> AppResult<()> {
         ],
     )?;
 
-    let mut builder = TrayIconBuilder::new()
+    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("WinDozCal")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -149,10 +154,12 @@ pub fn init(app: &AppHandle) -> AppResult<()> {
             }
         });
 
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
-    }
+    let today = Local::now().day();
+    builder = builder.icon(day_icon(today));
     builder.build(app)?;
+    if let Ok(mut slot) = app.state::<AppState>().tray.icon_day.lock() {
+        *slot = Some(today);
+    }
 
     let state = app.state::<AppState>();
     if let Ok(mut slot) = state.tray.items.lock() {
@@ -243,6 +250,29 @@ pub fn refresh_next_event(app: &AppHandle) {
     }
 }
 
+/// Icona del tray con il numero del giorno (`tray_icon`).
+fn day_icon(day: u32) -> Image<'static> {
+    Image::new_owned(day_icon_rgba(day), tray_icon::SIZE, tray_icon::SIZE)
+}
+
+/// Ridisegna l'icona se il giorno e' cambiato (mezzanotte, ripresa dalla sospensione).
+fn refresh_icon(app: &AppHandle) {
+    let today = Local::now().day();
+    let state = app.state::<AppState>();
+    let Ok(mut slot) = state.tray.icon_day.lock() else {
+        return;
+    };
+    if *slot == Some(today) {
+        return;
+    }
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        match tray.set_icon(Some(day_icon(today))) {
+            Ok(()) => *slot = Some(today),
+            Err(err) => tracing::warn!(error = %err, "cannot update tray icon"),
+        }
+    }
+}
+
 /// Aggiorna la voce ogni 60 secondi (il primo tick e' immediato: aggiornamento all'avvio).
 pub fn spawn_refresh_loop(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
@@ -251,6 +281,7 @@ pub fn spawn_refresh_loop(app: AppHandle) {
         loop {
             ticker.tick().await;
             refresh_next_event(&app);
+            refresh_icon(&app);
         }
     });
 }

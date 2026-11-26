@@ -29,6 +29,7 @@
 
 <p align="center">
   <a href="https://github.com/tozzilla/WinDozCal/releases/latest"><strong>Download for Windows</strong></a> ·
+  <a href="#install">Install</a> ·
   <a href="#what-it-does">Features</a> ·
   <a href="#privacy">Privacy</a> ·
   <a href="#status">Status</a> ·
@@ -36,6 +37,18 @@
 </p>
 
 ---
+
+## Install
+
+**Installer:** download `WinDozCal_x.y.z_x64-setup.exe` from the [latest release](https://github.com/tozzilla/WinDozCal/releases/latest) and run it. It installs for your user only, without administrator rights, and updates itself from then on. The installer is not code-signed yet: if SmartScreen appears, choose *More info → Run anyway*.
+
+**winget** *(coming soon: the package is under review in the Windows Package Manager repository)*:
+
+```powershell
+winget install Tozzilla.WinDozCal
+```
+
+Requires Windows 11 x64.
 
 ## Why
 
